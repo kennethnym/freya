@@ -210,6 +210,163 @@ describe("FeedPostProcessor", () => {
 	})
 
 	// =============================================================================
+	// BOOST
+	// =============================================================================
+
+	describe("boost", () => {
+		test("positive boost moves item before non-boosted items", async () => {
+			const engine = new FeedEngine()
+				.register(createWeatherSource([weatherItem("w1", 20), weatherItem("w2", 25)]))
+				.registerPostProcessor(async () => ({ boost: { w2: 0.8 } }))
+
+			const result = await engine.refresh()
+			expect(result.items.map((i) => i.id)).toEqual(["w2", "w1"])
+		})
+
+		test("negative boost moves item after non-boosted items", async () => {
+			const engine = new FeedEngine()
+				.register(createWeatherSource([weatherItem("w1", 20), weatherItem("w2", 25)]))
+				.registerPostProcessor(async () => ({ boost: { w1: -0.5 } }))
+
+			const result = await engine.refresh()
+			expect(result.items.map((i) => i.id)).toEqual(["w2", "w1"])
+		})
+
+		test("multiple boosted items are sorted by boost descending", async () => {
+			const engine = new FeedEngine()
+				.register(
+					createWeatherSource([
+						weatherItem("w1", 20),
+						weatherItem("w2", 25),
+						weatherItem("w3", 30),
+					]),
+				)
+				.registerPostProcessor(async () => ({
+					boost: { w3: 0.3, w1: 0.9 },
+				}))
+
+			const result = await engine.refresh()
+			// w1 (0.9) first, w3 (0.3) second, w2 (no boost) last
+			expect(result.items.map((i) => i.id)).toEqual(["w1", "w3", "w2"])
+		})
+
+		test("multiple processors accumulate boost scores", async () => {
+			const engine = new FeedEngine()
+				.register(createWeatherSource([weatherItem("w1", 20), weatherItem("w2", 25)]))
+				.registerPostProcessor(async () => ({ boost: { w1: 0.3 } }))
+				.registerPostProcessor(async () => ({ boost: { w1: 0.4 } }))
+
+			const result = await engine.refresh()
+			// w1 accumulated boost = 0.7, moves before w2
+			expect(result.items.map((i) => i.id)).toEqual(["w1", "w2"])
+		})
+
+		test("accumulated boost is clamped to [-1, 1]", async () => {
+			const engine = new FeedEngine()
+				.register(
+					createWeatherSource([
+						weatherItem("w1", 20),
+						weatherItem("w2", 25),
+						weatherItem("w3", 30),
+					]),
+				)
+				.registerPostProcessor(async () => ({ boost: { w1: 0.8, w2: 0.9 } }))
+				.registerPostProcessor(async () => ({ boost: { w1: 0.8 } }))
+
+			const result = await engine.refresh()
+			// w1 accumulated = 1.6 clamped to 1, w2 = 0.9 — w1 still first
+			expect(result.items.map((i) => i.id)).toEqual(["w1", "w2", "w3"])
+		})
+
+		test("out-of-range boost values are clamped", async () => {
+			const engine = new FeedEngine()
+				.register(createWeatherSource([weatherItem("w1", 20), weatherItem("w2", 25)]))
+				.registerPostProcessor(async () => ({ boost: { w1: 5.0 } }))
+
+			const result = await engine.refresh()
+			// Clamped to 1, still boosted to front
+			expect(result.items.map((i) => i.id)).toEqual(["w1", "w2"])
+		})
+
+		test("boosting a suppressed item is a no-op", async () => {
+			const engine = new FeedEngine()
+				.register(createWeatherSource([weatherItem("w1", 20), weatherItem("w2", 25)]))
+				.registerPostProcessor(async () => ({
+					suppress: ["w1"],
+					boost: { w1: 1.0 },
+				}))
+
+			const result = await engine.refresh()
+			expect(result.items).toHaveLength(1)
+			expect(result.items[0].id).toBe("w2")
+		})
+
+		test("boosting a nonexistent item ID is a no-op", async () => {
+			const engine = new FeedEngine()
+				.register(createWeatherSource([weatherItem("w1", 20)]))
+				.registerPostProcessor(async () => ({ boost: { nonexistent: 1.0 } }))
+
+			const result = await engine.refresh()
+			expect(result.items).toHaveLength(1)
+			expect(result.items[0].id).toBe("w1")
+		})
+
+		test("items with equal boost retain original relative order", async () => {
+			const engine = new FeedEngine()
+				.register(
+					createWeatherSource([
+						weatherItem("w1", 20),
+						weatherItem("w2", 25),
+						weatherItem("w3", 30),
+					]),
+				)
+				.registerPostProcessor(async () => ({
+					boost: { w1: 0.5, w3: 0.5 },
+				}))
+
+			const result = await engine.refresh()
+			// w1 and w3 have equal boost — original order preserved: w1 before w3
+			expect(result.items.map((i) => i.id)).toEqual(["w1", "w3", "w2"])
+		})
+
+		test("negative boosts preserve relative order among demoted items", async () => {
+			const engine = new FeedEngine()
+				.register(
+					createWeatherSource([
+						weatherItem("w1", 20),
+						weatherItem("w2", 25),
+						weatherItem("w3", 30),
+					]),
+				)
+				.registerPostProcessor(async () => ({
+					boost: { w1: -0.3, w2: -0.3 },
+				}))
+
+			const result = await engine.refresh()
+			// w3 (neutral) first, then w1 and w2 (equal negative) in original order
+			expect(result.items.map((i) => i.id)).toEqual(["w3", "w1", "w2"])
+		})
+
+		test("boost works alongside additionalItems and groupedItems", async () => {
+			const extra = calendarItem("c1", "Meeting")
+
+			const engine = new FeedEngine()
+				.register(createWeatherSource([weatherItem("w1", 20), weatherItem("w2", 25)]))
+				.registerPostProcessor(async () => ({
+					additionalItems: [extra],
+					boost: { c1: 1.0 },
+					groupedItems: [{ itemIds: ["w1", "c1"], summary: "Related" }],
+				}))
+
+			const result = await engine.refresh()
+			// c1 boosted to front
+			expect(result.items[0].id).toBe("c1")
+			expect(result.items).toHaveLength(3)
+			expect(result.groupedItems).toEqual([{ itemIds: ["w1", "c1"], summary: "Related" }])
+		})
+	})
+
+	// =============================================================================
 	// PIPELINE ORDERING
 	// =============================================================================
 

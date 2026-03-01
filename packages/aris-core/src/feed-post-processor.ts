@@ -15,6 +15,8 @@ export interface FeedEnhancement {
 	groupedItems?: ItemGroup[]
 	/** Item IDs to remove from the feed */
 	suppress?: string[]
+	/** Map of item ID to boost score (-1 to 1). Positive promotes, negative demotes. */
+	boost?: Record<string, number>
 }
 
 /**
