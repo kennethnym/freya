@@ -4,10 +4,10 @@ import { TimeRelevance, UnknownActionError } from "@aris/core"
 import { DAVClient } from "tsdav"
 
 import type { CalDavDAVClient, CalDavEventData, CalDavFeedItem } from "./types.ts"
-import { CalDavEventStatus } from "./types.ts"
 
 import { CalDavCalendarKey, type CalendarContext } from "./calendar-context.ts"
 import { parseICalEvents } from "./ical-parser.ts"
+import { CalDavEventStatus, CalDavFeedItemType } from "./types.ts"
 
 // -- Source options --
 
@@ -340,7 +340,7 @@ export function computeSignals(
 function createFeedItem(event: CalDavEventData, now: Date, timeZone?: string): CalDavFeedItem {
 	return {
 		id: `caldav-event-${event.uid}${event.recurrenceId ? `-${event.recurrenceId}` : ""}`,
-		type: "caldav-event",
+		type: CalDavFeedItemType.Event,
 		timestamp: now,
 		data: event,
 		signals: computeSignals(event, now, timeZone),

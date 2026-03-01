@@ -5,6 +5,7 @@ export {
 	AttendeeRole,
 	AttendeeStatus,
 	CalDavEventStatus,
+	CalDavFeedItemType,
 	type CalDavAlarm,
 	type CalDavAttendee,
 	type CalDavDAVCalendar,
