@@ -20,7 +20,13 @@ export interface TflAlertData extends Record<string, unknown> {
 	closestStationDistance: number | null
 }
 
-export type TflAlertFeedItem = FeedItem<"tfl-alert", TflAlertData>
+export const TflFeedItemType = {
+	Alert: "tfl-alert",
+} as const
+
+export type TflFeedItemType = (typeof TflFeedItemType)[keyof typeof TflFeedItemType]
+
+export type TflAlertFeedItem = FeedItem<typeof TflFeedItemType.Alert, TflAlertData>
 
 export interface TflSourceOptions {
 	apiKey?: string
