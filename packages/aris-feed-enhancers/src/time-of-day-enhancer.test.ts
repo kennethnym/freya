@@ -1,6 +1,6 @@
-import type { Context, FeedItem, FeedItemSignals } from "@aris/core"
+import type { FeedItem, FeedItemSignals } from "@aris/core"
 
-import { TimeRelevance } from "@aris/core"
+import { Context, TimeRelevance } from "@aris/core"
 import { CalDavFeedItemType } from "@aris/source-caldav"
 import { CalendarFeedItemType } from "@aris/source-google-calendar"
 import { TflFeedItemType } from "@aris/source-tfl"
@@ -20,7 +20,7 @@ import {
 // =============================================================================
 
 function makeContext(date: Date): Context {
-	return { time: date }
+	return new Context(date)
 }
 
 function makeDate(year: number, month: number, day: number, hour: number, minute = 0): Date {
@@ -671,6 +671,19 @@ describe("edge cases", () => {
 
 		// Should apply morning rules — weather-current boosted
 		expect(result.boost!["w-current"]).toBeGreaterThan(0)
+	})
+
+	test("boost values are clamped to [-1, 1]", async () => {
+		// Morning weekday: TfL alert gets +0.6 from period rules.
+		// Pre-meeting adds +0.5. Total would be +1.1 without clamping.
+		const now = tuesday(8, 45)
+		const enhancer = createTimeOfDayEnhancer({ clock: () => now })
+		const meeting = calendarEvent("c1", tuesday(9))
+		const alert = tflAlert("tfl-1", 0.8)
+		const result = await enhancer([meeting, alert], makeContext(now))
+
+		expect(result.boost!["tfl-1"]).toBeLessThanOrEqual(1)
+		expect(result.boost!["tfl-1"]).toBeGreaterThanOrEqual(-1)
 	})
 
 	test("suppress list is deduplicated", async () => {

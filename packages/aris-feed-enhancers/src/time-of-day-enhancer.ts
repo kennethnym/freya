@@ -123,6 +123,11 @@ export function createTimeOfDayEnhancer(options?: TimeOfDayEnhancerOptions): Fee
 		const eveningLocation = hasEveningCalendarEventWithLocation(items, now)
 		applyWeatherTimeCorrelation(items, period, dayType, eveningLocation, boost)
 
+		// Clamp boost values to [-1, 1] — additive layers can exceed the range
+		for (const id in boost) {
+			boost[id] = Math.max(-1, Math.min(1, boost[id]!))
+		}
+
 		const result: FeedEnhancement = {}
 		if (Object.keys(boost).length > 0) {
 			result.boost = boost
