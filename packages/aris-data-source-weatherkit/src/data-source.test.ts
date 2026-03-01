@@ -39,7 +39,7 @@ describe("WeatherKitDataSource", () => {
 			credentials: mockCredentials,
 		})
 
-		expect(dataSource.type).toBe(WeatherFeedItemType.current)
+		expect(dataSource.type).toBe(WeatherFeedItemType.Current)
 	})
 
 	test("throws error if neither client nor credentials provided", () => {
@@ -130,9 +130,9 @@ describe("query() with mocked client", () => {
 		const items = await dataSource.query(context)
 
 		expect(items.length).toBeGreaterThan(0)
-		expect(items.some((i) => i.type === WeatherFeedItemType.current)).toBe(true)
-		expect(items.some((i) => i.type === WeatherFeedItemType.hourly)).toBe(true)
-		expect(items.some((i) => i.type === WeatherFeedItemType.daily)).toBe(true)
+		expect(items.some((i) => i.type === WeatherFeedItemType.Current)).toBe(true)
+		expect(items.some((i) => i.type === WeatherFeedItemType.Hourly)).toBe(true)
+		expect(items.some((i) => i.type === WeatherFeedItemType.Daily)).toBe(true)
 	})
 
 	test("applies hourly and daily limits", async () => {
@@ -145,8 +145,8 @@ describe("query() with mocked client", () => {
 
 		const items = await dataSource.query(context)
 
-		const hourlyItems = items.filter((i) => i.type === WeatherFeedItemType.hourly)
-		const dailyItems = items.filter((i) => i.type === WeatherFeedItemType.daily)
+		const hourlyItems = items.filter((i) => i.type === WeatherFeedItemType.Hourly)
+		const dailyItems = items.filter((i) => i.type === WeatherFeedItemType.Daily)
 
 		expect(hourlyItems.length).toBe(3)
 		expect(dailyItems.length).toBe(2)
@@ -176,8 +176,8 @@ describe("query() with mocked client", () => {
 			units: Units.imperial,
 		})
 
-		const metricCurrent = metricItems.find((i) => i.type === WeatherFeedItemType.current)
-		const imperialCurrent = imperialItems.find((i) => i.type === WeatherFeedItemType.current)
+		const metricCurrent = metricItems.find((i) => i.type === WeatherFeedItemType.Current)
+		const imperialCurrent = imperialItems.find((i) => i.type === WeatherFeedItemType.Current)
 
 		expect(metricCurrent).toBeDefined()
 		expect(imperialCurrent).toBeDefined()
@@ -203,7 +203,7 @@ describe("query() with mocked client", () => {
 			expect(item.signals!.timeRelevance).toBeDefined()
 		}
 
-		const currentItem = items.find((i) => i.type === WeatherFeedItemType.current)
+		const currentItem = items.find((i) => i.type === WeatherFeedItemType.Current)
 		expect(currentItem).toBeDefined()
 		expect(currentItem!.signals!.urgency).toBeGreaterThanOrEqual(0.5)
 	})

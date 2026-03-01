@@ -291,7 +291,7 @@ function createCurrentWeatherFeedItem(
 
 	return {
 		id: `weather-current-${timestamp.getTime()}`,
-		type: WeatherFeedItemType.current,
+		type: WeatherFeedItemType.Current,
 		timestamp,
 		data: {
 			conditionCode: current.conditionCode,
@@ -325,7 +325,7 @@ function createHourlyWeatherFeedItem(
 
 	return {
 		id: `weather-hourly-${timestamp.getTime()}-${index}`,
-		type: WeatherFeedItemType.hourly,
+		type: WeatherFeedItemType.Hourly,
 		timestamp,
 		data: {
 			forecastTime: new Date(hourly.forecastStart),
@@ -359,7 +359,7 @@ function createDailyWeatherFeedItem(
 
 	return {
 		id: `weather-daily-${timestamp.getTime()}-${index}`,
-		type: WeatherFeedItemType.daily,
+		type: WeatherFeedItemType.Daily,
 		timestamp,
 		data: {
 			forecastDate: new Date(daily.forecastStart),
@@ -386,7 +386,7 @@ function createWeatherAlertFeedItem(alert: WeatherAlert, timestamp: Date): Weath
 
 	return {
 		id: `weather-alert-${alert.id}`,
-		type: WeatherFeedItemType.alert,
+		type: WeatherFeedItemType.Alert,
 		timestamp,
 		data: {
 			alertId: alert.id,

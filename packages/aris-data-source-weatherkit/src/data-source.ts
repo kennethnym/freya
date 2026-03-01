@@ -44,7 +44,7 @@ export class WeatherKitDataSource implements DataSource<WeatherFeedItem, Weather
 	private readonly DEFAULT_HOURLY_LIMIT = 12
 	private readonly DEFAULT_DAILY_LIMIT = 7
 
-	readonly type = WeatherFeedItemType.current
+	readonly type = WeatherFeedItemType.Current
 	private readonly client: WeatherKitClient
 	private readonly hourlyLimit: number
 	private readonly dailyLimit: number
@@ -228,7 +228,7 @@ function createCurrentWeatherFeedItem(
 
 	return {
 		id: `weather-current-${timestamp.getTime()}`,
-		type: WeatherFeedItemType.current,
+		type: WeatherFeedItemType.Current,
 		timestamp,
 		data: {
 			conditionCode: current.conditionCode,
@@ -262,7 +262,7 @@ function createHourlyWeatherFeedItem(
 
 	return {
 		id: `weather-hourly-${timestamp.getTime()}-${index}`,
-		type: WeatherFeedItemType.hourly,
+		type: WeatherFeedItemType.Hourly,
 		timestamp,
 		data: {
 			forecastTime: new Date(hourly.forecastStart),
@@ -296,7 +296,7 @@ function createDailyWeatherFeedItem(
 
 	return {
 		id: `weather-daily-${timestamp.getTime()}-${index}`,
-		type: WeatherFeedItemType.daily,
+		type: WeatherFeedItemType.Daily,
 		timestamp,
 		data: {
 			forecastDate: new Date(daily.forecastStart),
@@ -323,7 +323,7 @@ function createWeatherAlertFeedItem(alert: WeatherAlert, timestamp: Date): Weath
 
 	return {
 		id: `weather-alert-${alert.id}`,
-		type: WeatherFeedItemType.alert,
+		type: WeatherFeedItemType.Alert,
 		timestamp,
 		data: {
 			alertId: alert.id,
