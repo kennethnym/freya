@@ -333,12 +333,10 @@ describe("FeedPostProcessor", () => {
 				},
 			}
 
-			const engine = new FeedEngine()
-				.register(source)
-				.registerPostProcessor(async () => {
-					callCount++
-					return {}
-				})
+			const engine = new FeedEngine().register(source).registerPostProcessor(async () => {
+				callCount++
+				return {}
+			})
 
 			engine.start()
 
@@ -377,12 +375,10 @@ describe("FeedPostProcessor", () => {
 				},
 			}
 
-			const engine = new FeedEngine()
-				.register(source)
-				.registerPostProcessor(async () => {
-					callCount++
-					return {}
-				})
+			const engine = new FeedEngine().register(source).registerPostProcessor(async () => {
+				callCount++
+				return {}
+			})
 
 			engine.start()
 
