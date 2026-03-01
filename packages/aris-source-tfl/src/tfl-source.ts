@@ -15,6 +15,7 @@ import type {
 } from "./types.ts"
 
 import { TflApi, lineId } from "./tfl-api.ts"
+import { TflFeedItemType } from "./types.ts"
 
 const setLinesInput = lineId.array()
 
@@ -150,7 +151,7 @@ export class TflSource implements FeedSource<TflAlertFeedItem> {
 
 			return {
 				id: `tfl-alert-${status.lineId}-${status.severity}`,
-				type: "tfl-alert",
+				type: TflFeedItemType.Alert,
 				timestamp: context.time,
 				data,
 				signals,
