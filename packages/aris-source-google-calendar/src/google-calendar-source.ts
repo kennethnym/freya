@@ -209,7 +209,7 @@ function createFeedItem(
 	nowMs: number,
 	lookaheadMs: number,
 ): CalendarFeedItem {
-	const itemType = event.isAllDay ? CalendarFeedItemType.allDay : CalendarFeedItemType.event
+	const itemType = event.isAllDay ? CalendarFeedItemType.AllDay : CalendarFeedItemType.Event
 
 	return {
 		id: `calendar-${event.calendarId}-${event.eventId}`,

@@ -3,10 +3,10 @@ import type { FeedItem } from "@aris/core"
 import type { Certainty, ConditionCode, PrecipitationType, Severity, Urgency } from "./weatherkit"
 
 export const WeatherFeedItemType = {
-	current: "weather-current",
-	hourly: "weather-hourly",
-	daily: "weather-daily",
-	alert: "weather-alert",
+	Current: "weather-current",
+	Hourly: "weather-hourly",
+	Daily: "weather-daily",
+	Alert: "weather-alert",
 } as const
 
 export type WeatherFeedItemType = (typeof WeatherFeedItemType)[keyof typeof WeatherFeedItemType]
@@ -28,7 +28,7 @@ export type CurrentWeatherData = {
 }
 
 export interface CurrentWeatherFeedItem extends FeedItem<
-	typeof WeatherFeedItemType.current,
+	typeof WeatherFeedItemType.Current,
 	CurrentWeatherData
 > {}
 
@@ -49,7 +49,7 @@ export type HourlyWeatherData = {
 }
 
 export interface HourlyWeatherFeedItem extends FeedItem<
-	typeof WeatherFeedItemType.hourly,
+	typeof WeatherFeedItemType.Hourly,
 	HourlyWeatherData
 > {}
 
@@ -68,7 +68,7 @@ export type DailyWeatherData = {
 }
 
 export interface DailyWeatherFeedItem extends FeedItem<
-	typeof WeatherFeedItemType.daily,
+	typeof WeatherFeedItemType.Daily,
 	DailyWeatherData
 > {}
 
@@ -86,7 +86,7 @@ export type WeatherAlertData = {
 }
 
 export interface WeatherAlertFeedItem extends FeedItem<
-	typeof WeatherFeedItemType.alert,
+	typeof WeatherFeedItemType.Alert,
 	WeatherAlertData
 > {}
 

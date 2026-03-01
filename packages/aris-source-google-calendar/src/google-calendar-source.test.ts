@@ -69,7 +69,7 @@ describe("GoogleCalendarSource", () => {
 			const source = new GoogleCalendarSource({ client: defaultMockClient() })
 			const items = await source.fetchItems(createContext())
 
-			const timedItems = items.filter((i) => i.type === CalendarFeedItemType.event)
+			const timedItems = items.filter((i) => i.type === CalendarFeedItemType.Event)
 			expect(timedItems.length).toBe(4)
 		})
 
@@ -77,7 +77,7 @@ describe("GoogleCalendarSource", () => {
 			const source = new GoogleCalendarSource({ client: defaultMockClient() })
 			const items = await source.fetchItems(createContext())
 
-			const allDayItems = items.filter((i) => i.type === CalendarFeedItemType.allDay)
+			const allDayItems = items.filter((i) => i.type === CalendarFeedItemType.AllDay)
 			expect(allDayItems.length).toBe(1)
 		})
 
