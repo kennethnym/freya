@@ -1,3 +1,4 @@
+import type { Context } from "./context"
 import type { FeedItem } from "./feed"
 
 export interface ItemGroup {
@@ -20,4 +21,4 @@ export interface FeedEnhancement {
  * A function that transforms feed items and produces enhancement directives.
  * Use named functions for meaningful error attribution.
  */
-export type FeedPostProcessor = (items: FeedItem[]) => Promise<FeedEnhancement>
+export type FeedPostProcessor = (items: FeedItem[], context: Context) => Promise<FeedEnhancement>

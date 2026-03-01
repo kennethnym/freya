@@ -177,7 +177,7 @@ export class FeedEngine<TItems extends FeedItem = FeedItem> {
 			items: processedItems,
 			groupedItems,
 			errors: postProcessorErrors,
-		} = await this.applyPostProcessors(items as TItems[], errors)
+		} = await this.applyPostProcessors(items as TItems[], context, errors)
 
 		const result: FeedResult<TItems> = {
 			context,
@@ -294,6 +294,7 @@ export class FeedEngine<TItems extends FeedItem = FeedItem> {
 
 	private async applyPostProcessors(
 		items: TItems[],
+		context: Context,
 		errors: SourceError[],
 	): Promise<{ items: TItems[]; groupedItems: ItemGroup[]; errors: SourceError[] }> {
 		let currentItems = items
@@ -303,7 +304,7 @@ export class FeedEngine<TItems extends FeedItem = FeedItem> {
 		for (const processor of this.postProcessors) {
 			const snapshot = currentItems
 			try {
-				const enhancement = await processor(currentItems)
+				const enhancement = await processor(currentItems, context)
 
 				if (enhancement.additionalItems?.length) {
 					// Post-processors operate on FeedItem[] without knowledge of TItems.
@@ -399,7 +400,7 @@ export class FeedEngine<TItems extends FeedItem = FeedItem> {
 			items: processedItems,
 			groupedItems,
 			errors: postProcessorErrors,
-		} = await this.applyPostProcessors(items as TItems[], errors)
+		} = await this.applyPostProcessors(items as TItems[], this.context, errors)
 
 		const result: FeedResult<TItems> = {
 			context: this.context,
