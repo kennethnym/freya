@@ -299,6 +299,7 @@ export class FeedEngine<TItems extends FeedItem = FeedItem> {
 		let currentItems = items
 		const allGroupedItems: ItemGroup[] = []
 		const allErrors = [...errors]
+		const boostScores = new Map<string, number>()
 
 		for (const processor of this.postProcessors) {
 			const snapshot = currentItems
@@ -321,6 +322,12 @@ export class FeedEngine<TItems extends FeedItem = FeedItem> {
 				if (enhancement.groupedItems?.length) {
 					allGroupedItems.push(...enhancement.groupedItems)
 				}
+
+				if (enhancement.boost) {
+					for (const [id, score] of Object.entries(enhancement.boost)) {
+						boostScores.set(id, (boostScores.get(id) ?? 0) + score)
+					}
+				}
 			} catch (err) {
 				const sourceId = processor.name || "anonymous"
 				allErrors.push({
@@ -329,6 +336,12 @@ export class FeedEngine<TItems extends FeedItem = FeedItem> {
 				})
 				currentItems = snapshot
 			}
+		}
+
+		// Apply boost reordering: positive-boost first (desc), then zero, then negative (asc).
+		// Stable sort within each tier preserves original relative order.
+		if (boostScores.size > 0) {
+			currentItems = applyBoostOrder(currentItems, boostScores)
 		}
 
 		// Remove stale item IDs from groups and drop empty groups
@@ -484,6 +497,47 @@ export class FeedEngine<TItems extends FeedItem = FeedItem> {
 			}
 		})
 	}
+}
+
+function clamp(value: number, min: number, max: number): number {
+	return Math.min(max, Math.max(min, value))
+}
+
+function applyBoostOrder<T extends FeedItem>(items: T[], boostScores: Map<string, number>): T[] {
+	const positive: T[] = []
+	const neutral: T[] = []
+	const negative: T[] = []
+
+	for (const item of items) {
+		const raw = boostScores.get(item.id)
+		if (raw === undefined || raw === 0) {
+			neutral.push(item)
+		} else {
+			const clamped = clamp(raw, -1, 1)
+			if (clamped > 0) {
+				positive.push(item)
+			} else if (clamped < 0) {
+				negative.push(item)
+			} else {
+				neutral.push(item)
+			}
+		}
+	}
+
+	// Sort positive descending by boost, negative ascending (most negative last)
+	positive.sort((a, b) => {
+		const aScore = clamp(boostScores.get(a.id) ?? 0, -1, 1)
+		const bScore = clamp(boostScores.get(b.id) ?? 0, -1, 1)
+		return bScore - aScore
+	})
+
+	negative.sort((a, b) => {
+		const aScore = clamp(boostScores.get(a.id) ?? 0, -1, 1)
+		const bScore = clamp(boostScores.get(b.id) ?? 0, -1, 1)
+		return bScore - aScore
+	})
+
+	return [...positive, ...neutral, ...negative]
 }
 
 function buildGraph(sources: FeedSource[]): SourceGraph {
