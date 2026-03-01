@@ -338,7 +338,7 @@ export class FeedEngine<TItems extends FeedItem = FeedItem> {
 			}
 		}
 
-		// Apply boost reordering: positive-boost first (desc), then zero, then negative (asc).
+		// Apply boost reordering: positive-boost first (desc), then zero, then negative (desc).
 		// Stable sort within each tier preserves original relative order.
 		if (boostScores.size > 0) {
 			currentItems = applyBoostOrder(currentItems, boostScores)
@@ -524,7 +524,7 @@ function applyBoostOrder<T extends FeedItem>(items: T[], boostScores: Map<string
 		}
 	}
 
-	// Sort positive descending by boost, negative ascending (most negative last)
+	// Sort positive descending by boost, negative descending (least negative first, most negative last)
 	positive.sort((a, b) => {
 		const aScore = clamp(boostScores.get(a.id) ?? 0, -1, 1)
 		const bScore = clamp(boostScores.get(b.id) ?? 0, -1, 1)
