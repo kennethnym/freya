@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test"
 
-import type { ActionDefinition, Context, ContextKey, FeedItem, FeedSource } from "./index"
+import type { ActionDefinition, ContextEntry, ContextKey, FeedItem, FeedSource } from "./index"
 
 import { FeedEngine } from "./feed-engine"
-import { TimeRelevance, UnknownActionError, contextKey, contextValue } from "./index"
+import { Context, TimeRelevance, UnknownActionError, contextKey } from "./index"
 
 // No-op action methods for test sources
 const noActions = {
@@ -48,7 +48,7 @@ interface SimulatedLocationSource extends FeedSource {
 }
 
 function createLocationSource(): SimulatedLocationSource {
-	let callback: ((update: Partial<Context>) => void) | null = null
+	let callback: ((entries: readonly ContextEntry[]) => void) | null = null
 	let currentLocation: Location = { lat: 0, lng: 0 }
 
 	return {
@@ -63,12 +63,12 @@ function createLocationSource(): SimulatedLocationSource {
 		},
 
 		async fetchContext() {
-			return { [LocationKey]: currentLocation }
+			return [[LocationKey, currentLocation]]
 		},
 
 		simulateUpdate(location: Location) {
 			currentLocation = location
-			callback?.({ [LocationKey]: location })
+			callback?.([[LocationKey, location]])
 		},
 	}
 }
@@ -85,15 +85,15 @@ function createWeatherSource(
 		...noActions,
 
 		async fetchContext(context) {
-			const location = contextValue(context, LocationKey)
+			const location = context.get(LocationKey)
 			if (!location) return null
 
 			const weather = await fetchWeather(location)
-			return { [WeatherKey]: weather }
+			return [[WeatherKey, weather]]
 		},
 
 		async fetchItems(context) {
-			const weather = contextValue(context, WeatherKey)
+			const weather = context.get(WeatherKey)
 			if (!weather) return []
 
 			return [
@@ -123,7 +123,7 @@ function createAlertSource(): FeedSource<AlertFeedItem> {
 		},
 
 		async fetchItems(context) {
-			const weather = contextValue(context, WeatherKey)
+			const weather = context.get(WeatherKey)
 			if (!weather) return []
 
 			if (weather.condition === "storm") {
@@ -265,7 +265,7 @@ describe("FeedEngine", () => {
 				...noActions,
 				async fetchContext() {
 					order.push("location")
-					return { [LocationKey]: { lat: 51.5, lng: -0.1 } }
+					return [[LocationKey, { lat: 51.5, lng: -0.1 }]]
 				},
 			}
 
@@ -275,9 +275,9 @@ describe("FeedEngine", () => {
 				...noActions,
 				async fetchContext(ctx) {
 					order.push("weather")
-					const loc = contextValue(ctx, LocationKey)
+					const loc = ctx.get(LocationKey)
 					expect(loc).toBeDefined()
-					return { [WeatherKey]: { temperature: 20, condition: "sunny" } }
+					return [[WeatherKey, { temperature: 20, condition: "sunny" }]]
 				},
 			}
 
@@ -298,11 +298,11 @@ describe("FeedEngine", () => {
 
 			const { context } = await engine.refresh()
 
-			expect(contextValue(context, LocationKey)).toEqual({
+			expect(context.get(LocationKey)).toEqual({
 				lat: 51.5,
 				lng: -0.1,
 			})
-			expect(contextValue(context, WeatherKey)).toEqual({
+			expect(context.get(WeatherKey)).toEqual({
 				temperature: 20,
 				condition: "sunny",
 			})
@@ -361,7 +361,7 @@ describe("FeedEngine", () => {
 
 			const { context, items } = await engine.refresh()
 
-			expect(contextValue(context, WeatherKey)).toBeUndefined()
+			expect(context.get(WeatherKey)).toBeUndefined()
 			expect(items).toHaveLength(0)
 		})
 
@@ -459,7 +459,7 @@ describe("FeedEngine", () => {
 			await engine.refresh()
 
 			const context = engine.currentContext()
-			expect(contextValue(context, LocationKey)).toEqual({
+			expect(context.get(LocationKey)).toEqual({
 				lat: 51.5,
 				lng: -0.1,
 			})
@@ -734,7 +734,7 @@ describe("FeedEngine", () => {
 		})
 
 		test("reactive item update refreshes cache", async () => {
-			let itemUpdateCallback: (() => void) | null = null
+			let itemUpdateCallback: ((items: FeedItem[]) => void) | null = null
 
 			const source: FeedSource = {
 				id: "reactive-items",
@@ -765,7 +765,7 @@ describe("FeedEngine", () => {
 			engine.start()
 
 			// Trigger item update
-			itemUpdateCallback!()
+			itemUpdateCallback!([])
 
 			// Wait for async refresh
 			await new Promise((resolve) => setTimeout(resolve, 50))
@@ -885,12 +885,12 @@ describe("FeedEngine", () => {
 				...noActions,
 				async fetchContext(ctx) {
 					fetchCount++
-					const loc = contextValue(ctx, LocationKey)
+					const loc = ctx.get(LocationKey)
 					if (!loc) return null
-					return { [WeatherKey]: { temperature: 20, condition: "sunny" } }
+					return [[WeatherKey, { temperature: 20, condition: "sunny" }]]
 				},
 				async fetchItems(ctx) {
-					const weather = contextValue(ctx, WeatherKey)
+					const weather = ctx.get(WeatherKey)
 					if (!weather) return []
 					return [
 						{

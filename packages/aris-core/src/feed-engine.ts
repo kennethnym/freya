@@ -1,8 +1,10 @@
 import type { ActionDefinition } from "./action"
-import type { Context } from "./context"
+import type { ContextEntry } from "./context"
 import type { FeedItem } from "./feed"
 import type { FeedPostProcessor, ItemGroup } from "./feed-post-processor"
 import type { FeedSource } from "./feed-source"
+
+import { Context } from "./context"
 
 export interface SourceError {
 	sourceId: string
@@ -65,7 +67,7 @@ interface SourceGraph {
 export class FeedEngine<TItems extends FeedItem = FeedItem> {
 	private sources = new Map<string, FeedSource>()
 	private graph: SourceGraph | null = null
-	private context: Context = { time: new Date() }
+	private context: Context = new Context()
 	private subscribers = new Set<FeedSubscriber<TItems>>()
 	private cleanups: Array<() => void> = []
 	private started = false
@@ -138,14 +140,14 @@ export class FeedEngine<TItems extends FeedItem = FeedItem> {
 		const errors: SourceError[] = []
 
 		// Reset context with fresh time
-		let context: Context = { time: new Date() }
+		const context = new Context()
 
 		// Run fetchContext in topological order
 		for (const source of graph.sorted) {
 			try {
-				const update = await source.fetchContext(context)
-				if (update) {
-					context = { ...context, ...update }
+				const entries = await source.fetchContext(context)
+				if (entries) {
+					context.set(entries)
 				}
 			} catch (err) {
 				errors.push({
@@ -213,8 +215,8 @@ export class FeedEngine<TItems extends FeedItem = FeedItem> {
 		for (const source of graph.sorted) {
 			if (source.onContextUpdate) {
 				const cleanup = source.onContextUpdate(
-					(update) => {
-						this.handleContextUpdate(source.id, update)
+					(entries) => {
+						this.handleContextUpdate(source.id, entries)
 					},
 					() => this.context,
 				)
@@ -365,8 +367,9 @@ export class FeedEngine<TItems extends FeedItem = FeedItem> {
 		return this.graph
 	}
 
-	private handleContextUpdate(sourceId: string, update: Partial<Context>): void {
-		this.context = { ...this.context, ...update, time: new Date() }
+	private handleContextUpdate(sourceId: string, entries: readonly ContextEntry[]): void {
+		this.context.time = new Date()
+		this.context.set(entries)
 
 		// Re-run dependents and notify
 		this.refreshDependents(sourceId)
@@ -381,9 +384,9 @@ export class FeedEngine<TItems extends FeedItem = FeedItem> {
 			const source = graph.sources.get(id)
 			if (source) {
 				try {
-					const update = await source.fetchContext(this.context)
-					if (update) {
-						this.context = { ...this.context, ...update }
+					const entries = await source.fetchContext(this.context)
+					if (entries) {
+						this.context.set(entries)
 					}
 				} catch {
 					// Errors during reactive updates are logged but don't stop propagation

@@ -1,6 +1,6 @@
-import type { Context } from "@aris/core"
+import type { ContextEntry } from "@aris/core"
 
-import { TimeRelevance, contextValue } from "@aris/core"
+import { Context, TimeRelevance } from "@aris/core"
 import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
@@ -13,14 +13,21 @@ import type {
 } from "./types.ts"
 
 import { CalDavSource, computeSignals } from "./caldav-source.ts"
-import { CalDavCalendarKey } from "./calendar-context.ts"
+import { CalDavCalendarKey, type CalendarContext } from "./calendar-context.ts"
 
 function loadFixture(name: string): string {
 	return readFileSync(join(import.meta.dir, "..", "fixtures", name), "utf-8")
 }
 
 function createContext(time: Date): Context {
-	return { time }
+	return new Context(time)
+}
+
+/** Extract the CalendarContext value from fetchContext entries. */
+function extractCalendar(entries: readonly ContextEntry[] | null): CalendarContext | undefined {
+	if (!entries) return undefined
+	const entry = entries.find(([key]) => key === CalDavCalendarKey)
+	return entry?.[1] as CalendarContext | undefined
 }
 
 class MockDAVClient implements CalDavDAVClient {
@@ -302,8 +309,8 @@ describe("CalDavSource.fetchContext", () => {
 	test("returns empty context when no calendars exist", async () => {
 		const client = new MockDAVClient([], {})
 		const source = createSource(client)
-		const ctx = await source.fetchContext(createContext(new Date("2026-01-15T12:00:00Z")))
-		const calendar = contextValue(ctx as Context, CalDavCalendarKey)
+		const entries = await source.fetchContext(createContext(new Date("2026-01-15T12:00:00Z")))
+		const calendar = extractCalendar(entries)
 
 		expect(calendar).toBeDefined()
 		expect(calendar!.inProgress).toEqual([])
@@ -320,8 +327,8 @@ describe("CalDavSource.fetchContext", () => {
 		const source = createSource(client)
 
 		// 14:30 is during the 14:00-15:00 event
-		const ctx = await source.fetchContext(createContext(new Date("2026-01-15T14:30:00Z")))
-		const calendar = contextValue(ctx as Context, CalDavCalendarKey)
+		const entries = await source.fetchContext(createContext(new Date("2026-01-15T14:30:00Z")))
+		const calendar = extractCalendar(entries)
 
 		expect(calendar!.inProgress).toHaveLength(1)
 		expect(calendar!.inProgress[0]!.title).toBe("Team Standup")
@@ -335,8 +342,8 @@ describe("CalDavSource.fetchContext", () => {
 		const source = createSource(client)
 
 		// 12:00 is before the 14:00 event
-		const ctx = await source.fetchContext(createContext(new Date("2026-01-15T12:00:00Z")))
-		const calendar = contextValue(ctx as Context, CalDavCalendarKey)
+		const entries = await source.fetchContext(createContext(new Date("2026-01-15T12:00:00Z")))
+		const calendar = extractCalendar(entries)
 
 		expect(calendar!.inProgress).toHaveLength(0)
 		expect(calendar!.nextEvent).not.toBeNull()
@@ -350,8 +357,8 @@ describe("CalDavSource.fetchContext", () => {
 		const client = new MockDAVClient([{ url: "/cal/work", displayName: "Work" }], objects)
 		const source = createSource(client)
 
-		const ctx = await source.fetchContext(createContext(new Date("2026-01-15T12:00:00Z")))
-		const calendar = contextValue(ctx as Context, CalDavCalendarKey)
+		const entries = await source.fetchContext(createContext(new Date("2026-01-15T12:00:00Z")))
+		const calendar = extractCalendar(entries)
 
 		expect(calendar!.inProgress).toHaveLength(0)
 		expect(calendar!.nextEvent).toBeNull()
@@ -369,8 +376,8 @@ describe("CalDavSource.fetchContext", () => {
 		const client = new MockDAVClient([{ url: "/cal/work", displayName: "Work" }], objects)
 		const source = createSource(client)
 
-		const ctx = await source.fetchContext(createContext(new Date("2026-01-15T12:00:00Z")))
-		const calendar = contextValue(ctx as Context, CalDavCalendarKey)
+		const entries = await source.fetchContext(createContext(new Date("2026-01-15T12:00:00Z")))
+		const calendar = extractCalendar(entries)
 
 		expect(calendar!.todayEventCount).toBe(2)
 		expect(calendar!.hasTodayEvents).toBe(true)

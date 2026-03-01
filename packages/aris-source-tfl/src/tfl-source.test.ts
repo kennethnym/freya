@@ -1,5 +1,4 @@
-import type { Context } from "@aris/core"
-
+import { Context } from "@aris/core"
 import { LocationKey, type Location } from "@aris/source-location"
 import { describe, expect, test } from "bun:test"
 
@@ -81,9 +80,9 @@ class FixtureTflApi implements ITflApi {
 }
 
 function createContext(location?: Location): Context {
-	const ctx: Context = { time: new Date("2026-01-15T12:00:00Z") }
+	const ctx = new Context(new Date("2026-01-15T12:00:00Z"))
 	if (location) {
-		ctx[LocationKey] = location
+		ctx.set([[LocationKey, location]])
 	}
 	return ctx
 }

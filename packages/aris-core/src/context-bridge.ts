@@ -1,8 +1,10 @@
-import type { Context } from "./context"
+import type { ContextEntry } from "./context"
 import type { ContextProvider } from "./context-provider"
 
+import { contextKey } from "./context"
+
 interface ContextUpdatable {
-	pushContextUpdate(update: Partial<Context>): void
+	pushContextUpdate(entries: readonly ContextEntry[]): void
 }
 
 export interface ProviderError {
@@ -54,7 +56,7 @@ export class ContextBridge {
 		this.providers.set(provider.key, provider as ContextProvider)
 
 		const cleanup = provider.onUpdate((value) => {
-			this.controller.pushContextUpdate({ [provider.key]: value })
+			this.controller.pushContextUpdate([[contextKey(provider.key), value]])
 		})
 		this.cleanups.push(cleanup)
 
@@ -67,7 +69,7 @@ export class ContextBridge {
 	 * Returns errors from providers that failed to fetch.
 	 */
 	async refresh(): Promise<RefreshResult> {
-		const updates: Partial<Context> = {}
+		const collected: ContextEntry[] = []
 		const errors: ProviderError[] = []
 
 		const entries = Array.from(this.providers.entries())
@@ -78,7 +80,7 @@ export class ContextBridge {
 		entries.forEach(([key], i) => {
 			const result = results[i]
 			if (result?.status === "fulfilled") {
-				updates[key] = result.value
+				collected.push([contextKey(key), result.value])
 			} else if (result?.status === "rejected") {
 				errors.push({
 					key,
@@ -87,7 +89,7 @@ export class ContextBridge {
 			}
 		})
 
-		this.controller.pushContextUpdate(updates)
+		this.controller.pushContextUpdate(collected)
 
 		return { errors }
 	}

@@ -1,6 +1,6 @@
-import type { Context, DataSource, FeedItemSignals } from "@aris/core"
+import type { Context, ContextKey, DataSource, FeedItemSignals } from "@aris/core"
 
-import { TimeRelevance } from "@aris/core"
+import { TimeRelevance, contextKey } from "@aris/core"
 
 import {
 	WeatherFeedItemType,
@@ -40,6 +40,13 @@ export interface WeatherKitQueryConfig {
 	units?: Units
 }
 
+interface LocationData {
+	lat: number
+	lng: number
+}
+
+const LocationKey: ContextKey<LocationData> = contextKey("aris.location", "location")
+
 export class WeatherKitDataSource implements DataSource<WeatherFeedItem, WeatherKitQueryConfig> {
 	private readonly DEFAULT_HOURLY_LIMIT = 12
 	private readonly DEFAULT_DAILY_LIMIT = 7
@@ -59,7 +66,8 @@ export class WeatherKitDataSource implements DataSource<WeatherFeedItem, Weather
 	}
 
 	async query(context: Context, config: WeatherKitQueryConfig = {}): Promise<WeatherFeedItem[]> {
-		if (!context.location) {
+		const location = context.get(LocationKey)
+		if (!location) {
 			return []
 		}
 
@@ -67,8 +75,8 @@ export class WeatherKitDataSource implements DataSource<WeatherFeedItem, Weather
 		const timestamp = context.time
 
 		const response = await this.client.fetch({
-			lat: context.location.lat,
-			lng: context.location.lng,
+			lat: location.lat,
+			lng: location.lng,
 		})
 
 		const items: WeatherFeedItem[] = []

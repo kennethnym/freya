@@ -1,6 +1,6 @@
-import type { ActionDefinition, Context, FeedItemSignals, FeedSource } from "@aris/core"
+import type { ActionDefinition, ContextEntry, FeedItemSignals, FeedSource } from "@aris/core"
 
-import { TimeRelevance, UnknownActionError } from "@aris/core"
+import { Context, TimeRelevance, UnknownActionError } from "@aris/core"
 
 import type {
 	ApiCalendarEvent,
@@ -58,7 +58,7 @@ const URGENCY_ALL_DAY = 0.4
  *   .register(calendarSource)
  *
  * // Access next-event context in downstream sources
- * const next = contextValue(context, NextEventKey)
+ * const next = context.get(NextEventKey)
  * if (next && next.minutesUntilStart < 15) {
  *   // remind user
  * }
@@ -85,7 +85,7 @@ export class GoogleCalendarSource implements FeedSource<CalendarFeedItem> {
 		throw new UnknownActionError(actionId)
 	}
 
-	async fetchContext(context: Context): Promise<Partial<Context> | null> {
+	async fetchContext(context: Context): Promise<readonly ContextEntry[] | null> {
 		const events = await this.fetchAllEvents(context.time)
 
 		const now = context.time.getTime()
@@ -105,7 +105,7 @@ export class GoogleCalendarSource implements FeedSource<CalendarFeedItem> {
 			location: nextTimedEvent.location,
 		}
 
-		return { [NextEventKey]: nextEvent }
+		return [[NextEventKey, nextEvent]]
 	}
 
 	async fetchItems(context: Context): Promise<CalendarFeedItem[]> {

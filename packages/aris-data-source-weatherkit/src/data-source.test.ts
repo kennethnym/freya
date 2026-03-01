@@ -1,5 +1,6 @@
-import type { Context } from "@aris/core"
+import type { ContextKey } from "@aris/core"
 
+import { Context, contextKey } from "@aris/core"
 import { describe, expect, test } from "bun:test"
 
 import type { WeatherKitClient, WeatherKitResponse } from "./weatherkit"
@@ -15,14 +16,25 @@ const mockCredentials = {
 	serviceId: "mock",
 }
 
+interface LocationData {
+	lat: number
+	lng: number
+	accuracy: number
+}
+
+const LocationKey: ContextKey<LocationData> = contextKey("aris.location", "location")
+
 const createMockClient = (response: WeatherKitResponse): WeatherKitClient => ({
 	fetch: async () => response,
 })
 
-const createMockContext = (location?: { lat: number; lng: number }): Context => ({
-	time: new Date("2026-01-17T00:00:00Z"),
-	location: location ? { ...location, accuracy: 10 } : undefined,
-})
+function createMockContext(location?: { lat: number; lng: number }): Context {
+	const ctx = new Context(new Date("2026-01-17T00:00:00Z"))
+	if (location) {
+		ctx.set([[LocationKey, { ...location, accuracy: 10 }]])
+	}
+	return ctx
+}
 
 describe("WeatherKitDataSource", () => {
 	test("returns empty array when location is missing", async () => {

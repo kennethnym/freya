@@ -10,4 +10,4 @@ export interface NextEvent {
 	location: string | null
 }
 
-export const NextEventKey: ContextKey<NextEvent> = contextKey("nextEvent")
+export const NextEventKey: ContextKey<NextEvent> = contextKey("aris.google-calendar", "nextEvent")

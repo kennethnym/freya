@@ -1,4 +1,6 @@
-import { contextValue, type Context } from "@aris/core"
+import type { FeedSource } from "@aris/core"
+
+import { Context } from "@aris/core"
 import { LocationKey } from "@aris/source-location"
 import { describe, expect, test } from "bun:test"
 
@@ -6,7 +8,7 @@ import type { WeatherKitClient, WeatherKitResponse } from "./weatherkit"
 
 import fixture from "../fixtures/san-francisco.json"
 import { WeatherFeedItemType } from "./feed-items"
-import { WeatherKey } from "./weather-context"
+import { WeatherKey, type Weather } from "./weather-context"
 import { WeatherSource, Units } from "./weather-source"
 
 const mockCredentials = {
@@ -23,9 +25,9 @@ function createMockClient(response: WeatherKitResponse): WeatherKitClient {
 }
 
 function createMockContext(location?: { lat: number; lng: number }): Context {
-	const ctx: Context = { time: new Date("2026-01-17T00:00:00Z") }
+	const ctx = new Context(new Date("2026-01-17T00:00:00Z"))
 	if (location) {
-		ctx[LocationKey] = { ...location, accuracy: 10, timestamp: new Date() }
+		ctx.set([[LocationKey, { ...location, accuracy: 10, timestamp: new Date() }]])
 	}
 	return ctx
 }
@@ -63,18 +65,19 @@ describe("WeatherSource", () => {
 			const source = new WeatherSource({ client: mockClient })
 			const context = createMockContext({ lat: 37.7749, lng: -122.4194 })
 
-			const result = await source.fetchContext(context)
-			expect(result).not.toBeNull()
-			const weather = contextValue(result! as Context, WeatherKey)
+			const entries = await source.fetchContext(context)
+			expect(entries).not.toBeNull()
+			expect(entries).toHaveLength(1)
 
-			expect(weather).toBeDefined()
-			expect(typeof weather!.temperature).toBe("number")
-			expect(typeof weather!.temperatureApparent).toBe("number")
-			expect(typeof weather!.condition).toBe("string")
-			expect(typeof weather!.humidity).toBe("number")
-			expect(typeof weather!.uvIndex).toBe("number")
-			expect(typeof weather!.windSpeed).toBe("number")
-			expect(typeof weather!.daylight).toBe("boolean")
+			const [key, weather] = entries![0]! as [typeof WeatherKey, Weather]
+			expect(key).toEqual(WeatherKey)
+			expect(typeof weather.temperature).toBe("number")
+			expect(typeof weather.temperatureApparent).toBe("number")
+			expect(typeof weather.condition).toBe("string")
+			expect(typeof weather.humidity).toBe("number")
+			expect(typeof weather.uvIndex).toBe("number")
+			expect(typeof weather.windSpeed).toBe("number")
+			expect(typeof weather.daylight).toBe("boolean")
 		})
 
 		test("converts temperature to imperial", async () => {
@@ -84,12 +87,12 @@ describe("WeatherSource", () => {
 			})
 			const context = createMockContext({ lat: 37.7749, lng: -122.4194 })
 
-			const result = await source.fetchContext(context)
-			expect(result).not.toBeNull()
-			const weather = contextValue(result! as Context, WeatherKey)
+			const entries = await source.fetchContext(context)
+			expect(entries).not.toBeNull()
 
+			const [, weather] = entries![0]! as [typeof WeatherKey, Weather]
 			// Fixture has temperature around 10°C, imperial should be around 50°F
-			expect(weather!.temperature).toBeGreaterThan(40)
+			expect(weather.temperature).toBeGreaterThan(40)
 		})
 	})
 
@@ -177,12 +180,12 @@ describe("WeatherSource", () => {
 
 	describe("no reactive methods", () => {
 		test("does not implement onContextUpdate", () => {
-			const source = new WeatherSource({ credentials: mockCredentials })
+			const source: FeedSource = new WeatherSource({ credentials: mockCredentials })
 			expect(source.onContextUpdate).toBeUndefined()
 		})
 
 		test("does not implement onItemsUpdate", () => {
-			const source = new WeatherSource({ credentials: mockCredentials })
+			const source: FeedSource = new WeatherSource({ credentials: mockCredentials })
 			expect(source.onItemsUpdate).toBeUndefined()
 		})
 	})

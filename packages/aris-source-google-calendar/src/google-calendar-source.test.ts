@@ -1,10 +1,10 @@
-import { TimeRelevance, contextValue, type Context } from "@aris/core"
+import { Context, TimeRelevance } from "@aris/core"
 import { describe, expect, test } from "bun:test"
 
 import type { ApiCalendarEvent, GoogleCalendarClient, ListEventsOptions } from "./types"
 
 import fixture from "../fixtures/events.json"
-import { NextEventKey } from "./calendar-context"
+import { NextEventKey, type NextEvent } from "./calendar-context"
 import { CalendarFeedItemType } from "./feed-items"
 import { GoogleCalendarSource } from "./google-calendar-source"
 
@@ -38,7 +38,7 @@ function defaultMockClient(): GoogleCalendarClient {
 }
 
 function createContext(time?: Date): Context {
-	return { time: time ?? NOW }
+	return new Context(time ?? NOW)
 }
 
 describe("GoogleCalendarSource", () => {
@@ -229,15 +229,16 @@ describe("GoogleCalendarSource", () => {
 
 		test("returns next upcoming timed event (not ongoing)", async () => {
 			const source = new GoogleCalendarSource({ client: defaultMockClient() })
-			const result = await source.fetchContext(createContext())
+			const entries = await source.fetchContext(createContext())
 
-			expect(result).not.toBeNull()
-			const nextEvent = contextValue(result! as Context, NextEventKey)
-			expect(nextEvent).toBeDefined()
+			expect(entries).not.toBeNull()
+			expect(entries).toHaveLength(1)
+			const [key, nextEvent] = entries![0]! as [typeof NextEventKey, NextEvent]
+			expect(key).toEqual(NextEventKey)
 			// evt-soon starts at 10:10, which is the nearest future timed event
-			expect(nextEvent!.title).toBe("1:1 with Manager")
-			expect(nextEvent!.minutesUntilStart).toBe(10)
-			expect(nextEvent!.location).toBeNull()
+			expect(nextEvent.title).toBe("1:1 with Manager")
+			expect(nextEvent.minutesUntilStart).toBe(10)
+			expect(nextEvent.location).toBeNull()
 		})
 
 		test("includes location when available", async () => {
@@ -255,12 +256,11 @@ describe("GoogleCalendarSource", () => {
 			const source = new GoogleCalendarSource({
 				client: createMockClient({ primary: events }),
 			})
-			const result = await source.fetchContext(createContext())
+			const entries = await source.fetchContext(createContext())
 
-			expect(result).not.toBeNull()
-			const nextEvent = contextValue(result! as Context, NextEventKey)
-			expect(nextEvent).toBeDefined()
-			expect(nextEvent!.location).toBe("123 Main St")
+			expect(entries).not.toBeNull()
+			const [, nextEvent] = entries![0]! as [typeof NextEventKey, NextEvent]
+			expect(nextEvent.location).toBe("123 Main St")
 		})
 
 		test("skips ongoing events for next-event context", async () => {

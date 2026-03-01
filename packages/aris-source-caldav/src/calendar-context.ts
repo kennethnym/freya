@@ -21,4 +21,4 @@ export interface CalendarContext {
 	todayEventCount: number
 }
 
-export const CalDavCalendarKey: ContextKey<CalendarContext> = contextKey("caldavCalendar")
+export const CalDavCalendarKey: ContextKey<CalendarContext> = contextKey("aris.caldav", "calendar")

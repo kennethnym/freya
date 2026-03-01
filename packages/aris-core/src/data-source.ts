@@ -12,7 +12,7 @@ import type { FeedItem } from "./feed"
  *   readonly type = "weather"
  *
  *   async query(context: Context): Promise<WeatherItem[]> {
- *     const location = contextValue(context, LocationKey)
+ *     const location = context.get(LocationKey)
  *     if (!location) return []
  *     const data = await fetchWeather(location)
  *     return [{

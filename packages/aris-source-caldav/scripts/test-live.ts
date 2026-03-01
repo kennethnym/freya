@@ -5,6 +5,8 @@
  *   bun run test-live.ts
  */
 
+import { Context } from "@aris/core"
+
 import { CalDavSource } from "../src/index.ts"
 
 const serverUrl = prompt("CalDAV server URL:")
@@ -27,7 +29,7 @@ const source = new CalDavSource({
 	lookAheadDays,
 })
 
-const context = { time: new Date() }
+const context = new Context()
 
 console.log(`\nFetching from ${serverUrl} as ${username} (lookAheadDays=${lookAheadDays})...\n`)
 

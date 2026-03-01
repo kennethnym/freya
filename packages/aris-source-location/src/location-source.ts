@@ -1,11 +1,11 @@
-import type { ActionDefinition, Context, FeedSource } from "@aris/core"
+import type { ActionDefinition, ContextEntry, FeedSource } from "@aris/core"
 
-import { UnknownActionError, contextKey, type ContextKey } from "@aris/core"
+import { Context, UnknownActionError, contextKey, type ContextKey } from "@aris/core"
 import { type } from "arktype"
 
 import { Location, type LocationSourceOptions } from "./types.ts"
 
-export const LocationKey: ContextKey<Location> = contextKey("location")
+export const LocationKey: ContextKey<Location> = contextKey("aris.location", "location")
 
 /**
  * A FeedSource that provides location context.
@@ -20,7 +20,7 @@ export class LocationSource implements FeedSource {
 
 	private readonly historySize: number
 	private locations: Location[] = []
-	private listeners = new Set<(update: Partial<Context>) => void>()
+	private listeners = new Set<(entries: readonly ContextEntry[]) => void>()
 
 	constructor(options: LocationSourceOptions = {}) {
 		this.historySize = options.historySize ?? 1
@@ -59,8 +59,9 @@ export class LocationSource implements FeedSource {
 		if (this.locations.length > this.historySize) {
 			this.locations.shift()
 		}
+		const entries: readonly ContextEntry[] = [[LocationKey, location]]
 		this.listeners.forEach((listener) => {
-			listener({ [LocationKey]: location })
+			listener(entries)
 		})
 	}
 
@@ -78,16 +79,16 @@ export class LocationSource implements FeedSource {
 		return this.locations
 	}
 
-	onContextUpdate(callback: (update: Partial<Context>) => void): () => void {
+	onContextUpdate(callback: (entries: readonly ContextEntry[]) => void): () => void {
 		this.listeners.add(callback)
 		return () => {
 			this.listeners.delete(callback)
 		}
 	}
 
-	async fetchContext(): Promise<Partial<Context> | null> {
+	async fetchContext(): Promise<readonly ContextEntry[] | null> {
 		if (this.lastLocation) {
-			return { [LocationKey]: this.lastLocation }
+			return [[LocationKey, this.lastLocation]]
 		}
 		return null
 	}

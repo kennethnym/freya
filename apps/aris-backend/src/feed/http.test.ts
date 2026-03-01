@@ -1,4 +1,4 @@
-import type { ActionDefinition, Context, FeedItem, FeedSource } from "@aris/core"
+import type { ActionDefinition, ContextEntry, FeedItem, FeedSource } from "@aris/core"
 
 import { describe, expect, test } from "bun:test"
 import { Hono } from "hono"
@@ -27,7 +27,7 @@ function createStubSource(id: string, items: FeedItem[] = []): FeedSource {
 		async executeAction(): Promise<unknown> {
 			return undefined
 		},
-		async fetchContext(): Promise<Partial<Context> | null> {
+		async fetchContext(): Promise<readonly ContextEntry[] | null> {
 			return null
 		},
 		async fetchItems() {
