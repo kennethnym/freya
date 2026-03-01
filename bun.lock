@@ -89,6 +89,17 @@
         "arktype": "^2.1.0",
       },
     },
+    "packages/aris-feed-enhancers": {
+      "name": "@aris/feed-enhancers",
+      "version": "0.0.0",
+      "dependencies": {
+        "@aris/core": "workspace:*",
+        "@aris/source-caldav": "workspace:*",
+        "@aris/source-google-calendar": "workspace:*",
+        "@aris/source-tfl": "workspace:*",
+        "@aris/source-weatherkit": "workspace:*",
+      },
+    },
     "packages/aris-source-caldav": {
       "name": "@aris/source-caldav",
       "version": "0.0.0",
@@ -143,6 +154,8 @@
     "@aris/core": ["@aris/core@workspace:packages/aris-core"],
 
     "@aris/data-source-weatherkit": ["@aris/data-source-weatherkit@workspace:packages/aris-data-source-weatherkit"],
+
+    "@aris/feed-enhancers": ["@aris/feed-enhancers@workspace:packages/aris-feed-enhancers"],
 
     "@aris/source-caldav": ["@aris/source-caldav@workspace:packages/aris-source-caldav"],
 
