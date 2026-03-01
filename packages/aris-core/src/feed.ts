@@ -24,6 +24,20 @@ export interface FeedItemSignals {
 }
 
 /**
+ * A named slot for LLM-fillable content on a feed item.
+ *
+ * Sources declare slots with a description that tells the LLM what content
+ * to generate. The enhancement harness fills `content` asynchronously;
+ * until then it remains `null`.
+ */
+export interface Slot {
+	/** Tells the LLM what this slot wants — written by the source */
+	description: string
+	/** LLM-filled text content, null until enhanced */
+	content: string | null
+}
+
+/**
  * A single item in the feed.
  *
  * @example
@@ -36,6 +50,12 @@ export interface FeedItemSignals {
  *   timestamp: new Date(),
  *   data: { temp: 18, condition: "cloudy" },
  *   signals: { urgency: 0.5, timeRelevance: "ambient" },
+ *   slots: {
+ *     insight: {
+ *       description: "A short contextual insight about the current weather",
+ *       content: null,
+ *     },
+ *   },
  * }
  * ```
  */
@@ -53,4 +73,6 @@ export interface FeedItem<
 	data: TData
 	/** Source-provided hints for post-processors. Optional — omit if no signals apply. */
 	signals?: FeedItemSignals
+	/** Named slots for LLM-fillable content. Keys are slot names. */
+	slots?: Record<string, Slot>
 }
