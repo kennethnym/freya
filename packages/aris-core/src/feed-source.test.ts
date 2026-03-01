@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test"
 
-import type { ActionDefinition, Context, ContextKey, FeedItem, FeedSource } from "./index"
+import type { ActionDefinition, ContextEntry, ContextKey, FeedItem, FeedSource } from "./index"
 
-import { TimeRelevance, UnknownActionError, contextKey, contextValue } from "./index"
+import { Context, TimeRelevance, UnknownActionError, contextKey } from "./index"
 
 // No-op action methods for test sources
 const noActions = {
@@ -47,7 +47,7 @@ interface SimulatedLocationSource extends FeedSource {
 }
 
 function createLocationSource(): SimulatedLocationSource {
-	let callback: ((update: Partial<Context>) => void) | null = null
+	let callback: ((entries: readonly ContextEntry[]) => void) | null = null
 	let currentLocation: Location = { lat: 0, lng: 0 }
 
 	return {
@@ -62,12 +62,12 @@ function createLocationSource(): SimulatedLocationSource {
 		},
 
 		async fetchContext() {
-			return { [LocationKey]: currentLocation }
+			return [[LocationKey, currentLocation]]
 		},
 
 		simulateUpdate(location: Location) {
 			currentLocation = location
-			callback?.({ [LocationKey]: location })
+			callback?.([[LocationKey, location]])
 		},
 	}
 }
@@ -84,15 +84,15 @@ function createWeatherSource(
 		...noActions,
 
 		async fetchContext(context) {
-			const location = contextValue(context, LocationKey)
+			const location = context.get(LocationKey)
 			if (!location) return null
 
 			const weather = await fetchWeather(location)
-			return { [WeatherKey]: weather }
+			return [[WeatherKey, weather]]
 		},
 
 		async fetchItems(context) {
-			const weather = contextValue(context, WeatherKey)
+			const weather = context.get(WeatherKey)
 			if (!weather) return []
 
 			return [
@@ -122,7 +122,7 @@ function createAlertSource(): FeedSource<AlertFeedItem> {
 		},
 
 		async fetchItems(context) {
-			const weather = contextValue(context, WeatherKey)
+			const weather = context.get(WeatherKey)
 			if (!weather) return []
 
 			if (weather.condition === "storm") {
@@ -207,13 +207,13 @@ function buildGraph(sources: FeedSource[]): SourceGraph {
 }
 
 async function refreshGraph(graph: SourceGraph): Promise<{ context: Context; items: FeedItem[] }> {
-	let context: Context = { time: new Date() }
+	const context = new Context()
 
 	// Run fetchContext in topological order
 	for (const source of graph.sorted) {
-		const update = await source.fetchContext(context)
-		if (update) {
-			context = { ...context, ...update }
+		const entries = await source.fetchContext(context)
+		if (entries) {
+			context.set(entries)
 		}
 	}
 
@@ -265,7 +265,7 @@ describe("FeedSource", () => {
 
 		test("source without context returns null from fetchContext", async () => {
 			const source = createAlertSource()
-			const result = await source.fetchContext({ time: new Date() })
+			const result = await source.fetchContext(new Context())
 			expect(result).toBeNull()
 		})
 	})
@@ -369,7 +369,7 @@ describe("FeedSource", () => {
 				...noActions,
 				async fetchContext() {
 					order.push("location")
-					return { [LocationKey]: { lat: 51.5, lng: -0.1 } }
+					return [[LocationKey, { lat: 51.5, lng: -0.1 }]]
 				},
 			}
 
@@ -379,9 +379,9 @@ describe("FeedSource", () => {
 				...noActions,
 				async fetchContext(ctx) {
 					order.push("weather")
-					const loc = contextValue(ctx, LocationKey)
+					const loc = ctx.get(LocationKey)
 					expect(loc).toBeDefined()
-					return { [WeatherKey]: { temperature: 20, condition: "sunny" } }
+					return [[WeatherKey, { temperature: 20, condition: "sunny" }]]
 				},
 			}
 
@@ -400,11 +400,11 @@ describe("FeedSource", () => {
 			const graph = buildGraph([location, weather])
 			const { context } = await refreshGraph(graph)
 
-			expect(contextValue(context, LocationKey)).toEqual({
+			expect(context.get(LocationKey)).toEqual({
 				lat: 51.5,
 				lng: -0.1,
 			})
-			expect(contextValue(context, WeatherKey)).toEqual({
+			expect(context.get(WeatherKey)).toEqual({
 				temperature: 20,
 				condition: "sunny",
 			})
@@ -447,12 +447,10 @@ describe("FeedSource", () => {
 		})
 
 		test("source without location context returns empty items", async () => {
-			// Location source exists but hasn't been updated
 			const location: FeedSource = {
 				id: "location",
 				...noActions,
 				async fetchContext() {
-					// Simulate no location available
 					return null
 				},
 			}
@@ -462,7 +460,7 @@ describe("FeedSource", () => {
 			const graph = buildGraph([location, weather])
 			const { context, items } = await refreshGraph(graph)
 
-			expect(contextValue(context, WeatherKey)).toBeUndefined()
+			expect(context.get(WeatherKey)).toBeUndefined()
 			expect(items).toHaveLength(0)
 		})
 	})
@@ -476,7 +474,7 @@ describe("FeedSource", () => {
 				() => {
 					updateCount++
 				},
-				() => ({ time: new Date() }),
+				() => new Context(),
 			)
 
 			location.simulateUpdate({ lat: 1, lng: 1 })

@@ -1,6 +1,6 @@
-import type { ActionDefinition, Context, FeedItemSignals, FeedSource } from "@aris/core"
+import type { ActionDefinition, ContextEntry, FeedItemSignals, FeedSource } from "@aris/core"
 
-import { TimeRelevance, UnknownActionError } from "@aris/core"
+import { Context, TimeRelevance, UnknownActionError } from "@aris/core"
 import { DAVClient } from "tsdav"
 
 import type { CalDavDAVClient, CalDavEventData, CalDavFeedItem } from "./types.ts"
@@ -93,17 +93,20 @@ export class CalDavSource implements FeedSource<CalDavFeedItem> {
 		throw new UnknownActionError(actionId)
 	}
 
-	async fetchContext(context: Context): Promise<Partial<Context> | null> {
+	async fetchContext(context: Context): Promise<readonly ContextEntry[] | null> {
 		const events = await this.fetchEvents(context)
 		if (events.length === 0) {
-			return {
-				[CalDavCalendarKey]: {
-					inProgress: [],
-					nextEvent: null,
-					hasTodayEvents: false,
-					todayEventCount: 0,
-				},
-			}
+			return [
+				[
+					CalDavCalendarKey,
+					{
+						inProgress: [],
+						nextEvent: null,
+						hasTodayEvents: false,
+						todayEventCount: 0,
+					},
+				],
+			]
 		}
 
 		const now = context.time
@@ -121,7 +124,7 @@ export class CalDavSource implements FeedSource<CalDavFeedItem> {
 			todayEventCount: events.length,
 		}
 
-		return { [CalDavCalendarKey]: calendarContext }
+		return [[CalDavCalendarKey, calendarContext]]
 	}
 
 	async fetchItems(context: Context): Promise<CalDavFeedItem[]> {

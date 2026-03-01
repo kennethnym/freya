@@ -1,8 +1,9 @@
-import type { Context } from "./context"
+import type { ContextEntry } from "./context"
 import type { DataSource } from "./data-source"
 import type { FeedItem } from "./feed"
 import type { ReconcileResult } from "./reconciler"
 
+import { Context } from "./context"
 import { Reconciler } from "./reconciler"
 
 export interface FeedControllerConfig {
@@ -40,7 +41,7 @@ const DEFAULT_DEBOUNCE_MS = 100
  * })
  *
  * // Context update triggers debounced reconcile
- * controller.pushContextUpdate({ [LocationKey]: location })
+ * controller.pushContextUpdate([[LocationKey, location]])
  *
  * // Direct reconcile (no debounce)
  * const result = await controller.reconcile()
@@ -59,7 +60,7 @@ export class FeedController<TItems extends FeedItem = never> {
 	private stopped = false
 
 	constructor(config?: FeedControllerConfig) {
-		this.context = config?.initialContext ?? { time: new Date() }
+		this.context = config?.initialContext ?? new Context()
 		this.debounceMs = config?.debounceMs ?? DEFAULT_DEBOUNCE_MS
 		this.timeout = config?.timeout
 	}
@@ -94,9 +95,10 @@ export class FeedController<TItems extends FeedItem = never> {
 		}
 	}
 
-	/** Merges update into context and schedules a debounced reconcile. */
-	pushContextUpdate(update: Partial<Context>): void {
-		this.context = { ...this.context, ...update, time: new Date() }
+	/** Merges entries into context and schedules a debounced reconcile. */
+	pushContextUpdate(entries: readonly ContextEntry[]): void {
+		this.context.time = new Date()
+		this.context.set(entries)
 		this.scheduleReconcile()
 	}
 

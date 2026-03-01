@@ -1,4 +1,4 @@
-import type { ActionDefinition, Context, FeedSource } from "@aris/core"
+import type { ActionDefinition, ContextEntry, FeedSource } from "@aris/core"
 
 import { LocationSource } from "@aris/source-location"
 import { describe, expect, test } from "bun:test"
@@ -14,7 +14,7 @@ function createStubSource(id: string): FeedSource {
 		async executeAction(): Promise<unknown> {
 			return undefined
 		},
-		async fetchContext(): Promise<Partial<Context> | null> {
+		async fetchContext(): Promise<readonly ContextEntry[] | null> {
 			return null
 		},
 		async fetchItems() {

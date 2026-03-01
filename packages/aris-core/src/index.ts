@@ -1,6 +1,6 @@
 // Context
-export type { Context, ContextKey } from "./context"
-export { contextKey, contextValue } from "./context"
+export type { ContextEntry, ContextKey, ContextKeyPart } from "./context"
+export { Context, contextKey, serializeKey } from "./context"
 
 // Actions
 export type { ActionDefinition } from "./action"

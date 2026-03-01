@@ -1,6 +1,6 @@
-import type { ActionDefinition, Context, FeedItemSignals, FeedSource } from "@aris/core"
+import type { ActionDefinition, ContextEntry, FeedItemSignals, FeedSource } from "@aris/core"
 
-import { TimeRelevance, UnknownActionError, contextValue } from "@aris/core"
+import { Context, TimeRelevance, UnknownActionError } from "@aris/core"
 import { LocationKey } from "@aris/source-location"
 
 import { WeatherFeedItemType, type WeatherFeedItem } from "./feed-items"
@@ -86,7 +86,7 @@ const MODERATE_CONDITIONS = new Set<ConditionCode>([
  * })
  *
  * // Access weather context in downstream sources
- * const weather = contextValue(context, WeatherKey)
+ * const weather = context.get(WeatherKey)
  * if (weather?.condition === "Rain") {
  *   // suggest umbrella
  * }
@@ -119,8 +119,8 @@ export class WeatherSource implements FeedSource<WeatherFeedItem> {
 		throw new UnknownActionError(actionId)
 	}
 
-	async fetchContext(context: Context): Promise<Partial<Context> | null> {
-		const location = contextValue(context, LocationKey)
+	async fetchContext(context: Context): Promise<readonly ContextEntry[] | null> {
+		const location = context.get(LocationKey)
 		if (!location) {
 			return null
 		}
@@ -147,11 +147,11 @@ export class WeatherSource implements FeedSource<WeatherFeedItem> {
 			daylight: response.currentWeather.daylight,
 		}
 
-		return { [WeatherKey]: weather }
+		return [[WeatherKey, weather]]
 	}
 
 	async fetchItems(context: Context): Promise<WeatherFeedItem[]> {
-		const location = contextValue(context, LocationKey)
+		const location = context.get(LocationKey)
 		if (!location) {
 			return []
 		}

@@ -1,5 +1,5 @@
 import type { ActionDefinition } from "./action"
-import type { Context } from "./context"
+import type { Context, ContextEntry } from "./context"
 import type { FeedItem } from "./feed"
 
 /**
@@ -57,7 +57,7 @@ export interface FeedSource<TItem extends FeedItem = FeedItem> {
 	 * Maps to: source/contextUpdated (notification, source → host)
 	 */
 	onContextUpdate?(
-		callback: (update: Partial<Context>) => void,
+		callback: (entries: readonly ContextEntry[]) => void,
 		getContext: () => Context,
 	): () => void
 
@@ -67,7 +67,7 @@ export interface FeedSource<TItem extends FeedItem = FeedItem> {
 	 * Return null if this source cannot provide context.
 	 * Maps to: source/fetchContext
 	 */
-	fetchContext(context: Context): Promise<Partial<Context> | null>
+	fetchContext(context: Context): Promise<readonly ContextEntry[] | null>
 
 	/**
 	 * Subscribe to reactive feed item updates.

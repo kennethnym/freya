@@ -1,6 +1,12 @@
 import { describe, expect, mock, test } from "bun:test"
 
-import type { ActionDefinition, FeedItem, FeedPostProcessor, FeedSource } from "./index"
+import type {
+	ActionDefinition,
+	ContextEntry,
+	FeedItem,
+	FeedPostProcessor,
+	FeedSource,
+} from "./index"
 
 import { FeedEngine } from "./feed-engine"
 import { UnknownActionError } from "./index"
@@ -471,7 +477,7 @@ describe("FeedPostProcessor", () => {
 		test("post-processors run during reactive context updates", async () => {
 			let callCount = 0
 
-			let triggerUpdate: ((update: Record<string, unknown>) => void) | null = null
+			let triggerUpdate: ((entries: readonly ContextEntry[]) => void) | null = null
 
 			const source: FeedSource = {
 				id: "aris.reactive",
@@ -502,7 +508,7 @@ describe("FeedPostProcessor", () => {
 			const countAfterStart = callCount
 
 			// Trigger a reactive context update
-			triggerUpdate!({ foo: "bar" })
+			triggerUpdate!([])
 			await new Promise((resolve) => setTimeout(resolve, 50))
 
 			expect(callCount).toBeGreaterThan(countAfterStart)
@@ -513,7 +519,7 @@ describe("FeedPostProcessor", () => {
 		test("post-processors run during reactive item updates", async () => {
 			let callCount = 0
 
-			let triggerItemsUpdate: (() => void) | null = null
+			let triggerItemsUpdate: ((items: FeedItem[]) => void) | null = null
 
 			const source: FeedSource = {
 				id: "aris.reactive",
@@ -543,7 +549,7 @@ describe("FeedPostProcessor", () => {
 			const countAfterStart = callCount
 
 			// Trigger a reactive items update
-			triggerItemsUpdate!()
+			triggerItemsUpdate!([weatherItem("w1", 25)])
 			await new Promise((resolve) => setTimeout(resolve, 50))
 
 			expect(callCount).toBeGreaterThan(countAfterStart)

@@ -24,4 +24,4 @@ export interface Weather {
 	daylight: boolean
 }
 
-export const WeatherKey: ContextKey<Weather> = contextKey("weather")
+export const WeatherKey: ContextKey<Weather> = contextKey("aris.weather", "weather")

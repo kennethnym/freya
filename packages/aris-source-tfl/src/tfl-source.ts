@@ -1,6 +1,6 @@
-import type { ActionDefinition, Context, FeedItemSignals, FeedSource } from "@aris/core"
+import type { ActionDefinition, ContextEntry, FeedItemSignals, FeedSource } from "@aris/core"
 
-import { TimeRelevance, UnknownActionError, contextValue } from "@aris/core"
+import { Context, TimeRelevance, UnknownActionError } from "@aris/core"
 import { LocationKey } from "@aris/source-location"
 import { type } from "arktype"
 
@@ -112,7 +112,7 @@ export class TflSource implements FeedSource<TflAlertFeedItem> {
 		}
 	}
 
-	async fetchContext(): Promise<null> {
+	async fetchContext(): Promise<readonly ContextEntry[] | null> {
 		return null
 	}
 
@@ -129,7 +129,7 @@ export class TflSource implements FeedSource<TflAlertFeedItem> {
 			this.client.fetchStations(),
 		])
 
-		const location = contextValue(context, LocationKey)
+		const location = context.get(LocationKey)
 
 		const items: TflAlertFeedItem[] = statuses.map((status) => {
 			const closestStationDistance = location

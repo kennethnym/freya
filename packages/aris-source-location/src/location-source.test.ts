@@ -1,6 +1,8 @@
 import { describe, expect, mock, test } from "bun:test"
 
-import { LocationKey, LocationSource, type Location } from "./location-source.ts"
+import type { Location } from "./types.ts"
+
+import { LocationKey, LocationSource } from "./location-source.ts"
 
 function createLocation(overrides: Partial<Location> = {}): Location {
 	return {
@@ -39,8 +41,8 @@ describe("LocationSource", () => {
 			const location = createLocation()
 			source.pushLocation(location)
 
-			const context = await source.fetchContext()
-			expect(context).toEqual({ [LocationKey]: location })
+			const entries = await source.fetchContext()
+			expect(entries).toEqual([[LocationKey, location]])
 		})
 	})
 
@@ -65,7 +67,7 @@ describe("LocationSource", () => {
 			source.pushLocation(location)
 
 			expect(listener).toHaveBeenCalledTimes(1)
-			expect(listener).toHaveBeenCalledWith({ [LocationKey]: location })
+			expect(listener).toHaveBeenCalledWith([[LocationKey, location]])
 		})
 	})
 
