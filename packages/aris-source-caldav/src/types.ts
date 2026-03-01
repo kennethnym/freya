@@ -64,9 +64,17 @@ export interface CalDavEventData extends Record<string, unknown> {
 	recurrenceId: string | null
 }
 
+// -- Feed item type --
+
+export const CalDavFeedItemType = {
+	Event: "caldav-event",
+} as const
+
+export type CalDavFeedItemType = (typeof CalDavFeedItemType)[keyof typeof CalDavFeedItemType]
+
 // -- Feed item --
 
-export type CalDavFeedItem = FeedItem<"caldav-event", CalDavEventData>
+export type CalDavFeedItem = FeedItem<typeof CalDavFeedItemType.Event, CalDavEventData>
 
 // -- DAV client interface --
 
