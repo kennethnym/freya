@@ -1,5 +1,7 @@
 import type { Context, FeedEnhancement, FeedItem, FeedPostProcessor } from "@aris/core"
 
+import { TimeRelevance } from "@aris/core"
+
 import type { CalDavEventData } from "@aris/source-caldav"
 import type { CalendarEventData } from "@aris/source-google-calendar"
 import type { CurrentWeatherData } from "@aris/source-weatherkit"
@@ -304,7 +306,7 @@ function applyAfternoonWeekday(items: FeedItem[], boost: Record<string, number>)
 		switch (item.type) {
 			case CalendarFeedItemType.Event:
 			case CalDavFeedItemType.Event:
-				if (item.signals?.timeRelevance === "imminent") {
+				if (item.signals?.timeRelevance === TimeRelevance.Imminent) {
 					boost[item.id] = (boost[item.id] ?? 0) + 0.5
 				}
 				break
@@ -342,7 +344,7 @@ function applyEveningWeekday(
 		switch (item.type) {
 			case CalendarFeedItemType.Event:
 			case CalDavFeedItemType.Event:
-				if (item.signals?.timeRelevance === "ambient") {
+				if (item.signals?.timeRelevance === TimeRelevance.Ambient) {
 					suppress.push(item.id)
 				}
 				break
@@ -371,7 +373,7 @@ function applyEveningWeekend(
 				break
 			case CalendarFeedItemType.Event:
 			case CalDavFeedItemType.Event:
-				if (item.signals?.timeRelevance === "ambient") {
+				if (item.signals?.timeRelevance === TimeRelevance.Ambient) {
 					suppress.push(item.id)
 				}
 				break
@@ -385,7 +387,7 @@ function applyEveningWeekend(
 function applyNight(items: FeedItem[], boost: Record<string, number>, suppress: string[]): void {
 	for (const item of items) {
 		// Suppress all ambient items
-		if (item.signals?.timeRelevance === "ambient") {
+		if (item.signals?.timeRelevance === TimeRelevance.Ambient) {
 			suppress.push(item.id)
 			continue
 		}
