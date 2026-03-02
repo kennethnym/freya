@@ -176,6 +176,34 @@ describe("WeatherSource", () => {
 
 			expect(uniqueIds.size).toBe(ids.length)
 		})
+
+		test("current weather item has insight slot", async () => {
+			const source = new WeatherSource({ client: mockClient })
+			const context = createMockContext({ lat: 37.7749, lng: -122.4194 })
+
+			const items = await source.fetchItems(context)
+			const currentItem = items.find((i) => i.type === WeatherFeedItemType.Current)
+
+			expect(currentItem).toBeDefined()
+			expect(currentItem!.slots).toBeDefined()
+			expect(currentItem!.slots!.insight).toBeDefined()
+			expect(currentItem!.slots!.insight!.description).toBeString()
+			expect(currentItem!.slots!.insight!.description.length).toBeGreaterThan(0)
+			expect(currentItem!.slots!.insight!.content).toBeNull()
+		})
+
+		test("non-current items do not have slots", async () => {
+			const source = new WeatherSource({ client: mockClient })
+			const context = createMockContext({ lat: 37.7749, lng: -122.4194 })
+
+			const items = await source.fetchItems(context)
+			const nonCurrentItems = items.filter((i) => i.type !== WeatherFeedItemType.Current)
+
+			expect(nonCurrentItems.length).toBeGreaterThan(0)
+			for (const item of nonCurrentItems) {
+				expect(item.slots).toBeUndefined()
+			}
+		})
 	})
 
 	describe("no reactive methods", () => {

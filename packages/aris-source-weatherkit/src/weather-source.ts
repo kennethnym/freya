@@ -4,6 +4,7 @@ import { Context, TimeRelevance, UnknownActionError } from "@aris/core"
 import { LocationKey } from "@aris/source-location"
 
 import { WeatherFeedItemType, type WeatherFeedItem } from "./feed-items"
+import currentWeatherInsightPrompt from "./prompts/current-weather-insight.txt"
 import { WeatherKey, type Weather } from "./weather-context"
 import {
 	DefaultWeatherKitClient,
@@ -309,6 +310,12 @@ function createCurrentWeatherFeedItem(
 			windSpeed: convertSpeed(current.windSpeed, units),
 		},
 		signals,
+		slots: {
+			insight: {
+				description: currentWeatherInsightPrompt,
+				content: null,
+			},
+		},
 	}
 }
 
