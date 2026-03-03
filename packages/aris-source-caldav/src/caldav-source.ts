@@ -1,4 +1,4 @@
-import type { ActionDefinition, ContextEntry, FeedItemSignals, FeedSource } from "@aris/core"
+import type { ActionDefinition, ContextEntry, FeedItemSignals, FeedSource, Slot } from "@aris/core"
 
 import { Context, TimeRelevance, UnknownActionError } from "@aris/core"
 import { DAVClient } from "tsdav"
@@ -7,6 +7,9 @@ import type { CalDavDAVClient, CalDavEventData, CalDavFeedItem } from "./types.t
 
 import { CalDavCalendarKey, type CalendarContext } from "./calendar-context.ts"
 import { parseICalEvents } from "./ical-parser.ts"
+import crossSourcePrompt from "./prompts/cross-source.txt"
+import insightPrompt from "./prompts/insight.txt"
+import preparationPrompt from "./prompts/preparation.txt"
 import { CalDavEventStatus, CalDavFeedItemType } from "./types.ts"
 
 // -- Source options --
@@ -340,6 +343,14 @@ export function computeSignals(
 	return { urgency: 0.2, timeRelevance: TimeRelevance.Ambient }
 }
 
+function createEventSlots(): Record<string, Slot> {
+	return {
+		insight: { description: insightPrompt, content: null },
+		preparation: { description: preparationPrompt, content: null },
+		crossSource: { description: crossSourcePrompt, content: null },
+	}
+}
+
 function createFeedItem(event: CalDavEventData, now: Date, timeZone?: string): CalDavFeedItem {
 	return {
 		id: `caldav-event-${event.uid}${event.recurrenceId ? `-${event.recurrenceId}` : ""}`,
@@ -347,5 +358,6 @@ function createFeedItem(event: CalDavEventData, now: Date, timeZone?: string): C
 		timestamp: now,
 		data: event,
 		signals: computeSignals(event, now, timeZone),
+		slots: createEventSlots(),
 	}
 }
