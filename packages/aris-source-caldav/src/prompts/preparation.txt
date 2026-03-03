@@ -1,0 +1,6 @@
+A concrete preparation step — something the user should do, bring, or review before this event. Infer only from available event and feed data. Do not restate event details. Do not fabricate information you don't have. Return null if no useful preparation comes to mind.
+
+Examples:
+- "different building from your previous meeting — allow travel time"
+- "recurring meeting you declined last week — check if you need to attend"
+- null
