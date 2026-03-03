@@ -1,6 +1,6 @@
 export { CalDavCalendarKey, type CalendarContext } from "./calendar-context.ts"
 export { CalDavSource, type CalDavSourceOptions } from "./caldav-source.ts"
-export { parseICalEvents } from "./ical-parser.ts"
+export { parseICalEvents, type ICalTimeRange } from "./ical-parser.ts"
 export {
 	AttendeeRole,
 	AttendeeStatus,
