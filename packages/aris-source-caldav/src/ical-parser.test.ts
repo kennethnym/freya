@@ -105,3 +105,94 @@ describe("parseICalEvents", () => {
 		expect(events[0]!.status).toBe("cancelled")
 	})
 })
+
+describe("parseICalEvents with timeRange (recurrence expansion)", () => {
+	test("expands weekly recurring event into occurrences within range", () => {
+		// weekly-recurring.ics: DTSTART 2026-01-01 (Thu), FREQ=WEEKLY;BYDAY=TH;COUNT=10
+		// Occurrences: Jan 1, 8, 15, 22, 29, Feb 5, 12, 19, 26, Mar 5
+		// Query window: Jan 14 – Jan 23 → should get Jan 15 and Jan 22
+		const events = parseICalEvents(loadFixture("weekly-recurring.ics"), "Work", {
+			start: new Date("2026-01-14T00:00:00Z"),
+			end: new Date("2026-01-23T00:00:00Z"),
+		})
+
+		expect(events).toHaveLength(2)
+		expect(events[0]!.startDate).toEqual(new Date("2026-01-15T10:00:00Z"))
+		expect(events[0]!.endDate).toEqual(new Date("2026-01-15T11:00:00Z"))
+		expect(events[1]!.startDate).toEqual(new Date("2026-01-22T10:00:00Z"))
+		expect(events[1]!.endDate).toEqual(new Date("2026-01-22T11:00:00Z"))
+
+		// All occurrences share the same UID and metadata
+		for (const event of events) {
+			expect(event.uid).toBe("weekly-001@test")
+			expect(event.title).toBe("Weekly Team Meeting")
+			expect(event.location).toBe("Room B")
+			expect(event.calendarName).toBe("Work")
+		}
+	})
+
+	test("returns empty array when no occurrences fall in range", () => {
+		// Query window: Dec 2025 — before the first occurrence
+		const events = parseICalEvents(loadFixture("weekly-recurring.ics"), null, {
+			start: new Date("2025-12-01T00:00:00Z"),
+			end: new Date("2025-12-31T00:00:00Z"),
+		})
+
+		expect(events).toHaveLength(0)
+	})
+
+	test("applies exception overrides during expansion", () => {
+		// weekly-recurring-with-exception.ics:
+		//   Master: DTSTART 2026-01-01 (Thu) 14:00, FREQ=WEEKLY;BYDAY=TH;COUNT=8
+		//   Exception: RECURRENCE-ID 2026-01-15T14:00 → moved to 16:00-17:00, title changed
+		// Query window: Jan 14 – Jan 16 → should get the exception occurrence for Jan 15
+		const events = parseICalEvents(loadFixture("weekly-recurring-with-exception.ics"), "Work", {
+			start: new Date("2026-01-14T00:00:00Z"),
+			end: new Date("2026-01-16T00:00:00Z"),
+		})
+
+		expect(events).toHaveLength(1)
+		expect(events[0]!.title).toBe("Standup (rescheduled)")
+		expect(events[0]!.startDate).toEqual(new Date("2026-01-15T16:00:00Z"))
+		expect(events[0]!.endDate).toEqual(new Date("2026-01-15T17:00:00Z"))
+	})
+
+	test("expands recurring all-day events", () => {
+		// daily-recurring-allday.ics: DTSTART 2026-01-12, FREQ=DAILY;COUNT=7
+		// Occurrences: Jan 12, 13, 14, 15, 16, 17, 18
+		// Query window: Jan 14 – Jan 17 → should get Jan 14, 15, 16
+		const events = parseICalEvents(loadFixture("daily-recurring-allday.ics"), null, {
+			start: new Date("2026-01-14T00:00:00Z"),
+			end: new Date("2026-01-17T00:00:00Z"),
+		})
+
+		expect(events).toHaveLength(3)
+		for (const event of events) {
+			expect(event.isAllDay).toBe(true)
+			expect(event.title).toBe("Daily Reminder")
+		}
+	})
+
+	test("non-recurring events are filtered by range", () => {
+		// single-event.ics: 2026-01-15T14:00 – 15:00
+		// Query window that includes it
+		const included = parseICalEvents(loadFixture("single-event.ics"), null, {
+			start: new Date("2026-01-15T00:00:00Z"),
+			end: new Date("2026-01-16T00:00:00Z"),
+		})
+		expect(included).toHaveLength(1)
+
+		// Query window that excludes it
+		const excluded = parseICalEvents(loadFixture("single-event.ics"), null, {
+			start: new Date("2026-01-16T00:00:00Z"),
+			end: new Date("2026-01-17T00:00:00Z"),
+		})
+		expect(excluded).toHaveLength(0)
+	})
+
+	test("without timeRange, recurring events return raw VEVENTs (legacy)", () => {
+		// Legacy behavior: no expansion, just returns the VEVENT components as-is
+		const events = parseICalEvents(loadFixture("recurring-event.ics"), "Team")
+		expect(events).toHaveLength(2)
+	})
+})

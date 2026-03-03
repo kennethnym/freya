@@ -9,21 +9,172 @@ import {
 	type CalDavEventData,
 } from "./types.ts"
 
+export interface ICalTimeRange {
+	start: Date
+	end: Date
+}
+
 /**
- * Parses a raw iCalendar string and extracts all VEVENT components
+ * Parses a raw iCalendar string and extracts VEVENT components
  * into CalDavEventData objects.
+ *
+ * When a timeRange is provided, recurring events are expanded into
+ * individual occurrences within that range. Without a timeRange,
+ * each VEVENT component is returned as-is (legacy behavior).
  *
  * @param icsData - Raw iCalendar string from a CalDAV response
  * @param calendarName - Display name of the calendar this event belongs to
+ * @param timeRange - When set, expand recurrences and filter to this window
  */
-export function parseICalEvents(icsData: string, calendarName: string | null): CalDavEventData[] {
+export function parseICalEvents(
+	icsData: string,
+	calendarName: string | null,
+	timeRange?: ICalTimeRange,
+): CalDavEventData[] {
 	const jcal = ICAL.parse(icsData)
 	const comp = new ICAL.Component(jcal)
 	const vevents = comp.getAllSubcomponents("vevent")
 
-	return vevents.map((vevent: InstanceType<typeof ICAL.Component>) =>
-		parseVEvent(vevent, calendarName),
-	)
+	if (!timeRange) {
+		return vevents.map((vevent: InstanceType<typeof ICAL.Component>) =>
+			parseVEvent(vevent, calendarName),
+		)
+	}
+
+	// Group VEVENTs by UID: master + exceptions
+	const byUid = new Map<
+		string,
+		{
+			master: InstanceType<typeof ICAL.Component> | null
+			exceptions: InstanceType<typeof ICAL.Component>[]
+		}
+	>()
+
+	for (const vevent of vevents as InstanceType<typeof ICAL.Component>[]) {
+		const uid = vevent.getFirstPropertyValue("uid") as string | null
+		if (!uid) continue
+
+		const hasRecurrenceId = vevent.getFirstPropertyValue("recurrence-id") !== null
+		let group = byUid.get(uid)
+		if (!group) {
+			group = { master: null, exceptions: [] }
+			byUid.set(uid, group)
+		}
+
+		if (hasRecurrenceId) {
+			group.exceptions.push(vevent)
+		} else {
+			group.master = vevent
+		}
+	}
+
+	const results: CalDavEventData[] = []
+	const rangeStart = ICAL.Time.fromJSDate(timeRange.start, true)
+	const rangeEnd = ICAL.Time.fromJSDate(timeRange.end, true)
+
+	for (const group of byUid.values()) {
+		if (!group.master) {
+			// Orphan exceptions — parse them directly if they fall in range
+			for (const exc of group.exceptions) {
+				const parsed = parseVEvent(exc, calendarName)
+				if (overlapsRange(parsed, timeRange)) {
+					results.push(parsed)
+				}
+			}
+			continue
+		}
+
+		const masterEvent = new ICAL.Event(group.master)
+
+		// Register exceptions so getOccurrenceDetails resolves them
+		for (const exc of group.exceptions) {
+			masterEvent.relateException(exc)
+		}
+
+		if (!masterEvent.isRecurring()) {
+			const parsed = parseVEvent(group.master, calendarName)
+			if (overlapsRange(parsed, timeRange)) {
+				results.push(parsed)
+			}
+			// Also include standalone exceptions for non-recurring events
+			for (const exc of group.exceptions) {
+				const parsedExc = parseVEvent(exc, calendarName)
+				if (overlapsRange(parsedExc, timeRange)) {
+					results.push(parsedExc)
+				}
+			}
+			continue
+		}
+
+		// Expand recurring event occurrences within the time range
+		const iter = masterEvent.iterator()
+		let next: InstanceType<typeof ICAL.Time> | null = iter.next()
+
+		while (next) {
+			// Stop once we're past the range end
+			if (next.compare(rangeEnd) >= 0) break
+
+			const details = masterEvent.getOccurrenceDetails(next)
+			const occEnd = details.endDate
+
+			// Skip occurrences that end before the range starts
+			if (occEnd.compare(rangeStart) <= 0) {
+				next = iter.next()
+				continue
+			}
+
+			const occEvent = details.item
+			const occComponent = occEvent.component
+
+			const parsed = parseVEventWithDates(
+				occComponent,
+				calendarName,
+				details.startDate.toJSDate(),
+				details.endDate.toJSDate(),
+				details.recurrenceId ? details.recurrenceId.toString() : null,
+			)
+			results.push(parsed)
+
+			next = iter.next()
+		}
+	}
+
+	return results
+}
+
+function overlapsRange(event: CalDavEventData, range: ICalTimeRange): boolean {
+	return event.startDate < range.end && event.endDate > range.start
+}
+
+/**
+ * Parse a VEVENT component, overriding start/end/recurrenceId with
+ * values from recurrence expansion.
+ */
+function parseVEventWithDates(
+	vevent: InstanceType<typeof ICAL.Component>,
+	calendarName: string | null,
+	startDate: Date,
+	endDate: Date,
+	recurrenceId: string | null,
+): CalDavEventData {
+	const event = new ICAL.Event(vevent)
+
+	return {
+		uid: event.uid ?? "",
+		title: event.summary ?? "",
+		startDate,
+		endDate,
+		isAllDay: event.startDate?.isDate ?? false,
+		location: event.location ?? null,
+		description: event.description ?? null,
+		calendarName,
+		status: parseStatus(asStringOrNull(vevent.getFirstPropertyValue("status"))),
+		url: asStringOrNull(vevent.getFirstPropertyValue("url")),
+		organizer: parseOrganizer(asStringOrNull(event.organizer), vevent),
+		attendees: parseAttendees(Array.isArray(event.attendees) ? event.attendees : []),
+		alarms: parseAlarms(vevent),
+		recurrenceId,
+	}
 }
 
 function parseVEvent(
