@@ -1,0 +1,7 @@
+Max 12 words. Plain language, no hedging. Now + what's next.
+
+Examples:
+- "Clear tonight, warming up. Rain by Saturday."
+- "Clearing soon with strong winds overnight. Light rain Thursday."
+- "Sunny all day. Grab sunscreen."
+- "Cloudy tonight, warming to 15°. Rain Monday."
