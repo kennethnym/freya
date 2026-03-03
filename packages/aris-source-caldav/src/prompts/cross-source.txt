@@ -1,0 +1,8 @@
+If other feed data (weather, transit, nearby events) would disrupt or materially affect this event, state the connection in one sentence. Infer whether the event is indoor/outdoor/virtual from the title and location. Weather is only relevant if it affects getting to the event or the activity itself (e.g., rain for outdoor events, extreme conditions for physical activities). Return null for indoor or virtual events where weather has no impact. Do not fabricate information you don't have — only reference data present in the feed.
+
+Examples:
+- "rain expected at 5pm — bring an umbrella for the walk to Tooley Street"
+- "Northern line has delays — leave 15 minutes early"
+- "your next event is across town — the 40 min gap may not be enough"
+- null (indoor guitar class with wind outside — weather doesn't affect the event)
+- null

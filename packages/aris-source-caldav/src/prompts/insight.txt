@@ -1,0 +1,7 @@
+One sentence of actionable insight the user can't already see from the event title, time, and location. Do not restate event details. Do not fabricate information you don't have. Return null if there's nothing non-obvious to say.
+
+Examples:
+- "you have 2 hours free before this starts"
+- "all 8 attendees accepted — expect a full room"
+- "third time this has been rescheduled"
+- null
