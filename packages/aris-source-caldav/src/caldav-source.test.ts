@@ -208,7 +208,7 @@ describe("CalDavSource", () => {
 		expect(items[0]!.data.calendarName).toBeNull()
 	})
 
-	test("handles recurring events with exceptions", async () => {
+	test("expands recurring events within the time range", async () => {
 		const objects: Record<string, CalDavDAVObject[]> = {
 			"/cal/work": [
 				{
@@ -218,21 +218,42 @@ describe("CalDavSource", () => {
 			],
 		}
 		const client = new MockDAVClient([{ url: "/cal/work", displayName: "Work" }], objects)
+		// lookAheadDays=0 → range is Jan 15 only
 		const source = createSource(client)
 
 		const items = await source.fetchItems(createContext(new Date("2026-01-15T08:00:00Z")))
 
-		expect(items).toHaveLength(2)
+		// Only the Jan 15 occurrence falls in the single-day window
+		expect(items).toHaveLength(1)
+		expect(items[0]!.data.title).toBe("Weekly Sync")
+		expect(items[0]!.data.startDate).toEqual(new Date("2026-01-15T09:00:00Z"))
+	})
 
-		const base = items.find((i) => i.data.title === "Weekly Sync")
+	test("includes exception overrides when they fall in range", async () => {
+		const objects: Record<string, CalDavDAVObject[]> = {
+			"/cal/work": [
+				{
+					url: "/cal/work/recurring.ics",
+					data: loadFixture("recurring-event.ics"),
+				},
+			],
+		}
+		const client = new MockDAVClient([{ url: "/cal/work", displayName: "Work" }], objects)
+		// lookAheadDays=8 → range covers Jan 15 through Jan 23, includes the Jan 22 exception
+		const source = createSource(client, 8)
+
+		const items = await source.fetchItems(createContext(new Date("2026-01-15T08:00:00Z")))
+
+		const base = items.filter((i) => i.data.title === "Weekly Sync")
 		const exception = items.find((i) => i.data.title === "Weekly Sync (moved)")
 
-		expect(base).toBeDefined()
-		expect(base!.data.recurrenceId).toBeNull()
+		// Jan 15 base occurrence
+		expect(base.length).toBeGreaterThanOrEqual(1)
 
+		// Jan 22 exception replaces the base occurrence
 		expect(exception).toBeDefined()
-		expect(exception!.data.recurrenceId).not.toBeNull()
-		expect(exception!.id).toContain("-")
+		expect(exception!.data.startDate).toEqual(new Date("2026-01-22T10:00:00Z"))
+		expect(exception!.data.endDate).toEqual(new Date("2026-01-22T10:30:00Z"))
 	})
 
 	test("caches events within the same refresh cycle", async () => {
@@ -512,3 +533,5 @@ describe("computeSignals", () => {
 		expect(computeSignals(event, now, "Asia/Tokyo").urgency).toBe(0.2)
 	})
 })
+
+

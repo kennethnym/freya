@@ -184,7 +184,7 @@ export class CalDavSource implements FeedSource<CalDavFeedItem> {
 			for (const obj of objects) {
 				if (typeof obj.data !== "string") continue
 
-				const events = parseICalEvents(obj.data, calendarName)
+				const events = parseICalEvents(obj.data, calendarName, { start, end })
 				for (const event of events) {
 					allEvents.push(event)
 				}

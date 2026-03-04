@@ -3,7 +3,12 @@
  *
  * Usage:
  *   bun run test-live.ts
+ *
+ * Writes feed items (with slots) to scripts/.cache/feed-items.json for inspection.
  */
+
+import { mkdirSync, writeFileSync } from "node:fs"
+import { join } from "node:path"
 
 import { Context } from "@aris/core"
 
@@ -51,6 +56,9 @@ for (const item of items) {
 	console.log(`  Status:     ${item.data.status ?? "(none)"}`)
 	console.log(`  Urgency:    ${item.signals?.urgency}`)
 	console.log(`  Relevance:  ${item.signals?.timeRelevance}`)
+	if (item.slots) {
+		console.log(`  Slots:      ${Object.keys(item.slots).join(", ")}`)
+	}
 	if (item.data.attendees.length > 0) {
 		console.log(`  Attendees:  ${item.data.attendees.map((a) => a.name ?? a.email).join(", ")}`)
 	}
@@ -62,3 +70,11 @@ for (const item of items) {
 if (items.length === 0) {
 	console.log("(no events found in the time window)")
 }
+
+// Write feed items to .cache for slot testing
+const cacheDir = join(import.meta.dir, ".cache")
+mkdirSync(cacheDir, { recursive: true })
+
+const outPath = join(cacheDir, "feed-items.json")
+writeFileSync(outPath, JSON.stringify(items, null, 2))
+console.log(`\nFeed items written to ${outPath}`)
