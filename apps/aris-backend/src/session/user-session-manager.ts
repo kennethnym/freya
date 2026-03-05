@@ -1,13 +1,21 @@
+import type { FeedEnhancer } from "../enhancement/enhance-feed.ts"
 import type { FeedSourceProviderInput } from "./feed-source-provider.ts"
 
 import { UserSession } from "./user-session.ts"
 
+export interface UserSessionManagerConfig {
+	providers: FeedSourceProviderInput[]
+	feedEnhancer?: FeedEnhancer | null
+}
+
 export class UserSessionManager {
 	private sessions = new Map<string, UserSession>()
 	private readonly providers: FeedSourceProviderInput[]
+	private readonly feedEnhancer: FeedEnhancer | null
 
-	constructor(providers: FeedSourceProviderInput[]) {
-		this.providers = providers
+	constructor(config: UserSessionManagerConfig) {
+		this.providers = config.providers
+		this.feedEnhancer = config.feedEnhancer ?? null
 	}
 
 	getOrCreate(userId: string): UserSession {
@@ -16,7 +24,7 @@ export class UserSessionManager {
 			const sources = this.providers.map((p) =>
 				typeof p === "function" ? p(userId) : p.feedSourceForUser(userId),
 			)
-			session = new UserSession(sources)
+			session = new UserSession(sources, this.feedEnhancer)
 			this.sessions.set(userId, session)
 		}
 		return session

@@ -11,18 +11,6 @@ import { UserSessionManager } from "./session/index.ts"
 import { WeatherSourceProvider } from "./weather/provider.ts"
 
 function main() {
-	const sessionManager = new UserSessionManager([
-		() => new LocationSource(),
-		new WeatherSourceProvider({
-			credentials: {
-				privateKey: process.env.WEATHERKIT_PRIVATE_KEY!,
-				keyId: process.env.WEATHERKIT_KEY_ID!,
-				teamId: process.env.WEATHERKIT_TEAM_ID!,
-				serviceId: process.env.WEATHERKIT_SERVICE_ID!,
-			},
-		}),
-	])
-
 	const openrouterApiKey = process.env.OPENROUTER_API_KEY
 	const feedEnhancer = openrouterApiKey
 		? createFeedEnhancer({
@@ -36,6 +24,21 @@ function main() {
 		console.warn("[enhancement] OPENROUTER_API_KEY not set — feed enhancement disabled")
 	}
 
+	const sessionManager = new UserSessionManager({
+		providers: [
+			() => new LocationSource(),
+			new WeatherSourceProvider({
+				credentials: {
+					privateKey: process.env.WEATHERKIT_PRIVATE_KEY!,
+					keyId: process.env.WEATHERKIT_KEY_ID!,
+					teamId: process.env.WEATHERKIT_TEAM_ID!,
+					serviceId: process.env.WEATHERKIT_SERVICE_ID!,
+				},
+			}),
+		],
+		feedEnhancer,
+	})
+
 	const app = new Hono()
 
 	app.get("/health", (c) => c.json({ status: "ok" }))
@@ -44,7 +47,6 @@ function main() {
 	registerFeedHttpHandlers(app, {
 		sessionManager,
 		authSessionMiddleware: requireSession,
-		feedEnhancer,
 	})
 	registerLocationHttpHandlers(app, { sessionManager })
 

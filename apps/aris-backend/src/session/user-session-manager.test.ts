@@ -12,7 +12,7 @@ const mockWeatherClient: WeatherKitClient = {
 
 describe("UserSessionManager", () => {
 	test("getOrCreate creates session on first call", () => {
-		const manager = new UserSessionManager([() => new LocationSource()])
+		const manager = new UserSessionManager({ providers: [() => new LocationSource()] })
 
 		const session = manager.getOrCreate("user-1")
 
@@ -21,7 +21,7 @@ describe("UserSessionManager", () => {
 	})
 
 	test("getOrCreate returns same session for same user", () => {
-		const manager = new UserSessionManager([() => new LocationSource()])
+		const manager = new UserSessionManager({ providers: [() => new LocationSource()] })
 
 		const session1 = manager.getOrCreate("user-1")
 		const session2 = manager.getOrCreate("user-1")
@@ -30,7 +30,7 @@ describe("UserSessionManager", () => {
 	})
 
 	test("getOrCreate returns different sessions for different users", () => {
-		const manager = new UserSessionManager([() => new LocationSource()])
+		const manager = new UserSessionManager({ providers: [() => new LocationSource()] })
 
 		const session1 = manager.getOrCreate("user-1")
 		const session2 = manager.getOrCreate("user-2")
@@ -39,7 +39,7 @@ describe("UserSessionManager", () => {
 	})
 
 	test("each user gets independent source instances", () => {
-		const manager = new UserSessionManager([() => new LocationSource()])
+		const manager = new UserSessionManager({ providers: [() => new LocationSource()] })
 
 		const session1 = manager.getOrCreate("user-1")
 		const session2 = manager.getOrCreate("user-2")
@@ -51,7 +51,7 @@ describe("UserSessionManager", () => {
 	})
 
 	test("remove destroys session and allows re-creation", () => {
-		const manager = new UserSessionManager([() => new LocationSource()])
+		const manager = new UserSessionManager({ providers: [() => new LocationSource()] })
 
 		const session1 = manager.getOrCreate("user-1")
 		manager.remove("user-1")
@@ -61,13 +61,13 @@ describe("UserSessionManager", () => {
 	})
 
 	test("remove is no-op for unknown user", () => {
-		const manager = new UserSessionManager([() => new LocationSource()])
+		const manager = new UserSessionManager({ providers: [() => new LocationSource()] })
 
 		expect(() => manager.remove("unknown")).not.toThrow()
 	})
 
 	test("accepts function providers", async () => {
-		const manager = new UserSessionManager([() => new LocationSource()])
+		const manager = new UserSessionManager({ providers: [() => new LocationSource()] })
 
 		const session = manager.getOrCreate("user-1")
 		const result = await session.engine.refresh()
@@ -77,7 +77,9 @@ describe("UserSessionManager", () => {
 
 	test("accepts object providers", () => {
 		const provider = new WeatherSourceProvider({ client: mockWeatherClient })
-		const manager = new UserSessionManager([() => new LocationSource(), provider])
+		const manager = new UserSessionManager({
+			providers: [() => new LocationSource(), provider],
+		})
 
 		const session = manager.getOrCreate("user-1")
 
@@ -86,7 +88,9 @@ describe("UserSessionManager", () => {
 
 	test("accepts mixed providers", () => {
 		const provider = new WeatherSourceProvider({ client: mockWeatherClient })
-		const manager = new UserSessionManager([() => new LocationSource(), provider])
+		const manager = new UserSessionManager({
+			providers: [() => new LocationSource(), provider],
+		})
 
 		const session = manager.getOrCreate("user-1")
 
@@ -95,7 +99,7 @@ describe("UserSessionManager", () => {
 	})
 
 	test("refresh returns feed result through session", async () => {
-		const manager = new UserSessionManager([() => new LocationSource()])
+		const manager = new UserSessionManager({ providers: [() => new LocationSource()] })
 
 		const session = manager.getOrCreate("user-1")
 		const result = await session.engine.refresh()
@@ -107,7 +111,7 @@ describe("UserSessionManager", () => {
 	})
 
 	test("location update via executeAction works", async () => {
-		const manager = new UserSessionManager([() => new LocationSource()])
+		const manager = new UserSessionManager({ providers: [() => new LocationSource()] })
 
 		const session = manager.getOrCreate("user-1")
 		await session.engine.executeAction("aris.location", "update-location", {
@@ -122,7 +126,7 @@ describe("UserSessionManager", () => {
 	})
 
 	test("subscribe receives updates after location push", async () => {
-		const manager = new UserSessionManager([() => new LocationSource()])
+		const manager = new UserSessionManager({ providers: [() => new LocationSource()] })
 		const callback = mock()
 
 		const session = manager.getOrCreate("user-1")
@@ -142,7 +146,7 @@ describe("UserSessionManager", () => {
 	})
 
 	test("remove stops reactive updates", async () => {
-		const manager = new UserSessionManager([() => new LocationSource()])
+		const manager = new UserSessionManager({ providers: [() => new LocationSource()] })
 		const callback = mock()
 
 		const session = manager.getOrCreate("user-1")
