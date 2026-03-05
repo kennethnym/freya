@@ -61,10 +61,7 @@ function partsEqual(a: unknown, b: unknown): boolean {
 		const bKeys = Object.keys(b)
 		if (aKeys.length !== bKeys.length) return false
 		return aKeys.every((key) =>
-			partsEqual(
-				(a as Record<string, unknown>)[key],
-				(b as Record<string, unknown>)[key],
-			),
+			partsEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]),
 		)
 	}
 	return false

@@ -5,7 +5,11 @@ import { createMiddleware } from "hono/factory"
 import type { AuthSessionMiddleware } from "../auth/session-middleware.ts"
 import type { UserSessionManager } from "../session/index.ts"
 
-type Env = { Variables: { sessionManager: UserSessionManager } }
+type Env = {
+	Variables: {
+		sessionManager: UserSessionManager
+	}
+}
 
 interface FeedHttpHandlersDeps {
 	sessionManager: UserSessionManager
@@ -29,7 +33,7 @@ async function handleGetFeed(c: Context<Env>) {
 	const sessionManager = c.get("sessionManager")
 	const session = sessionManager.getOrCreate(user.id)
 
-	const feed = session.engine.lastFeed() ?? (await session.engine.refresh())
+	const feed = await session.feed()
 
 	return c.json({
 		items: feed.items,

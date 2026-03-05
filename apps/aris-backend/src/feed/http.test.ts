@@ -47,7 +47,7 @@ function buildTestApp(sessionManager: UserSessionManager, userId?: string) {
 
 describe("GET /api/feed", () => {
 	test("returns 401 without auth", async () => {
-		const manager = new UserSessionManager([])
+		const manager = new UserSessionManager({ providers: [] })
 		const app = buildTestApp(manager)
 
 		const res = await app.request("/api/feed")
@@ -65,7 +65,9 @@ describe("GET /api/feed", () => {
 				data: { value: 42 },
 			},
 		]
-		const manager = new UserSessionManager([() => createStubSource("test", items)])
+		const manager = new UserSessionManager({
+			providers: [() => createStubSource("test", items)],
+		})
 		const app = buildTestApp(manager, "user-1")
 
 		// Prime the cache
@@ -95,7 +97,9 @@ describe("GET /api/feed", () => {
 				data: { fresh: true },
 			},
 		]
-		const manager = new UserSessionManager([() => createStubSource("test", items)])
+		const manager = new UserSessionManager({
+			providers: [() => createStubSource("test", items)],
+		})
 		const app = buildTestApp(manager, "user-1")
 
 		// No prior refresh — lastFeed() returns null, handler should call refresh()
@@ -125,7 +129,7 @@ describe("GET /api/feed", () => {
 				throw new Error("connection timeout")
 			},
 		}
-		const manager = new UserSessionManager([() => failingSource])
+		const manager = new UserSessionManager({ providers: [() => failingSource] })
 		const app = buildTestApp(manager, "user-1")
 
 		const res = await app.request("/api/feed")

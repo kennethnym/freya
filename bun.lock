@@ -18,9 +18,12 @@
       "version": "0.0.0",
       "dependencies": {
         "@aris/core": "workspace:*",
+        "@aris/source-caldav": "workspace:*",
+        "@aris/source-google-calendar": "workspace:*",
         "@aris/source-location": "workspace:*",
         "@aris/source-tfl": "workspace:*",
         "@aris/source-weatherkit": "workspace:*",
+        "@openrouter/sdk": "^0.9.11",
         "arktype": "^2.1.29",
         "better-auth": "^1",
         "hono": "^4",
@@ -542,6 +545,8 @@
     "@oclif/plugin-autocomplete": ["@oclif/plugin-autocomplete@2.3.10", "", { "dependencies": { "@oclif/core": "^2.15.0", "chalk": "^4.1.0", "debug": "^4.3.4" } }, "sha512-Ow1AR8WtjzlyCtiWWPgzMyT8SbcDJFr47009riLioHa+MHX2BCDtVn2DVnN/E6b9JlPV5ptQpjefoRSNWBesmg=="],
 
     "@oclif/screen": ["@oclif/screen@3.0.8", "", {}, "sha512-yx6KAqlt3TAHBduS2fMQtJDL2ufIHnDRArrJEOoTTuizxqmjLT+psGYOHpmMl3gvQpFJ11Hs76guUUktzAF9Bg=="],
+
+    "@openrouter/sdk": ["@openrouter/sdk@0.9.11", "", { "dependencies": { "zod": "^3.25.0 || ^4.0.0" } }, "sha512-BgFu6NcIJO4a9aVjr04y3kZ8pyM71j15I+bzfVAGEvxnj+KQNIkBYQGgwrG3D+aT1QpDKLki8btcQmpaxUas6A=="],
 
     "@oxfmt/darwin-arm64": ["@oxfmt/darwin-arm64@0.24.0", "", { "os": "darwin", "cpu": "arm64" }, "sha512-aYXuGf/yq8nsyEcHindGhiz9I+GEqLkVq8CfPbd+6VE259CpPEH+CaGHEO1j6vIOmNr8KHRq+IAjeRO2uJpb8A=="],
 
