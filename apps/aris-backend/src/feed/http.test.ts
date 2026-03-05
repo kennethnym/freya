@@ -41,6 +41,7 @@ function buildTestApp(sessionManager: UserSessionManager, userId?: string) {
 	registerFeedHttpHandlers(app, {
 		sessionManager,
 		authSessionMiddleware: mockAuthSessionMiddleware(userId),
+		feedEnhancer: null,
 	})
 	return app
 }
@@ -107,6 +108,66 @@ describe("GET /api/feed", () => {
 		expect(body.items[0]!.id).toBe("fresh-1")
 		expect(body.items[0]!.data.fresh).toBe(true)
 		expect(body.errors).toHaveLength(0)
+	})
+
+	test("returns enhanced items when feedEnhancer is provided", async () => {
+		const items: FeedItem[] = [
+			{
+				id: "item-1",
+				type: "test",
+				timestamp: new Date("2025-01-01T00:00:00.000Z"),
+				data: { value: 42 },
+			},
+		]
+		const manager = new UserSessionManager([() => createStubSource("test", items)])
+
+		const enhancer = async (feedItems: FeedItem[]) =>
+			feedItems.map((item) => ({ ...item, data: { ...item.data, enhanced: true } }))
+
+		const app = new Hono()
+		registerFeedHttpHandlers(app, {
+			sessionManager: manager,
+			authSessionMiddleware: mockAuthSessionMiddleware("user-1"),
+			feedEnhancer: enhancer,
+		})
+
+		const res = await app.request("/api/feed")
+
+		expect(res.status).toBe(200)
+		const body = (await res.json()) as FeedResponse
+		expect(body.items).toHaveLength(1)
+		expect(body.items[0]!.data.enhanced).toBe(true)
+	})
+
+	test("falls back to raw items when feedEnhancer throws", async () => {
+		const items: FeedItem[] = [
+			{
+				id: "item-1",
+				type: "test",
+				timestamp: new Date("2025-01-01T00:00:00.000Z"),
+				data: { value: 42 },
+			},
+		]
+		const manager = new UserSessionManager([() => createStubSource("test", items)])
+
+		const enhancer = async () => {
+			throw new Error("enhancement exploded")
+		}
+
+		const app = new Hono()
+		registerFeedHttpHandlers(app, {
+			sessionManager: manager,
+			authSessionMiddleware: mockAuthSessionMiddleware("user-1"),
+			feedEnhancer: enhancer,
+		})
+
+		const res = await app.request("/api/feed")
+
+		expect(res.status).toBe(200)
+		const body = (await res.json()) as FeedResponse
+		expect(body.items).toHaveLength(1)
+		expect(body.items[0]!.id).toBe("item-1")
+		expect(body.items[0]!.data.value).toBe(42)
 	})
 
 	test("serializes source errors as message strings", async () => {

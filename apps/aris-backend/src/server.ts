@@ -3,6 +3,8 @@ import { Hono } from "hono"
 
 import { registerAuthHandlers } from "./auth/http.ts"
 import { requireSession } from "./auth/session-middleware.ts"
+import { createFeedEnhancer } from "./enhancement/enhance-feed.ts"
+import { createLlmClient } from "./enhancement/llm-client.ts"
 import { registerFeedHttpHandlers } from "./feed/http.ts"
 import { registerLocationHttpHandlers } from "./location/http.ts"
 import { UserSessionManager } from "./session/index.ts"
@@ -21,12 +23,29 @@ function main() {
 		}),
 	])
 
+	const openrouterApiKey = process.env.OPENROUTER_API_KEY
+	const feedEnhancer = openrouterApiKey
+		? createFeedEnhancer({
+				client: createLlmClient({
+					apiKey: openrouterApiKey,
+					model: process.env.OPENROUTER_MODEL || undefined,
+				}),
+			})
+		: null
+	if (!feedEnhancer) {
+		console.warn("[enhancement] OPENROUTER_API_KEY not set — feed enhancement disabled")
+	}
+
 	const app = new Hono()
 
 	app.get("/health", (c) => c.json({ status: "ok" }))
 
 	registerAuthHandlers(app)
-	registerFeedHttpHandlers(app, { sessionManager, authSessionMiddleware: requireSession })
+	registerFeedHttpHandlers(app, {
+		sessionManager,
+		authSessionMiddleware: requireSession,
+		feedEnhancer,
+	})
 	registerLocationHttpHandlers(app, { sessionManager })
 
 	return app
