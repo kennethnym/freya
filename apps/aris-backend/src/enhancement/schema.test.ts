@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test"
 
-import { emptyEnhancementResult, parseEnhancementResult } from "./schema.ts"
+import {
+	emptyEnhancementResult,
+	enhancementResultJsonSchema,
+	parseEnhancementResult,
+} from "./schema.ts"
 
 describe("parseEnhancementResult", () => {
 	test("parses valid result", () => {
@@ -85,5 +89,88 @@ describe("emptyEnhancementResult", () => {
 		const result = emptyEnhancementResult()
 		expect(result.slotFills).toEqual({})
 		expect(result.syntheticItems).toEqual([])
+	})
+})
+
+describe("schema sync", () => {
+	const referencePayloads = [
+		{
+			name: "full payload with null slot fill",
+			payload: {
+				slotFills: {
+					"weather-1": { insight: "Rain after 3pm", crossSource: null },
+					"cal-2": { summary: "Busy morning" },
+				},
+				syntheticItems: [
+					{ id: "briefing-morning", type: "briefing", text: "Light day ahead." },
+					{ id: "nudge-umbrella", type: "nudge", text: "Bring an umbrella." },
+				],
+			},
+		},
+		{
+			name: "empty collections",
+			payload: { slotFills: {}, syntheticItems: [] },
+		},
+		{
+			name: "slot fills only",
+			payload: {
+				slotFills: { "item-1": { slot: "filled" } },
+				syntheticItems: [],
+			},
+		},
+		{
+			name: "synthetic items only",
+			payload: {
+				slotFills: {},
+				syntheticItems: [{ id: "insight-1", type: "insight", text: "Something." }],
+			},
+		},
+	]
+
+	for (const { name, payload } of referencePayloads) {
+		test(`arktype and JSON Schema agree on: ${name}`, () => {
+			// arktype accepts it
+			const parsed = parseEnhancementResult(JSON.stringify(payload))
+			expect(parsed).not.toBeNull()
+
+			// JSON Schema structure matches
+			const jsonSchema = enhancementResultJsonSchema
+			expect(Object.keys(jsonSchema.properties).sort()).toEqual(
+				Object.keys(payload).sort(),
+			)
+			expect([...jsonSchema.required].sort()).toEqual(Object.keys(payload).sort())
+
+			// syntheticItems item schema has the right required fields
+			const itemSchema = jsonSchema.properties.syntheticItems.items
+			expect([...itemSchema.required].sort()).toEqual(["id", "text", "type"])
+
+			// Verify each synthetic item has exactly the fields the JSON Schema expects
+			for (const item of payload.syntheticItems) {
+				expect(Object.keys(item).sort()).toEqual([...itemSchema.required].sort())
+			}
+		})
+	}
+
+	test("JSON Schema rejects what arktype rejects: missing required field", () => {
+		// Missing syntheticItems
+		expect(parseEnhancementResult(JSON.stringify({ slotFills: {} }))).toBeNull()
+
+		// JSON Schema also requires it
+		expect(enhancementResultJsonSchema.required).toContain("syntheticItems")
+	})
+
+	test("JSON Schema rejects what arktype rejects: wrong slot fill value type", () => {
+		const bad = { slotFills: { "item-1": { slot: 42 } }, syntheticItems: [] }
+
+		// arktype rejects it
+		expect(parseEnhancementResult(JSON.stringify(bad))).toBeNull()
+
+		// JSON Schema only allows string or null for slot values
+		const slotValueTypes =
+			enhancementResultJsonSchema.properties.slotFills.additionalProperties
+				.additionalProperties.type
+		expect(slotValueTypes).toContain("string")
+		expect(slotValueTypes).toContain("null")
+		expect(slotValueTypes).not.toContain("number")
 	})
 })
