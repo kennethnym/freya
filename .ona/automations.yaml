@@ -1,8 +1,8 @@
 services:
   expo:
     name: Expo Dev Server
-    description: Expo development server for aris-client
+    description: Expo development server for aelis-client
     triggeredBy:
       - postDevcontainerStart
     commands:
-      start: cd apps/aris-client && ./scripts/run-dev-server.sh
+      start: cd apps/aelis-client && ./scripts/run-dev-server.sh

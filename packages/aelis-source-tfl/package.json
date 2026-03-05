@@ -1,0 +1,16 @@
+{
+	"name": "@aelis/source-tfl",
+	"version": "0.0.0",
+	"type": "module",
+	"main": "src/index.ts",
+	"types": "src/index.ts",
+	"scripts": {
+		"test": "bun test src/",
+		"fetch-fixtures": "bun run scripts/fetch-fixtures.ts"
+	},
+	"dependencies": {
+		"@aelis/core": "workspace:*",
+		"@aelis/source-location": "workspace:*",
+		"arktype": "^2.1.0"
+	}
+}

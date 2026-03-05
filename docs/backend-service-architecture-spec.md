@@ -32,7 +32,7 @@ server.ts
 
 ## Scope
 
-**Backend only** (`apps/aris-backend`). No changes to `aris-core` or source packages (`packages/aris-source-*`). The `FeedSource` interface and source implementations remain unchanged.
+**Backend only** (`apps/aelis-backend`). No changes to `aelis-core` or source packages (`packages/aelis-source-*`). The `FeedSource` interface and source implementations remain unchanged.
 
 ## Architectural Options
 
