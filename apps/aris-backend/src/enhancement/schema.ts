@@ -1,24 +1,24 @@
 import { type } from "arktype"
 
-const syntheticItemSchema = type({
+const SyntheticItem = type({
 	id: "string",
 	type: "string",
 	text: "string",
 })
 
-const enhancementResultSchema = type({
+const EnhancementResult = type({
 	slotFills: "Record<string, Record<string, string | null>>",
-	syntheticItems: syntheticItemSchema.array(),
+	syntheticItems: SyntheticItem.array(),
 })
 
-export type SyntheticItem = typeof syntheticItemSchema.infer
-export type EnhancementResult = typeof enhancementResultSchema.infer
+export type SyntheticItem = typeof SyntheticItem.infer
+export type EnhancementResult = typeof EnhancementResult.infer
 
 /**
  * JSON Schema passed to OpenRouter's structured output.
  * OpenRouter doesn't support arktype, so this is maintained separately.
  *
- * ⚠️  Must stay in sync with enhancementResultSchema above.
+ * ⚠️  Must stay in sync with EnhancementResult above.
  * If you add/remove fields, update both schemas.
  */
 export const enhancementResultJsonSchema = {
@@ -76,7 +76,7 @@ export function parseEnhancementResult(json: string): EnhancementResult | null {
 		return null
 	}
 
-	const result = enhancementResultSchema(parsed)
+	const result = EnhancementResult(parsed)
 	if (result instanceof type.errors) {
 		return null
 	}
