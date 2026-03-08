@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "motion/react"
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react"
-import { useFetcher } from "react-router"
+import { Link, useFetcher } from "react-router"
 import { Resend } from "resend"
 import { Streamdown } from "streamdown"
 
@@ -159,7 +159,7 @@ export default function Home() {
 					<motion.div
 						ref={chatBoxRef}
 						key="test"
-						className="w-full max-w-2xl absolute bottom-8 px-6 md:px-0 flex justify-center"
+						className="w-full max-w-2xl absolute bottom-12 px-6 md:px-0 flex justify-center z-20"
 						initial={{ y: 100, opacity: 0 }}
 						animate={{ y: 0, opacity: 1 }}
 						transition={{ type: "spring", stiffness: 300, damping: 30, mass: 1.5 }}
