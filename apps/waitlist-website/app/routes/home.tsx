@@ -7,7 +7,7 @@ import { Streamdown } from "streamdown"
 import { ChatBox } from "~/chat/chat-box"
 import {
 	duplicateEmailMessage,
-	INITLAL_MESSAGES,
+	INITIAL_MESSAGES,
 	troubleMessage,
 	waitListJoinedMessage,
 	type Message,
@@ -62,7 +62,10 @@ export async function action({ request }: Route.ActionArgs) {
 
 	const resend = new Resend(process.env.RESEND_API_KEY)
 
+	const audienceId = process.env.RESEND_AUDIENCE_ID!
+
 	const dup = await resend.contacts.get({
+		audienceId,
 		email,
 	})
 	if (dup.data) {
@@ -70,13 +73,8 @@ export async function action({ request }: Route.ActionArgs) {
 	}
 
 	const res = await resend.contacts.create({
+		audienceId,
 		email,
-		segments: [
-			{
-				// resend segment id for "Waitlist" segment
-				id: "b80fb036-74a1-4f7d-bca5-2c035b696071",
-			},
-		],
 	})
 
 	if (res.error) {
@@ -101,7 +99,7 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function Home() {
-	const [messages, setMessages] = useState<Message[]>(INITLAL_MESSAGES)
+	const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES)
 	const [emailSent, setEmailSent] = useState("")
 	const [isAnimatingSend, setIsAnimatingSend] = useState(false)
 	const [logoState, setLogoState] = useState<TAnimatedLogoState>(AnimatedLogoState.Idle)

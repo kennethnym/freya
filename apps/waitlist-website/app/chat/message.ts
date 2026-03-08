@@ -12,17 +12,18 @@ export interface SystemMessage {
 export type Message = UserMessage | SystemMessage
 
 function timeOfDay() {
-	const now = new Date()
-	const hours = now.getHours()
-	if (hours >= 6 && hours <= 9) {
+	const hours = new Date().getHours()
+	if (hours >= 5 && hours < 12) {
+		return "morning"
+	} else if (hours >= 12 && hours < 18) {
+		return "afternoon"
+	} else if (hours >= 18 && hours < 22) {
 		return "evening"
-	} else if (hours > 9 || hours <= 4) {
-		return "night"
 	}
-	return "day"
+	return "night"
 }
 
-export const INITLAL_MESSAGES: Message[] = [
+export const INITIAL_MESSAGES: Message[] = [
 	{
 		role: "user",
 		message: "Who are you?",
