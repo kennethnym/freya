@@ -27,6 +27,11 @@ export default function PrivacyPolicy() {
 			>
 				{POLICY}
 			</Streamdown>
+			<footer className="mt-16 pt-8 border-t border-stone-200 dark:border-stone-700">
+				<Link to="/" className="text-sm opacity-50 hover:opacity-75 underline">
+					Back to home
+				</Link>
+			</footer>
 		</main>
 	)
 }
