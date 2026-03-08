@@ -11,6 +11,17 @@ export interface SystemMessage {
 
 export type Message = UserMessage | SystemMessage
 
+function timeOfDay() {
+	const now = new Date()
+	const hours = now.getHours()
+	if (hours >= 6 && hours <= 9) {
+		return "evening"
+	} else if (hours > 9 || hours <= 4) {
+		return "night"
+	}
+	return "day"
+}
+
 export const INITLAL_MESSAGES: Message[] = [
 	{
 		role: "user",
@@ -35,6 +46,13 @@ export function waitListJoinedMessage(email: string): SystemMessage {
 		message: `Thanks for joining the waitlist! I've sent you a confirmation email.
 I'll send an email to **${email}** when I'm ready.
 
-Have a good day!`,
+Have a good ${timeOfDay()}!`,
+	}
+}
+
+export function duplicateEmailMessage(): SystemMessage {
+	return {
+		role: "system",
+		message: `I appreciate your excitement! You are already on the waitlist. When I am ready, I will reach out again. Have a good ${timeOfDay()} :)`,
 	}
 }
