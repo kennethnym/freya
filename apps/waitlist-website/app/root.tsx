@@ -28,6 +28,11 @@ export const links: Route.LinksFunction = () => [
 		type: "image/svg+xml",
 		media: "(prefers-color-scheme: dark)",
 	},
+	{
+		rel: "icon",
+		href: "/favicon.ico",
+		sizes: "any",
+	},
 ]
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -67,11 +72,14 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 	}
 
 	return (
-		<main className="pt-16 p-4 container mx-auto">
-			<h1>{message}</h1>
-			<p>{details}</p>
+		<main className="flex flex-col items-center justify-center w-full h-full gap-4">
+			<h1 className="text-6xl font-semibold">{message}</h1>
+			<p className="text-stone-600 dark:text-stone-400">{details}</p>
+			<a href="/" className="mt-4 text-sm underline opacity-50 hover:opacity-75">
+				Back to home
+			</a>
 			{stack && (
-				<pre className="w-full p-4 overflow-x-auto">
+				<pre className="mt-8 w-full max-w-2xl p-4 overflow-x-auto text-xs bg-stone-100 dark:bg-stone-800 rounded-lg">
 					<code>{stack}</code>
 				</pre>
 			)}
