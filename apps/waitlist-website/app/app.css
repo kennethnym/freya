@@ -43,7 +43,7 @@ body {
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 
-	@apply bg-stone-50 dark:bg-stone-900 text-stone-900 dark:text-stone-300 selection:bg-teal-600 dark:selection:bg-teal-500 selection:text-stone-50 dark:selection:text-stone-900;
+	@apply bg-stone-50 dark:bg-stone-900 text-stone-900 dark:text-stone-200 selection:bg-teal-600 dark:selection:bg-teal-500 selection:text-stone-50 dark:selection:text-stone-900;
 
 	@media (prefers-color-scheme: dark) {
 		color-scheme: dark;

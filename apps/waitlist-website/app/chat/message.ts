@@ -20,9 +20,12 @@ export const INITLAL_MESSAGES: Message[] = [
 		role: "system",
 		message: `Hey! I'm **Aelis** — your personal assistant that brings you the right thing, at the right time, in the right place.
 
-Jubilee line down? I've already found you an alternative route. Flying tomorrow? Your boarding pass and gate info are ready before you even check. I learn your routines, anticipate what's next, and surface what matters before you even think to look for it.
+- Jubilee line down? I've already found you an alternative route.
+- Dinner reservation at 8? I'll have the restaurant, directions, and the menu ready before you head out.
 
-I'm not ready yet — [@kennethnym](https://x.com/kennethnym) is still building me. Drop your email below and I'll let you know when I'm available.`,
+I learn your routines, anticipate what's next, and surface what matters before you even think to look for it.
+
+I'm not ready yet — [@kennethnym](https://x.com/kennethnym) is still building me. **Drop your email below** and I'll let you know when I'm available.`,
 	},
 ]
 
