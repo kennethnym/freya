@@ -22,10 +22,26 @@ import { ProgressiveBlur } from "~/components/progressive-blur"
 
 import type { Route } from "./+types/home"
 
+const PAGE_TITLE = "Aelis - Next Generation AI Assistant"
+const PAGE_DESCRIPTION =
+	"Meet Aelis, a personal assistant that stays one step ahead of your day. Join the waitlist now."
+
 export function meta({}: Route.MetaArgs) {
 	return [
-		{ title: "New React Router App" },
-		{ name: "description", content: "Welcome to React Router!" },
+		{ title: PAGE_TITLE },
+		{
+			name: "description",
+			content: PAGE_DESCRIPTION,
+		},
+		{ property: "og:title", content: PAGE_TITLE },
+		{ property: "og:description", content: PAGE_DESCRIPTION },
+		{ property: "og:image", content: "https://ael.is/social-media-preview.png" },
+		{ property: "og:url", content: "https://ael.is" },
+		{ property: "og:type", content: "website" },
+		{ name: "twitter:card", content: "summary_large_image" },
+		{ name: "twitter:title", content: PAGE_TITLE },
+		{ name: "twitter:description", content: PAGE_DESCRIPTION },
+		{ name: "twitter:image", content: "https://ael.is/social-media-preview.png" },
 	]
 }
 

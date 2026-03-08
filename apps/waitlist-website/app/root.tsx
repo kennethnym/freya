@@ -16,7 +16,33 @@ export const links: Route.LinksFunction = () => [
 		rel: "stylesheet",
 		href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
 	},
+	{
+		rel: "icon",
+		href: "/favicon-light.svg",
+		type: "image/svg+xml",
+		media: "(prefers-color-scheme: light)",
+	},
+	{
+		rel: "icon",
+		href: "/favicon-dark.svg",
+		type: "image/svg+xml",
+		media: "(prefers-color-scheme: dark)",
+	},
 ]
+
+export const meta: Route.MetaFunction = () => {
+	return [
+		{ property: "og:title", content: "Page Title" },
+		{ property: "og:description", content: "Page description" },
+		{ property: "og:image", content: "https://example.com/og-image.png" },
+		{ property: "og:url", content: "https://example.com" },
+		{ property: "og:type", content: "website" },
+		{ name: "twitter:card", content: "summary_large_image" },
+		{ name: "twitter:title", content: "Page Title" },
+		{ name: "twitter:description", content: "Page description" },
+		{ name: "twitter:image", content: "https://example.com/og-image.png" },
+	]
+}
 
 export function Layout({ children }: { children: React.ReactNode }) {
 	return (
