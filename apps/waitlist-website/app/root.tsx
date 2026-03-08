@@ -30,20 +30,6 @@ export const links: Route.LinksFunction = () => [
 	},
 ]
 
-export const meta: Route.MetaFunction = () => {
-	return [
-		{ property: "og:title", content: "Page Title" },
-		{ property: "og:description", content: "Page description" },
-		{ property: "og:image", content: "https://example.com/og-image.png" },
-		{ property: "og:url", content: "https://example.com" },
-		{ property: "og:type", content: "website" },
-		{ name: "twitter:card", content: "summary_large_image" },
-		{ name: "twitter:title", content: "Page Title" },
-		{ name: "twitter:description", content: "Page description" },
-		{ name: "twitter:image", content: "https://example.com/og-image.png" },
-	]
-}
-
 export function Layout({ children }: { children: React.ReactNode }) {
 	return (
 		<html lang="en">
