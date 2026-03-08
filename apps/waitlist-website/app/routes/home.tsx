@@ -62,10 +62,10 @@ export async function action({ request }: Route.ActionArgs) {
 
 	const resend = new Resend(process.env.RESEND_API_KEY)
 
-	const audienceId = process.env.RESEND_AUDIENCE_ID!
+	const segmentId = "b80fb036-74a1-4f7d-bca5-2c035b696071"
 
 	const dup = await resend.contacts.get({
-		audienceId,
+		segmentId,
 		email,
 	})
 	if (dup.data) {
@@ -73,8 +73,8 @@ export async function action({ request }: Route.ActionArgs) {
 	}
 
 	const res = await resend.contacts.create({
-		audienceId,
 		email,
+		segments: [{ id: segmentId }],
 	})
 
 	if (res.error) {
