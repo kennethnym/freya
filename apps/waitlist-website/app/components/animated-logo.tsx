@@ -162,6 +162,7 @@ export function AnimatedLogo({ state, className }: AnimatedLogoProps) {
 			onLoopComplete={onLoopComplete}
 			onMouseDown={onMouseDown}
 			onMouseUp={onMouseUp}
+			onMouseLeave={onMouseUp}
 		/>
 	)
 }
