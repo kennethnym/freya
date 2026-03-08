@@ -65,7 +65,6 @@ export async function action({ request }: Route.ActionArgs) {
 	const segmentId = "b80fb036-74a1-4f7d-bca5-2c035b696071"
 
 	const dup = await resend.contacts.get({
-		segmentId,
 		email,
 	})
 	if (dup.data) {
@@ -204,7 +203,10 @@ export default function Home() {
 				}}
 			/>
 			{chatBox}
-			<ProgressiveBlur direction="up" className="absolute bottom-0 left-0 right-0 h-24 z-10 pointer-events-none" />
+			<ProgressiveBlur
+				direction="up"
+				className="absolute bottom-0 left-0 right-0 h-24 z-10 pointer-events-none"
+			/>
 			<footer className="absolute bottom-4 z-20">
 				<Link to="/privacy" className="text-xs opacity-50 underline">
 					Privacy policy
