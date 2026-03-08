@@ -8,6 +8,7 @@ import { ChatBox } from "~/chat/chat-box"
 import {
 	duplicateEmailMessage,
 	INITLAL_MESSAGES,
+	troubleMessage,
 	waitListJoinedMessage,
 	type Message,
 	type SystemMessage,
@@ -111,10 +112,19 @@ export default function Home() {
 		if (fetcher.data?.email && !isAnimatingSend) {
 			setMessages((messages) => [...messages, waitListJoinedMessage(fetcher.data.email)])
 		} else if (fetcher.data?.error) {
-			if (fetcher.data.error === FormError.Duplicate && !isAnimatingSend) {
-				setMessages((messages) => [...messages, duplicateEmailMessage()])
-			} else {
-				console.error(fetcher.data.error)
+			if (!isAnimatingSend) {
+				let errorMessage: SystemMessage
+				switch (fetcher.data.error) {
+					case FormError.Duplicate:
+						errorMessage = duplicateEmailMessage()
+						break
+					default: {
+						console.error(fetcher.data.error)
+						errorMessage = troubleMessage()
+						break
+					}
+				}
+				setMessages((messages) => [...messages, errorMessage])
 			}
 		}
 	}, [fetcher.data?.email, fetcher.data?.error, isAnimatingSend])
@@ -196,6 +206,12 @@ export default function Home() {
 				}}
 			/>
 			{chatBox}
+			<ProgressiveBlur direction="up" className="absolute bottom-0 left-0 right-0 h-24 z-10 pointer-events-none" />
+			<footer className="absolute bottom-4 z-20">
+				<Link to="/privacy" className="text-xs opacity-50 underline">
+					Privacy policy
+				</Link>
+			</footer>
 		</main>
 	)
 }

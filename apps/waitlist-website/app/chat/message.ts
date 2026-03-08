@@ -56,3 +56,10 @@ export function duplicateEmailMessage(): SystemMessage {
 		message: `I appreciate your excitement! You are already on the waitlist. When I am ready, I will reach out again. Have a good ${timeOfDay()} :)`,
 	}
 }
+
+export function troubleMessage(): SystemMessage {
+	return {
+		role: "system",
+		message: `I apologize, but I am having trouble adding you to the waitlist. Could you refresh the page and try again please in a moment?`,
+	}
+}
