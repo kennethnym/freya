@@ -6,6 +6,7 @@ import { Streamdown } from "streamdown"
 
 import { ChatBox } from "~/chat/chat-box"
 import {
+	duplicateEmailMessage,
 	INITLAL_MESSAGES,
 	waitListJoinedMessage,
 	type Message,
@@ -45,6 +46,11 @@ export function meta({}: Route.MetaArgs) {
 	]
 }
 
+const FormError = {
+	Duplicate: "duplicate",
+	Resend: "resend",
+} as const
+
 export async function action({ request }: Route.ActionArgs) {
 	const formData = await request.formData()
 	const email = formData.get("email")
@@ -54,6 +60,13 @@ export async function action({ request }: Route.ActionArgs) {
 	}
 
 	const resend = new Resend(process.env.RESEND_API_KEY)
+
+	const dup = await resend.contacts.get({
+		email,
+	})
+	if (dup.data) {
+		return { error: FormError.Duplicate }
+	}
 
 	const res = await resend.contacts.create({
 		email,
@@ -67,7 +80,20 @@ export async function action({ request }: Route.ActionArgs) {
 
 	if (res.error) {
 		console.log("Error adding contact to Resend:", res.error)
-		return { error: res.error.message }
+		return { error: FormError.Resend, message: res.error.message }
+	}
+
+	const emailRes = await resend.emails.send({
+		from: "Aelis <no-reply@ael.is>",
+		to: email,
+		template: {
+			id: "waitlist-confirmation",
+		},
+	})
+
+	if (emailRes.error) {
+		// swallow the error since the user is already added to the waitlist, but log it for debugging
+		console.log("Error sending confirmation email:", emailRes.error)
 	}
 
 	return { email }
@@ -85,7 +111,11 @@ export default function Home() {
 		if (fetcher.data?.email && !isAnimatingSend) {
 			setMessages((messages) => [...messages, waitListJoinedMessage(fetcher.data.email)])
 		} else if (fetcher.data?.error) {
-			console.error(fetcher.data.error)
+			if (fetcher.data.error === FormError.Duplicate && !isAnimatingSend) {
+				setMessages((messages) => [...messages, duplicateEmailMessage()])
+			} else {
+				console.error(fetcher.data.error)
+			}
 		}
 	}, [fetcher.data?.email, fetcher.data?.error, isAnimatingSend])
 
