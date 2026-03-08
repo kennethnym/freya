@@ -277,7 +277,6 @@ function MessageList({
 	onMessageStreamStart: () => void
 	onMessageStreamEnd: () => void
 }) {
-	console.log({ messages, showLastMessage })
 	return (
 		<ul className="w-full flex flex-col gap-8 overflow-auto px-6 pt-20 md:px-0 md:pt-24 pb-34">
 			{messages.map((message, index) => (
