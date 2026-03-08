@@ -81,6 +81,8 @@ export async function action({ request }: Route.ActionArgs) {
 		return { error: FormError.Resend, message: res.error.message }
 	}
 
+	await new Promise((resolve) => setTimeout(resolve, 1000))
+
 	const emailRes = await resend.emails.send({
 		from: "Aelis <no-reply@ael.is>",
 		to: email,
