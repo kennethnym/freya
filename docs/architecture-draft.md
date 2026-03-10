@@ -1,10 +1,10 @@
-# ARIS Architecture Draft
+# AELIS Architecture Draft
 
 > This is a working draft from initial architecture discussions. Not final documentation.
 
 ## Overview
 
-ARIS is an AI-powered personal assistant. The core aggregates data from various sources and compiles a feed of contextually relevant items - similar to Google Now. The feed shows users useful information based on their current context (date, time, location).
+AELIS is an AI-powered personal assistant. The core aggregates data from various sources and compiles a feed of contextually relevant items - similar to Google Now. The feed shows users useful information based on their current context (date, time, location).
 
 Examples of feed items:
 
@@ -26,7 +26,7 @@ Examples of feed items:
 ┌─────────────────────────────────────────────────────────────┐
 │                         Backend                              │
 │  ┌─────────────┐    ┌─────────────┐                         │
-│  │  aris-core  │    │   Sources   │                         │
+│  │  aelis-core  │    │   Sources   │                         │
 │  │             │    │  (plugins)  │                         │
 │  │ - FeedEngine│◄───│ - Calendar  │                         │
 │  │ - Context   │    │ - Weather   │                         │
@@ -51,7 +51,7 @@ Examples of feed items:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Core Package (`aris-core`)
+## Core Package (`aelis-core`)
 
 The core is responsible for:
 
@@ -64,7 +64,7 @@ The core is responsible for:
 
 - **Context**: Time and location (with accuracy) passed to all sources. Sources can contribute to context (e.g., location source provides coordinates, weather source provides conditions).
 - **FeedItem**: Has an ID (source-generated, stable), type, timestamp, JSON-serializable data, optional actions, an optional `ui` tree, and optional `slots` for LLM-fillable content.
-- **FeedSource**: Interface that first and third parties implement to provide context, feed items, and actions. Uses reverse-domain IDs (e.g., `aris.weather`, `com.spotify`).
+- **FeedSource**: Interface that first and third parties implement to provide context, feed items, and actions. Uses reverse-domain IDs (e.g., `aelis.weather`, `com.spotify`).
 - **FeedEngine**: Orchestrates sources respecting their dependency graph, runs independent sources in parallel, returns items and any errors. Routes action execution to the correct source.
 
 ## Data Sources
@@ -113,7 +113,7 @@ The UI for feed items is **server-driven**. Sources describe how their items loo
 ### Two tiers of UI
 
 - **Server-driven (default):** Any source can return a `ui` tree. Covers most cards — weather, tasks, alerts, package tracking, news, etc. Simple interactions go through source actions. This is the default path for both first-party and third-party sources.
-- **Bespoke native:** For cards that need rich client interaction (gestures, animations, real-time updates), a native React Native component is registered in the json-render component map and referenced by type. Third parties that need this level of richness work with the ARIS team to get it integrated.
+- **Bespoke native:** For cards that need rich client interaction (gestures, animations, real-time updates), a native React Native component is registered in the json-render component map and referenced by type. Third parties that need this level of richness work with the AELIS team to get it integrated.
 
 ### Why server-driven
 

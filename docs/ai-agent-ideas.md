@@ -1,4 +1,4 @@
-# ARIS Agent Vision
+# AELIS Agent Vision
 
 ## What We're Building
 
@@ -43,7 +43,7 @@ Sources → Source Graph → FeedEngine
 
 The "agents" in this doc describe *behaviors*, not separate running processes. A human PA is one person — they don't have a "calendar agent" and a "follow-up agent" in their head. They look at your whole situation and act on whatever matters.
 
-ARIS works the same way. One LLM harness receives all feed items, all context, all user memory, and all available tools. It returns a single `FeedEnhancement`. Every behavior (preparation, follow-up, anomaly detection, tone adjustment, cross-source reasoning) is an instruction in the system prompt, not a separate agent.
+AELIS works the same way. One LLM harness receives all feed items, all context, all user memory, and all available tools. It returns a single `FeedEnhancement`. Every behavior (preparation, follow-up, anomaly detection, tone adjustment, cross-source reasoning) is an instruction in the system prompt, not a separate agent.
 
 The advantage: the LLM sees everything at once. It doesn't need agent-to-agent communication because there's no separation. It naturally connects "rain at 6pm" with "dinner at 7pm" because both are in the same context window.
 
@@ -100,9 +100,9 @@ const agentContext = new AgentContext({
 })
 ```
 
-This keeps the engine usable as a pure feed library without the AI layer — useful for testing and for anyone who wants `aris-core` without the agent features.
+This keeps the engine usable as a pure feed library without the AI layer — useful for testing and for anyone who wants `aelis-core` without the agent features.
 
-**Implementation:** `AgentContext` lives in a new package (`packages/aris-agent-context` or alongside the enhancement layer). It wraps a `FeedEngine` instance and the persistence stores. The ring buffer for recent items (last N=10 refreshes) lives here, not on the engine — `AgentContext` subscribes to the engine via `engine.subscribe()` and accumulates snapshots. The `itemsFrom(sourceId)` method filters the ring buffer by item type prefix. This is Phase 0 work.
+**Implementation:** `AgentContext` lives in a new package (`packages/aelis-agent-context` or alongside the enhancement layer). It wraps a `FeedEngine` instance and the persistence stores. The ring buffer for recent items (last N=10 refreshes) lives here, not on the engine — `AgentContext` subscribes to the engine via `engine.subscribe()` and accumulates snapshots. The `itemsFrom(sourceId)` method filters the ring buffer by item type prefix. This is Phase 0 work.
 
 ---
 
@@ -199,7 +199,7 @@ interface UserAffinityModel {
 }
 ```
 
-**Implementation:** Build these as individual `FeedPostProcessor` implementations in a `packages/aris-feed-enhancers` package. Each enhancer is a pure function: items in, enhancement out. Start with three: `TimeOfDayEnhancer`, `CalendarGroupingEnhancer`, `UserAffinityEnhancer`. The affinity model needs a persistence layer — a simple JSON blob per user stored in the database, updated on each dismiss/tap event sent from the client via the WebSocket `feed.interact` method (new JSON-RPC method to add). Time buckets: morning (6-12), afternoon (12-17), evening (17-22), night (22-6).
+**Implementation:** Build these as individual `FeedPostProcessor` implementations in a `packages/aelis-feed-enhancers` package. Each enhancer is a pure function: items in, enhancement out. Start with three: `TimeOfDayEnhancer`, `CalendarGroupingEnhancer`, `UserAffinityEnhancer`. The affinity model needs a persistence layer — a simple JSON blob per user stored in the database, updated on each dismiss/tap event sent from the client via the WebSocket `feed.interact` method (new JSON-RPC method to add). Time buckets: morning (6-12), afternoon (12-17), evening (17-22), night (22-6).
 
 ### LLM-Powered Enhancements
 
@@ -286,7 +286,7 @@ These enhancements are delivered via slots on source-produced feed items. Each s
 
 ## Emergent Behavior
 
-Most of what makes ARIS feel like a person isn't hardcoded. It emerges from giving the LLM the right context and the right prompt.
+Most of what makes AELIS feel like a person isn't hardcoded. It emerges from giving the LLM the right context and the right prompt.
 
 ### What's hardcoded vs. what's emergent
 
@@ -338,10 +338,10 @@ These are ~10 small pure functions. Everything else is the LLM reading context a
 
 ### The system prompt
 
-The core of ARIS's behavior is one prompt. Roughly:
+The core of AELIS's behavior is one prompt. Roughly:
 
 ```
-You are ARIS, a personal assistant. Here is everything happening
+You are AELIS, a personal assistant. Here is everything happening
 in the user's life right now:
 
 [serialized feed items from all sources]
@@ -564,7 +564,7 @@ Surfaces things that break routine, because those are the things you miss.
 - "Your calendar is empty tomorrow — did you mean to block time?"
 - "You have 3 meetings that overlap between 2-3pm"
 
-**Implementation:** Mostly rule-based — no LLM needed for detection. Build as a `FeedSource` (`aris.anomaly`) that depends on calendar sources. Maintain a rolling histogram of the user's meeting start times (stored in the preference/memory DB). On each refresh, compare upcoming events against the histogram. Flag events outside 2 standard deviations. Overlap detection is comparing time ranges. "First free afternoon in N weeks" requires storing daily busyness scores. The anomaly items are `FeedItem`s with type `anomaly` — the LLM is only needed to phrase the message naturally, which can be done with simple templates for v1 ("You have a meeting at {time} — that's unusual for you").
+**Implementation:** Mostly rule-based — no LLM needed for detection. Build as a `FeedSource` (`aelis.anomaly`) that depends on calendar sources. Maintain a rolling histogram of the user's meeting start times (stored in the preference/memory DB). On each refresh, compare upcoming events against the histogram. Flag events outside 2 standard deviations. Overlap detection is comparing time ranges. "First free afternoon in N weeks" requires storing daily busyness scores. The anomaly items are `FeedItem`s with type `anomaly` — the LLM is only needed to phrase the message naturally, which can be done with simple templates for v1 ("You have a meeting at {time} — that's unusual for you").
 
 ---
 
@@ -585,7 +585,7 @@ The key difference from task tracking: this catches things that fell through the
 
 The realistic v1 has two channels:
 
-1. **ARIS conversations (free, no privacy concerns).** Every conversation flows through the Query Agent. When the user says "I'll send that to Sarah tomorrow," the system extracts the intent (action: send something, person: Sarah, deadline: tomorrow) and stores it. No extra permissions needed — the user is already talking to ARIS.
+1. **AELIS conversations (free, no privacy concerns).** Every conversation flows through the Query Agent. When the user says "I'll send that to Sarah tomorrow," the system extracts the intent (action: send something, person: Sarah, deadline: tomorrow) and stores it. No extra permissions needed — the user is already talking to AELIS.
 
 2. **Email scanning (opt-in).** Connect Gmail/Outlook as a source. Scan outbound emails for commitment language: "I'll get back to you," "let me check on that," "I'll send this by Friday." LLM extracts intent + deadline + person. This catches most professional commitments since email is where they're made. Privacy-sensitive — must be explicit opt-in.
 
@@ -595,7 +595,7 @@ Later channels (harder, deferred): meeting transcripts (Otter, Fireflies, Google
 
 Surfaces gentle reminders — not nagging, more like "hey, just in case." Learns which follow-ups the user appreciates vs. dismisses. Backs off on topics the user ignores repeatedly.
 
-**Implementation:** Two parts: extraction and surfacing. Extraction runs as a side-effect of the Query Agent — after every conversation turn, pass the user's message through an LLM with a structured output schema: `{ hasCommitment: boolean, action?: string, person?: string, deadline?: string }`. Store extracted commitments in a `commitments` table (user_id, action, person, deadline, status, created_at, dismissed_count). Surfacing is a `FeedSource` (`aris.followup`) that queries the commitments table for items past their deadline or approaching it. If the user dismisses a follow-up, increment `dismissed_count`; stop showing after 3 dismissals. Email scanning (v2) adds a second extraction path: a background job that processes new sent emails through the same LLM extraction.
+**Implementation:** Two parts: extraction and surfacing. Extraction runs as a side-effect of the Query Agent — after every conversation turn, pass the user's message through an LLM with a structured output schema: `{ hasCommitment: boolean, action?: string, person?: string, deadline?: string }`. Store extracted commitments in a `commitments` table (user_id, action, person, deadline, status, created_at, dismissed_count). Surfacing is a `FeedSource` (`aelis.followup`) that queries the commitments table for items past their deadline or approaching it. If the user dismisses a follow-up, increment `dismissed_count`; stop showing after 3 dismissals. Email scanning (v2) adds a second extraction path: a background job that processes new sent emails through the same LLM extraction.
 
 #### Memory
 
@@ -725,7 +725,7 @@ Beyond frequency, the assistant can understand relationship *dynamics*:
 - "You've cancelled on Tom three times — he might be feeling deprioritized."
 - "Your meetings with the design team have been getting longer — they averaged 30 min last month, now they're 50 min."
 
-**Implementation:** Requires a contacts source (Apple Contacts via CardDAV, or Google People API) — build this as a new `FeedSource` that provides contact context (birthdays, anniversaries) to the graph. The social awareness agent is a `FeedSource` (`aris.social`) that depends on the contacts source and calendar sources. Birthday/anniversary detection: compare contact dates against current date, surface items 7 days before. Meeting frequency: query calendar history for events containing a contact's name, compute average interval, flag when current gap exceeds 2x the average. The "Sarah mentioned she's been sick" level requires email/message scanning — defer to v2. For v1, stick to birthdays + meeting frequency, which are purely rule-based.
+**Implementation:** Requires a contacts source (Apple Contacts via CardDAV, or Google People API) — build this as a new `FeedSource` that provides contact context (birthdays, anniversaries) to the graph. The social awareness agent is a `FeedSource` (`aelis.social`) that depends on the contacts source and calendar sources. Birthday/anniversary detection: compare contact dates against current date, surface items 7 days before. Meeting frequency: query calendar history for events containing a contact's name, compute average interval, flag when current gap exceeds 2x the average. The "Sarah mentioned she's been sick" level requires email/message scanning — defer to v2. For v1, stick to birthdays + meeting frequency, which are purely rule-based.
 
 #### Ambient Context
 
@@ -741,7 +741,7 @@ Monitors the world for things that affect you, beyond weather and location.
 
 A human assistant would flag these without being asked. You shouldn't have to go looking for problems.
 
-**Implementation:** A collection of specialized `FeedSource` nodes, each monitoring a specific external signal. Start with what's closest to existing sources: `aris.tfl` already handles transit — extend it to check for planned strikes/closures (TfL API has this data). Package tracking: a new source (`aris.packages`) that polls tracking APIs (Royal Mail, UPS) given tracking numbers extracted from email (requires email source). News: a source (`aris.news`) that uses a news API (NewsAPI, Google News) filtered by user interests from the preference store. Each of these is independent and produces its own feed items. The cross-source connection ("train strike affects your commute") happens in the LLM enhancement layer, not in the source itself.
+**Implementation:** A collection of specialized `FeedSource` nodes, each monitoring a specific external signal. Start with what's closest to existing sources: `aelis.tfl` already handles transit — extend it to check for planned strikes/closures (TfL API has this data). Package tracking: a new source (`aelis.packages`) that polls tracking APIs (Royal Mail, UPS) given tracking numbers extracted from email (requires email source). News: a source (`aelis.news`) that uses a news API (NewsAPI, Google News) filtered by user interests from the preference store. Each of these is independent and produces its own feed items. The cross-source connection ("train strike affects your commute") happens in the LLM enhancement layer, not in the source itself.
 
 #### Energy Awareness
 
@@ -846,7 +846,7 @@ Reduces notification fatigue while ensuring important items aren't missed.
 
 The primary interface. This isn't a feed query tool — it's the person you talk to.
 
-The user should be able to ask ARIS anything they'd ask a knowledgeable friend. Some questions are about their data. Most aren't.
+The user should be able to ask AELIS anything they'd ask a knowledgeable friend. Some questions are about their data. Most aren't.
 
 **About their life (reads from the source graph):**
 - "What's on my calendar tomorrow?"
@@ -876,7 +876,7 @@ This is also where intent extraction happens for the Gentle Follow-up Agent. Eve
 
 #### Web Search
 
-The backbone for general knowledge. Makes ARIS a person you can ask things, not just a dashboard you look at.
+The backbone for general knowledge. Makes AELIS a person you can ask things, not just a dashboard you look at.
 
 **Reactive (user asks):**
 - Recipe ideas, how-to questions, factual lookups, recommendations
@@ -936,7 +936,7 @@ Handles practical logistics a human assistant would manage.
 
 Combines tasks, calendar, location, and business hours. Groups nearby errands. Warns about deadlines.
 
-**Implementation:** A `FeedSource` (`aris.errands`) that depends on a task source (Todoist, Apple Reminders — needs to be built), calendar sources, and location. On each refresh, it queries tasks tagged as errands or with locations, cross-references against calendar free slots and current location, and uses a simple greedy algorithm to suggest optimal windows. Business hours: either hardcode common defaults or use Google Places API for specific venues. For v1, skip route optimization — just identify "you have a gap near this errand's location." The LLM enhancer can phrase the suggestion naturally. Requires a task source to exist first.
+**Implementation:** A `FeedSource` (`aelis.errands`) that depends on a task source (Todoist, Apple Reminders — needs to be built), calendar sources, and location. On each refresh, it queries tasks tagged as errands or with locations, cross-references against calendar free slots and current location, and uses a simple greedy algorithm to suggest optimal windows. Business hours: either hardcode common defaults or use Google Places API for specific venues. For v1, skip route optimization — just identify "you have a gap near this errand's location." The LLM enhancer can phrase the suggestion naturally. Requires a task source to exist first.
 
 #### Delegation
 
@@ -1012,7 +1012,7 @@ These aren't features — they're qualities that run through everything the assi
 
 #### Personality & Voice
 
-A human assistant has a consistent personality. ARIS needs one too.
+A human assistant has a consistent personality. AELIS needs one too.
 
 The voice should be: warm but not bubbly, concise but not robotic, occasionally witty but never trying too hard. It says "I" not "we." It has opinions when asked ("I'd skip the design sync — you've been to the last 8 and nothing changes") but defers on big decisions.
 
@@ -1128,7 +1128,7 @@ Expose the source graph to the enhancement layer. Without this, every behavior s
 - Add `FeedEnhancement` type and merge logic in `refresh()`
 - Remove `priority` from `FeedItem` — ranking is now entirely post-processing
 - Add `signals` field to `FeedItem` for source-provided hints (optional urgency, time relevance)
-- Create `packages/aris-feed-enhancers` for post-processor implementations
+- Create `packages/aelis-feed-enhancers` for post-processor implementations
 - Add `feed.interact` JSON-RPC method for tap/dismiss/dwell events from client
 - Add `memories` table to database schema (user_id, key, value_json, confidence, updated_at, source)
 - Add `feed_snapshots` table for routine learning (user_id, items_json, context_json, timestamp)
@@ -1139,10 +1139,10 @@ Expose the source graph to the enhancement layer. Without this, every behavior s
 The minimum for "this is an AI assistant."
 
 1. **Personality spec** — write the voice/tone document included in all LLM calls. ~500 tokens. This shapes everything that follows.
-2. **Rule-based post-processors** — `TimeOfDayEnhancer`, `CalendarGroupingEnhancer`, `DeduplicationEnhancer`, silence/"all clear" card logic in `aris-feed-enhancers`. Pure functions, no external dependencies.
+2. **Rule-based post-processors** — `TimeOfDayEnhancer`, `CalendarGroupingEnhancer`, `DeduplicationEnhancer`, silence/"all clear" card logic in `aelis-feed-enhancers`. Pure functions, no external dependencies.
 3. **Query Agent** — `query.ask` JSON-RPC method, LLM with tool use, conversation history table. Start with a single model (GPT-4.1 mini or Gemini Flash for cost).
 4. **Web Search** — Tavily or Brave Search API wrapper, exposed as an LLM tool. Cache layer with TTL.
-5. **Daily Briefing** — `aris.briefing` FeedSource, depends on all content sources, runs in morning/evening time windows.
+5. **Daily Briefing** — `aelis.briefing` FeedSource, depends on all content sources, runs in morning/evening time windows.
 6. **Graceful degradation** — ensure all post-processors and the LLM harness work with any subset of sources connected.
 
 ### Phase 2: It Feels Human
@@ -1151,7 +1151,7 @@ The features that make people say "whoa."
 
 7. **LLM Enhancement slow path** — background timer, serializes feed + context into prompt, returns `FeedEnhancement`, caches result. This enables card rewriting, cross-source synthesis, tone adjustment, and ambient personality. Include confidence/uncertainty instructions in the prompt.
 8. **User Affinity model** — `UserAffinityEnhancer` post-processor + `feed.interact` event handling. Writes to `memories` table. No LLM.
-9. **Contextual Preparation** — `aris.preparation` FeedSource, depends on calendar + web search tool. Includes anticipatory logistics and anticipating questions. Cache prep cards per event ID.
+9. **Contextual Preparation** — `aelis.preparation` FeedSource, depends on calendar + web search tool. Includes anticipatory logistics and anticipating questions. Cache prep cards per event ID.
 10. **Tone & Timing + Temporal Empathy** — post-processor that infers user state, adjusts suppression, sets `notify` flags, holds emotionally heavy items for appropriate windows.
 11. **Context Switching Buffers** — rule-based detection of activity transitions, LLM-generated transition cards.
 
@@ -1161,7 +1161,7 @@ The long-term relationship.
 
 12. **Memory store + decay model** — `memories` table with confidence scores, `last_reinforced` timestamps, nightly decay job. Include in all LLM prompts.
 13. **Learning from corrections** — correction extraction as Query Agent side-effect, writes to memory with confidence 1.0.
-14. **Gentle Follow-up** — intent extraction as Query Agent side-effect, `commitments` table, `aris.followup` FeedSource.
+14. **Gentle Follow-up** — intent extraction as Query Agent side-effect, `commitments` table, `aelis.followup` FeedSource.
 15. **Routine Learning** — feed snapshot storage, daily summary compression, weekly LLM pattern discovery with dynamic `DiscoveredPattern[]` output.
 16. **Social Awareness** — contacts source (CardDAV or Google People API), birthday detection, meeting frequency analysis.
 
@@ -1170,9 +1170,9 @@ The long-term relationship.
 Background intelligence.
 
 17. **Push notification infrastructure** — Expo push notifications, driven by `notify` flag from Tone & Timing processor.
-18. **Ambient Context sources** — extend TfL for planned disruptions, add `aris.packages` (tracking APIs), add `aris.news` (news API filtered by interests).
+18. **Ambient Context sources** — extend TfL for planned disruptions, add `aelis.packages` (tracking APIs), add `aelis.news` (news API filtered by interests).
 19. **Energy Awareness + Health Nudges** — rule-based detection (meeting density, sedentary time, late nights), LLM-phrased nudge cards with cooldowns.
-20. **Anomaly Detection** — `aris.anomaly` FeedSource, meeting time histogram, overlap detection. Mostly rule-based.
+20. **Anomaly Detection** — `aelis.anomaly` FeedSource, meeting time histogram, overlap detection. Mostly rule-based.
 21. **Cross-Source Reasoning** — handled by LLM enhancement layer with explicit cross-source instructions in prompt.
 22. **Celebration** — positive pattern detection in LLM harness, comparison against daily summary baselines, one per day max.
 23. **Seasonal Awareness** — static annual events dataset per locale + personal annual patterns from 6+ months of summaries.
@@ -1181,11 +1181,11 @@ Background intelligence.
 
 The full PA experience.
 
-24. **Task source** — new `aris.tasks` FeedSource (Todoist API or Apple Reminders). Required for Errand & Logistics.
+24. **Task source** — new `aelis.tasks` FeedSource (Todoist API or Apple Reminders). Required for Errand & Logistics.
 25. **Decision Support** — conflict detection (rule-based) + comparison card generation (LLM). Structured comparison data for client rendering.
 26. **Micro-Moments** — gap detection post-processor + LLM micro-briefing generation for 2-10 minute windows.
 27. **Financial Awareness** — financial event extraction from email, `financial_events` table, 48-hour reminder post-processor.
-28. **Errand & Logistics** — `aris.errands` FeedSource, depends on tasks + calendar + location. Greedy gap-matching algorithm.
+28. **Errand & Logistics** — `aelis.errands` FeedSource, depends on tasks + calendar + location. Greedy gap-matching algorithm.
 29. **Actions** — extend OAuth scopes for write access, add `actions` field to `FeedItem`, `feed.action` JSON-RPC method, confirmation flow.
 30. **Delegation** — extend Query Agent with write tools, `delegation.confirm` notification, confirmation UI on client.
 
@@ -1211,7 +1211,7 @@ The full PA experience.
 - Feed snapshot storage cost at scale: compress after N days, or summarize and discard?
 - System prompt size: as behaviors accumulate, the prompt grows. When does it need to be split or dynamically composed?
 - Personality consistency: how to ensure the voice stays consistent across enhancement runs and query responses?
-- Health nudge liability: should ARIS ever comment on health-related patterns, or is that too risky?
+- Health nudge liability: should AELIS ever comment on health-related patterns, or is that too risky?
 - Celebration frequency: how often is encouraging vs. patronizing?
 - Emotional weight classification: can the LLM reliably assess how stressful a piece of information is?
 - Multi-device: how to sync seen-item state and hold queues across phone, laptop, watch?

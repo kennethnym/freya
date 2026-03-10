@@ -1,0 +1,27 @@
+{
+	"name": "@aelis/backend",
+	"version": "0.0.0",
+	"type": "module",
+	"main": "src/server.ts",
+	"scripts": {
+		"dev": "bun run --watch src/server.ts",
+		"start": "bun run src/server.ts",
+		"test": "bun test src/"
+	},
+	"dependencies": {
+		"@aelis/core": "workspace:*",
+		"@aelis/source-caldav": "workspace:*",
+		"@aelis/source-google-calendar": "workspace:*",
+		"@aelis/source-location": "workspace:*",
+		"@aelis/source-tfl": "workspace:*",
+		"@aelis/source-weatherkit": "workspace:*",
+		"@openrouter/sdk": "^0.9.11",
+		"arktype": "^2.1.29",
+		"better-auth": "^1",
+		"hono": "^4",
+		"pg": "^8"
+	},
+	"devDependencies": {
+		"@types/pg": "^8"
+	}
+}

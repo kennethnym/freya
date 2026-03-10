@@ -1,8 +1,8 @@
-# ARIS Backend Specification
+# AELIS Backend Specification
 
 ## Problem Statement
 
-ARIS needs a backend service that manages per-user FeedEngine instances and delivers real-time feed updates to clients. The backend must handle authentication, maintain WebSocket connections for live updates, and accept context updates (like location) that trigger feed recalculations.
+AELIS needs a backend service that manages per-user FeedEngine instances and delivers real-time feed updates to clients. The backend must handle authentication, maintain WebSocket connections for live updates, and accept context updates (like location) that trigger feed recalculations.
 
 ## Requirements
 
@@ -105,7 +105,7 @@ All WebSocket communication uses JSON-RPC 2.0.
 
 ### Phase 1: Project Setup
 
-1. Create `apps/aris-backend` with Hono
+1. Create `apps/aelis-backend` with Hono
 2. Configure TypeScript, add dependencies (hono, better-auth, postgres driver)
 3. Set up database connection and BetterAuth
 
@@ -152,7 +152,7 @@ All WebSocket communication uses JSON-RPC 2.0.
 ## Package Structure
 
 ```
-apps/aris-backend/
+apps/aelis-backend/
 ├── package.json
 ├── src/
 │   ├── index.ts              # Entry point, Hono app
@@ -177,10 +177,10 @@ apps/aris-backend/
 		"hono": "^4",
 		"better-auth": "^1",
 		"postgres": "^3",
-		"@aris/core": "workspace:*",
-		"@aris/source-location": "workspace:*",
-		"@aris/source-weatherkit": "workspace:*",
-		"@aris/data-source-tfl": "workspace:*"
+		"@aelis/core": "workspace:*",
+		"@aelis/source-location": "workspace:*",
+		"@aelis/source-weatherkit": "workspace:*",
+		"@aelis/data-source-tfl": "workspace:*"
 	}
 }
 ```

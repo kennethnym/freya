@@ -2,7 +2,7 @@
 
 ## Project
 
-ARIS is an AI-powered personal assistant that aggregates data from various sources into a contextual feed. Monorepo with `packages/` (shared libraries) and `apps/` (applications).
+AELIS is an AI-powered personal assistant that aggregates data from various sources into a contextual feed. Monorepo with `packages/` (shared libraries) and `apps/` (applications).
 
 ## Commands
 

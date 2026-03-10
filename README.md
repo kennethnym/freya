@@ -1,4 +1,4 @@
-# aris
+# aelis
 
 To install dependencies:
 
@@ -8,14 +8,14 @@ bun install
 
 ## Packages
 
-### @aris/source-tfl
+### @aelis/source-tfl
 
 TfL (Transport for London) feed source for tube, overground, and Elizabeth line alerts.
 
 #### Testing
 
 ```bash
-cd packages/aris-source-tfl
+cd packages/aelis-source-tfl
 bun run test
 ```
 
