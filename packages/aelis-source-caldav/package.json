@@ -1,0 +1,16 @@
+{
+	"name": "@aelis/source-caldav",
+	"version": "0.0.0",
+	"type": "module",
+	"main": "src/index.ts",
+	"types": "src/index.ts",
+	"scripts": {
+		"test": "bun test .",
+		"test:live": "bun run scripts/test-live.ts"
+	},
+	"dependencies": {
+		"@aelis/core": "workspace:*",
+		"ical.js": "^2.1.0",
+		"tsdav": "^2.1.7"
+	}
+}
