@@ -534,4 +534,68 @@ describe("computeSignals", () => {
 	})
 })
 
+describe("CalDavSource feed item slots", () => {
+	const EXPECTED_SLOT_NAMES = ["insight", "preparation", "crossSource"]
 
+	test("timed event has all three slots with null content", async () => {
+		const objects: Record<string, CalDavDAVObject[]> = {
+			"/cal/work": [{ url: "/cal/work/event1.ics", data: loadFixture("single-event.ics") }],
+		}
+		const client = new MockDAVClient([{ url: "/cal/work", displayName: "Work" }], objects)
+		const source = createSource(client)
+
+		const items = await source.fetchItems(createContext(new Date("2026-01-15T12:00:00Z")))
+
+		expect(items).toHaveLength(1)
+		const item = items[0]!
+		expect(item.slots).toBeDefined()
+		expect(Object.keys(item.slots!).sort()).toEqual([...EXPECTED_SLOT_NAMES].sort())
+
+		for (const name of EXPECTED_SLOT_NAMES) {
+			const slot = item.slots![name]!
+			expect(slot.content).toBeNull()
+			expect(typeof slot.description).toBe("string")
+			expect(slot.description.length).toBeGreaterThan(0)
+		}
+	})
+
+	test("all-day event has all three slots with null content", async () => {
+		const objects: Record<string, CalDavDAVObject[]> = {
+			"/cal/work": [{ url: "/cal/work/allday.ics", data: loadFixture("all-day-event.ics") }],
+		}
+		const client = new MockDAVClient([{ url: "/cal/work", displayName: "Work" }], objects)
+		const source = createSource(client)
+
+		const items = await source.fetchItems(createContext(new Date("2026-01-15T12:00:00Z")))
+
+		expect(items).toHaveLength(1)
+		const item = items[0]!
+		expect(item.data.isAllDay).toBe(true)
+		expect(item.slots).toBeDefined()
+		expect(Object.keys(item.slots!).sort()).toEqual([...EXPECTED_SLOT_NAMES].sort())
+
+		for (const name of EXPECTED_SLOT_NAMES) {
+			expect(item.slots![name]!.content).toBeNull()
+		}
+	})
+
+	test("cancelled event has all three slots with null content", async () => {
+		const objects: Record<string, CalDavDAVObject[]> = {
+			"/cal/work": [{ url: "/cal/work/cancelled.ics", data: loadFixture("cancelled-event.ics") }],
+		}
+		const client = new MockDAVClient([{ url: "/cal/work", displayName: "Work" }], objects)
+		const source = createSource(client)
+
+		const items = await source.fetchItems(createContext(new Date("2026-01-15T12:00:00Z")))
+
+		expect(items).toHaveLength(1)
+		const item = items[0]!
+		expect(item.data.status).toBe("cancelled")
+		expect(item.slots).toBeDefined()
+		expect(Object.keys(item.slots!).sort()).toEqual([...EXPECTED_SLOT_NAMES].sort())
+
+		for (const name of EXPECTED_SLOT_NAMES) {
+			expect(item.slots![name]!.content).toBeNull()
+		}
+	})
+})
