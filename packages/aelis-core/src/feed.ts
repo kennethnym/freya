@@ -1,3 +1,5 @@
+import type { JrxNode } from "@nym.sh/jrx"
+
 /**
  * Source-provided hints for post-processors.
  *
@@ -75,4 +77,13 @@ export interface FeedItem<
 	signals?: FeedItemSignals
 	/** Named slots for LLM-fillable content. Keys are slot names. */
 	slots?: Record<string, Slot>
+}
+
+/** A FeedItem with a JRX UI tree attached for client-side rendering. */
+export interface RenderedFeedItem<
+	TType extends string = string,
+	TData extends Record<string, unknown> = Record<string, unknown>,
+> extends FeedItem<TType, TData> {
+	/** JRX node tree describing how to render this item */
+	ui: JrxNode
 }
