@@ -61,7 +61,7 @@ export async function getSessionFromHeaders(
 }
 
 /**
- * Test-only middleware that injects a fake user and session.
+ * Dev/test middleware that injects a fake user and session.
  * Pass userId to simulate an authenticated request, or omit to get 401.
  */
 export function mockAuthSessionMiddleware(userId?: string): AuthSessionMiddleware {
@@ -69,8 +69,34 @@ export function mockAuthSessionMiddleware(userId?: string): AuthSessionMiddlewar
 		if (!userId) {
 			return c.json({ error: "Unauthorized" }, 401)
 		}
-		c.set("user", { id: userId } as AuthUser)
-		c.set("session", { id: "mock-session" } as AuthSession)
+
+		const now = new Date()
+		const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+
+		const user: AuthUser = {
+			id: "k7Gx2mPqRvNwYs9TdLfA4bHcJeUo1iZn",
+			name: "Dev User",
+			email: "dev@aelis.local",
+			emailVerified: true,
+			image: null,
+			createdAt: now,
+			updatedAt: now,
+		}
+
+		const session: AuthSession = {
+			id: "Wt3FvBpXaQrMhD8sKjE6LcYn0gUz5iRo",
+			userId: "k7Gx2mPqRvNwYs9TdLfA4bHcJeUo1iZn",
+			token: "Vb9CxNfRm2KwQs7TjPeA5dLhYg0UoZi4",
+			expiresAt,
+			ipAddress: "127.0.0.1",
+			userAgent: "aelis-dev",
+			createdAt: now,
+			updatedAt: now,
+		}
+
+		c.set("user", user)
+		c.set("session", session)
+
 		await next()
 	}
 }
