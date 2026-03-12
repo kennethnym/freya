@@ -59,7 +59,7 @@ function handleGetContext(c: Context<Env>) {
 		return c.json({ error: 'Invalid or missing "key" parameter: must be a JSON array' }, 400)
 	}
 
-	if (!Array.isArray(parsed)) {
+	if (!Array.isArray(parsed) || parsed.length === 0 || !parsed.every(isContextKeyPart)) {
 		return c.json({ error: 'Invalid or missing "key" parameter: must be a JSON array' }, 400)
 	}
 
@@ -102,4 +102,17 @@ function handleGetContext(c: Context<Env>) {
 	}
 
 	return c.json({ match: "prefix", entries })
+}
+
+/** Validates that a value is a valid ContextKeyPart (string, number, or plain object of primitives). */
+function isContextKeyPart(value: unknown): boolean {
+	if (typeof value === "string" || typeof value === "number") {
+		return true
+	}
+	if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+		return Object.values(value).every(
+			(v) => typeof v === "string" || typeof v === "number" || typeof v === "boolean",
+		)
+	}
+	return false
 }

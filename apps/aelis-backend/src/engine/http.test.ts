@@ -204,6 +204,26 @@ describe("GET /api/context", () => {
 		expect(body.error).toContain("key")
 	})
 
+	test("returns 400 when key contains invalid element types", async () => {
+		const { app } = buildContextApp("user-1")
+
+		const res = await app.request("/api/context?key=[true,null,[1,2]]")
+
+		expect(res.status).toBe(400)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toContain("key")
+	})
+
+	test("returns 400 when key is an empty array", async () => {
+		const { app } = buildContextApp("user-1")
+
+		const res = await app.request("/api/context?key=[]")
+
+		expect(res.status).toBe(400)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toContain("key")
+	})
+
 	test("returns 400 when match param is invalid", async () => {
 		const { app } = buildContextApp("user-1")
 
