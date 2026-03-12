@@ -5,7 +5,7 @@ import { SansSerifText } from "./ui/sans-serif-text"
 
 export type Showcase = {
 	title: string
-	component: () => React.ReactNode
+	component: React.ComponentType
 }
 
 export function Section({ title, children }: { title: string; children: React.ReactNode }) {

@@ -38,9 +38,11 @@ export default function ComponentDetailScreen() {
 		)
 	}
 
+	const ShowcaseComponent = showcase.component
+
 	return (
 		<ScrollView style={tw`bg-stone-100 dark:bg-stone-900 flex-1`} contentContainerStyle={tw`px-5 pb-10 pt-4 gap-6`}>
-			{showcase.component()}
+			<ShowcaseComponent />
 		</ScrollView>
 	)
 }
