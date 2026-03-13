@@ -1,5 +1,6 @@
 import type { ActionDefinition, ContextEntry, FeedItem, FeedSource } from "@aelis/core"
 
+import { contextKey } from "@aelis/core"
 import { describe, expect, test } from "bun:test"
 import { Hono } from "hono"
 
@@ -18,7 +19,11 @@ interface FeedResponse {
 	errors: Array<{ sourceId: string; error: string }>
 }
 
-function createStubSource(id: string, items: FeedItem[] = []): FeedSource {
+function createStubSource(
+	id: string,
+	items: FeedItem[] = [],
+	contextEntries: readonly ContextEntry[] | null = null,
+): FeedSource {
 	return {
 		id,
 		async listActions(): Promise<Record<string, ActionDefinition>> {
@@ -28,7 +33,7 @@ function createStubSource(id: string, items: FeedItem[] = []): FeedSource {
 			return undefined
 		},
 		async fetchContext(): Promise<readonly ContextEntry[] | null> {
-			return null
+			return contextEntries
 		},
 		async fetchItems() {
 			return items
@@ -140,5 +145,169 @@ describe("GET /api/feed", () => {
 		expect(body.errors).toHaveLength(1)
 		expect(body.errors[0]!.sourceId).toBe("failing")
 		expect(body.errors[0]!.error).toBe("connection timeout")
+	})
+})
+
+describe("GET /api/context", () => {
+	const weatherKey = contextKey("aelis.weather", "weather")
+	const weatherData = { temperature: 20, condition: "Clear" }
+	const contextEntries: readonly ContextEntry[] = [[weatherKey, weatherData]]
+
+	// The mock auth middleware always injects this hardcoded user ID
+	const mockUserId = "k7Gx2mPqRvNwYs9TdLfA4bHcJeUo1iZn"
+
+	function buildContextApp(userId?: string) {
+		const manager = new UserSessionManager({
+			providers: [() => createStubSource("weather", [], contextEntries)],
+		})
+		const app = buildTestApp(manager, userId)
+		const session = manager.getOrCreate(mockUserId)
+		return { app, session }
+	}
+
+	test("returns 401 without auth", async () => {
+		const manager = new UserSessionManager({ providers: [] })
+		const app = buildTestApp(manager)
+
+		const res = await app.request('/api/context?key=["aelis.weather","weather"]')
+
+		expect(res.status).toBe(401)
+	})
+
+	test("returns 400 when key param is missing", async () => {
+		const { app } = buildContextApp("user-1")
+
+		const res = await app.request("/api/context")
+
+		expect(res.status).toBe(400)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toContain("key")
+	})
+
+	test("returns 400 when key is invalid JSON", async () => {
+		const { app } = buildContextApp("user-1")
+
+		const res = await app.request("/api/context?key=notjson")
+
+		expect(res.status).toBe(400)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toContain("key")
+	})
+
+	test("returns 400 when key is not an array", async () => {
+		const { app } = buildContextApp("user-1")
+
+		const res = await app.request('/api/context?key="string"')
+
+		expect(res.status).toBe(400)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toContain("key")
+	})
+
+	test("returns 400 when key contains invalid element types", async () => {
+		const { app } = buildContextApp("user-1")
+
+		const res = await app.request("/api/context?key=[true,null,[1,2]]")
+
+		expect(res.status).toBe(400)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toContain("key")
+	})
+
+	test("returns 400 when key is an empty array", async () => {
+		const { app } = buildContextApp("user-1")
+
+		const res = await app.request("/api/context?key=[]")
+
+		expect(res.status).toBe(400)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toContain("key")
+	})
+
+	test("returns 400 when match param is invalid", async () => {
+		const { app } = buildContextApp("user-1")
+
+		const res = await app.request('/api/context?key=["aelis.weather"]&match=invalid')
+
+		expect(res.status).toBe(400)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toContain("match")
+	})
+
+	test("returns exact match with match=exact", async () => {
+		const { app, session } = buildContextApp("user-1")
+		await session.engine.refresh()
+
+		const res = await app.request('/api/context?key=["aelis.weather","weather"]&match=exact')
+
+		expect(res.status).toBe(200)
+		const body = (await res.json()) as { match: string; value: unknown }
+		expect(body.match).toBe("exact")
+		expect(body.value).toEqual(weatherData)
+	})
+
+	test("returns 404 with match=exact when only prefix would match", async () => {
+		const { app, session } = buildContextApp("user-1")
+		await session.engine.refresh()
+
+		const res = await app.request('/api/context?key=["aelis.weather"]&match=exact')
+
+		expect(res.status).toBe(404)
+	})
+
+	test("returns prefix match with match=prefix", async () => {
+		const { app, session } = buildContextApp("user-1")
+		await session.engine.refresh()
+
+		const res = await app.request('/api/context?key=["aelis.weather"]&match=prefix')
+
+		expect(res.status).toBe(200)
+		const body = (await res.json()) as {
+			match: string
+			entries: Array<{ key: unknown[]; value: unknown }>
+		}
+		expect(body.match).toBe("prefix")
+		expect(body.entries).toHaveLength(1)
+		expect(body.entries[0]!.key).toEqual(["aelis.weather", "weather"])
+		expect(body.entries[0]!.value).toEqual(weatherData)
+	})
+
+	test("default mode returns exact match when available", async () => {
+		const { app, session } = buildContextApp("user-1")
+		await session.engine.refresh()
+
+		const res = await app.request('/api/context?key=["aelis.weather","weather"]')
+
+		expect(res.status).toBe(200)
+		const body = (await res.json()) as { match: string; value: unknown }
+		expect(body.match).toBe("exact")
+		expect(body.value).toEqual(weatherData)
+	})
+
+	test("default mode falls back to prefix when no exact match", async () => {
+		const { app, session } = buildContextApp("user-1")
+		await session.engine.refresh()
+
+		const res = await app.request('/api/context?key=["aelis.weather"]')
+
+		expect(res.status).toBe(200)
+		const body = (await res.json()) as {
+			match: string
+			entries: Array<{ key: unknown[]; value: unknown }>
+		}
+		expect(body.match).toBe("prefix")
+		expect(body.entries).toHaveLength(1)
+		expect(body.entries[0]!.value).toEqual(weatherData)
+	})
+
+	test("returns 404 when neither exact nor prefix matches", async () => {
+		const { app, session } = buildContextApp("user-1")
+		await session.engine.refresh()
+
+		const res = await app.request('/api/context?key=["nonexistent"]')
+
+		expect(res.status).toBe(404)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toBe("Context key not found")
 	})
 })
