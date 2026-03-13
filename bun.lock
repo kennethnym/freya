@@ -42,6 +42,7 @@
         "@expo-google-fonts/inter": "^0.4.2",
         "@expo-google-fonts/source-serif-4": "^0.4.1",
         "@expo/vector-icons": "^15.0.3",
+        "@json-render/react-native": "^0.13.0",
         "@react-navigation/bottom-tabs": "^7.4.0",
         "@react-navigation/elements": "^2.6.3",
         "@react-navigation/native": "^7.1.8",
@@ -70,6 +71,7 @@
         "react-native-web": "~0.21.0",
         "react-native-worklets": "0.5.1",
         "twrnc": "^4.16.0",
+        "zod": "^4.3.6",
       },
       "devDependencies": {
         "@types/react": "~19.1.0",
@@ -656,6 +658,8 @@
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
     "@json-render/core": ["@json-render/core@0.12.1", "", { "dependencies": { "zod": "^4.3.6" } }, "sha512-1tV/481GPHmIRd6lXfWcTaIslQusmDg5lzcSBzWLkSXjF9sjjyOQL090in7uHT4tOMWkdmlEJOW5H9C72PsUEQ=="],
+
+    "@json-render/react-native": ["@json-render/react-native@0.13.0", "", { "dependencies": { "@json-render/core": "0.13.0" }, "peerDependencies": { "react": "^18.0.0 || ^19.0.0", "react-native": ">=0.71.0", "zod": "^4.0.0" } }, "sha512-uUrK28xPb7LuyYsi9cTnvrnXnVBG0OwU5Up35aaXwcWMLrfqxJ7oWfF97HlDvZIckQtm0VEngAXhHMW97qBEkg=="],
 
     "@mjackson/node-fetch-server": ["@mjackson/node-fetch-server@0.2.0", "", {}, "sha512-EMlH1e30yzmTpGLQjlFmaDAjyOeZhng1/XCd7DExR8PNAnG/G1tyruZxEoUe11ClnwGhGrtsdnyyUx1frSzjng=="],
 
@@ -3456,6 +3460,8 @@
     "@istanbuljs/load-nyc-config/js-yaml": ["js-yaml@3.14.2", "", { "dependencies": { "argparse": "^1.0.7", "esprima": "^4.0.0" }, "bin": { "js-yaml": "bin/js-yaml.js" } }, "sha512-PMSmkqxr106Xa156c2M265Z+FTrPl+oxd/rgOQy2tijQeK5TxQ43psO1ZCwhVOSdnn+RzkzlRz/eY4BgJBYVpg=="],
 
     "@jest/transform/write-file-atomic": ["write-file-atomic@4.0.2", "", { "dependencies": { "imurmurhash": "^0.1.4", "signal-exit": "^3.0.7" } }, "sha512-7KxauUdBmSdWnmpaGFg+ppNjKF8uNLry8LyzjauQDOVONfFLNKrKvQOxZ/VuTIcS/gge/YNahf5RIIQWTSarlg=="],
+
+    "@json-render/react-native/@json-render/core": ["@json-render/core@0.13.0", "", { "dependencies": { "zod": "^4.3.6" } }, "sha512-CXmCsc8BHDRq45ScVd+qgvjTbwZHPVpVD05WnTqgDxqfY3LGXu5vxaQRSwYoEodg/DGcZq/4HSj4ipVvrzy3qQ=="],
 
     "@mrleebo/prisma-ast/lilconfig": ["lilconfig@2.1.0", "", {}, "sha512-utWOt/GHzuUxnLKxB6dk81RoOeoNeHgbrXiuGk4yyF5qlRz+iIVWu56E2fqGHFrXz0QNUhLB/8nKqvRH66JKGQ=="],
 
