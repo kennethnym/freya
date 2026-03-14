@@ -6,7 +6,7 @@
       "name": "aelis",
       "devDependencies": {
         "@json-render/core": "^0.12.1",
-        "@nym.sh/jrx": "^0.1.0",
+        "@nym.sh/jrx": "^0.2.0",
         "@types/bun": "latest",
         "oxfmt": "^0.24.0",
         "oxlint": "^1.39.0",
@@ -177,9 +177,14 @@
       "name": "@aelis/source-tfl",
       "version": "0.0.0",
       "dependencies": {
+        "@aelis/components": "workspace:*",
         "@aelis/core": "workspace:*",
         "@aelis/source-location": "workspace:*",
         "arktype": "^2.1.0",
+      },
+      "peerDependencies": {
+        "@json-render/core": "*",
+        "@nym.sh/jrx": "*",
       },
     },
     "packages/aelis-source-weatherkit": {
@@ -691,7 +696,7 @@
 
     "@nolyfill/is-core-module": ["@nolyfill/is-core-module@1.0.39", "", {}, "sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA=="],
 
-    "@nym.sh/jrx": ["@nym.sh/jrx@0.1.0", "", { "peerDependencies": { "@json-render/core": ">=0.10.0" } }, "sha512-mu6fkAP/TI9FuP8A4WMCrcucpUtWF5xBTcETnrjOtvEED9i+7sQKuoOyhJeF6QaSuUkAA/8t3Xx3kYUjcAPFbw=="],
+    "@nym.sh/jrx": ["@nym.sh/jrx@0.2.0", "", { "peerDependencies": { "@json-render/core": ">=0.10.0" } }, "sha512-jd7Z1Q6T21366MtSUnwCFiu6Yl1AdNc9s5m6HxeUg265P+0enZCiyyxOuHsFwvpUcSEs/2DVBsqfMptdca44lA=="],
 
     "@oclif/core": ["@oclif/core@4.8.4", "", { "dependencies": { "ansi-escapes": "^4.3.2", "ansis": "^3.17.0", "clean-stack": "^3.0.1", "cli-spinners": "^2.9.2", "debug": "^4.4.3", "ejs": "^3.1.10", "get-package-type": "^0.1.0", "indent-string": "^4.0.0", "is-wsl": "^2.2.0", "lilconfig": "^3.1.3", "minimatch": "^10.2.4", "semver": "^7.7.3", "string-width": "^4.2.3", "supports-color": "^8", "tinyglobby": "^0.2.14", "widest-line": "^3.1.0", "wordwrap": "^1.0.0", "wrap-ansi": "^7.0.0" } }, "sha512-UTAqwXJJyRvLBvosL+1uPZYSpr8lEHgUb/EVGbPXo5WZqUIBHfJ0sR2bkBEsrj00/ar4IegKxx4YK0wn2c8SQg=="],
 
