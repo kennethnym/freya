@@ -79,6 +79,12 @@ export interface FeedItem<
 	slots?: Record<string, Slot>
 }
 
+/** Takes a FeedItem and returns a JRX node tree for rendering. */
+export type FeedItemRenderer<
+	TType extends string = string,
+	TData extends Record<string, unknown> = Record<string, unknown>,
+> = (item: FeedItem<TType, TData>) => JrxNode
+
 /** A FeedItem with a JRX UI tree attached for client-side rendering. */
 export interface RenderedFeedItem<
 	TType extends string = string,
