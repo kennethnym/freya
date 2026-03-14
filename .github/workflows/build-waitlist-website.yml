@@ -11,7 +11,7 @@ on:
 
 env:
   REGISTRY: cr.nym.sh
-  IMAGE_NAME: waitlist-website
+  IMAGE_NAME: aelis-waitlist-website
 
 jobs:
   build:
