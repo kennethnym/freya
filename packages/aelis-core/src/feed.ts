@@ -48,6 +48,7 @@ export interface Slot {
  *
  * const item: WeatherItem = {
  *   id: "weather-123",
+ *   sourceId: "aelis.weatherkit",
  *   type: "weather",
  *   timestamp: new Date(),
  *   data: { temp: 18, condition: "cloudy" },
@@ -67,6 +68,8 @@ export interface FeedItem<
 > {
 	/** Unique identifier */
 	id: string
+	/** ID of the FeedSource that produced this item */
+	sourceId: string
 	/** Item type, matches the data source type */
 	type: TType
 	/** When this item was generated */

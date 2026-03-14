@@ -113,7 +113,7 @@ export class GoogleCalendarSource implements FeedSource<CalendarFeedItem> {
 		const now = context.time.getTime()
 		const lookaheadMs = this.lookaheadHours * 60 * 60 * 1000
 
-		return events.map((event) => createFeedItem(event, now, lookaheadMs))
+		return events.map((event) => createFeedItem(event, now, lookaheadMs, this.id))
 	}
 
 	private async resolveCalendarIds(): Promise<string[]> {
@@ -208,11 +208,13 @@ function createFeedItem(
 	event: CalendarEventData,
 	nowMs: number,
 	lookaheadMs: number,
+	sourceId: string,
 ): CalendarFeedItem {
 	const itemType = event.isAllDay ? CalendarFeedItemType.AllDay : CalendarFeedItemType.Event
 
 	return {
 		id: `calendar-${event.calendarId}-${event.eventId}`,
+		sourceId,
 		type: itemType,
 		timestamp: new Date(nowMs),
 		data: event,

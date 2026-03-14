@@ -167,7 +167,9 @@ export class WeatherSource implements FeedSource<WeatherFeedItem> {
 		const items: WeatherFeedItem[] = []
 
 		if (response.currentWeather) {
-			items.push(createCurrentWeatherFeedItem(response.currentWeather, timestamp, this.units))
+			items.push(
+				createCurrentWeatherFeedItem(response.currentWeather, timestamp, this.units, this.id),
+			)
 		}
 
 		if (response.forecastHourly?.hours) {
@@ -175,7 +177,7 @@ export class WeatherSource implements FeedSource<WeatherFeedItem> {
 			for (let i = 0; i < hours.length; i++) {
 				const hour = hours[i]
 				if (hour) {
-					items.push(createHourlyWeatherFeedItem(hour, i, timestamp, this.units))
+					items.push(createHourlyWeatherFeedItem(hour, i, timestamp, this.units, this.id))
 				}
 			}
 		}
@@ -185,14 +187,14 @@ export class WeatherSource implements FeedSource<WeatherFeedItem> {
 			for (let i = 0; i < days.length; i++) {
 				const day = days[i]
 				if (day) {
-					items.push(createDailyWeatherFeedItem(day, i, timestamp, this.units))
+					items.push(createDailyWeatherFeedItem(day, i, timestamp, this.units, this.id))
 				}
 			}
 		}
 
 		if (response.weatherAlerts?.alerts) {
 			for (const alert of response.weatherAlerts.alerts) {
-				items.push(createWeatherAlertFeedItem(alert, timestamp))
+				items.push(createWeatherAlertFeedItem(alert, timestamp, this.id))
 			}
 		}
 
@@ -284,6 +286,7 @@ function createCurrentWeatherFeedItem(
 	current: CurrentWeather,
 	timestamp: Date,
 	units: Units,
+	sourceId: string,
 ): WeatherFeedItem {
 	const signals: FeedItemSignals = {
 		urgency: adjustUrgencyForCondition(BASE_URGENCY.current, current.conditionCode),
@@ -292,6 +295,7 @@ function createCurrentWeatherFeedItem(
 
 	return {
 		id: `weather-current-${timestamp.getTime()}`,
+		sourceId,
 		type: WeatherFeedItemType.Current,
 		timestamp,
 		data: {
@@ -324,6 +328,7 @@ function createHourlyWeatherFeedItem(
 	index: number,
 	timestamp: Date,
 	units: Units,
+	sourceId: string,
 ): WeatherFeedItem {
 	const signals: FeedItemSignals = {
 		urgency: adjustUrgencyForCondition(BASE_URGENCY.hourly, hourly.conditionCode),
@@ -332,6 +337,7 @@ function createHourlyWeatherFeedItem(
 
 	return {
 		id: `weather-hourly-${timestamp.getTime()}-${index}`,
+		sourceId,
 		type: WeatherFeedItemType.Hourly,
 		timestamp,
 		data: {
@@ -358,6 +364,7 @@ function createDailyWeatherFeedItem(
 	index: number,
 	timestamp: Date,
 	units: Units,
+	sourceId: string,
 ): WeatherFeedItem {
 	const signals: FeedItemSignals = {
 		urgency: adjustUrgencyForCondition(BASE_URGENCY.daily, daily.conditionCode),
@@ -366,6 +373,7 @@ function createDailyWeatherFeedItem(
 
 	return {
 		id: `weather-daily-${timestamp.getTime()}-${index}`,
+		sourceId,
 		type: WeatherFeedItemType.Daily,
 		timestamp,
 		data: {
@@ -385,7 +393,11 @@ function createDailyWeatherFeedItem(
 	}
 }
 
-function createWeatherAlertFeedItem(alert: WeatherAlert, timestamp: Date): WeatherFeedItem {
+function createWeatherAlertFeedItem(
+	alert: WeatherAlert,
+	timestamp: Date,
+	sourceId: string,
+): WeatherFeedItem {
 	const signals: FeedItemSignals = {
 		urgency: adjustUrgencyForAlertSeverity(alert.severity),
 		timeRelevance: timeRelevanceForAlertSeverity(alert.severity),
@@ -393,6 +405,7 @@ function createWeatherAlertFeedItem(alert: WeatherAlert, timestamp: Date): Weath
 
 	return {
 		id: `weather-alert-${alert.id}`,
+		sourceId,
 		type: WeatherFeedItemType.Alert,
 		timestamp,
 		data: {

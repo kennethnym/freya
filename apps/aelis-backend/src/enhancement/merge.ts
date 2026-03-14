@@ -2,6 +2,8 @@ import type { FeedItem } from "@aelis/core"
 
 import type { EnhancementResult } from "./schema.ts"
 
+const ENHANCEMENT_SOURCE_ID = "aelis.enhancement"
+
 /**
  * Merges an EnhancementResult into feed items.
  *
@@ -10,7 +12,11 @@ import type { EnhancementResult } from "./schema.ts"
  * - Returns a new array (no mutation)
  * - Ignores fills for items/slots that don't exist
  */
-export function mergeEnhancement(items: FeedItem[], result: EnhancementResult, currentTime: Date): FeedItem[] {
+export function mergeEnhancement(
+	items: FeedItem[],
+	result: EnhancementResult,
+	currentTime: Date,
+): FeedItem[] {
 	const merged = items.map((item) => {
 		const fills = result.slotFills[item.id]
 		if (!fills || !item.slots) return item
@@ -31,6 +37,7 @@ export function mergeEnhancement(items: FeedItem[], result: EnhancementResult, c
 	for (const synthetic of result.syntheticItems) {
 		merged.push({
 			id: synthetic.id,
+			sourceId: ENHANCEMENT_SOURCE_ID,
 			type: synthetic.type,
 			timestamp: currentTime,
 			data: { text: synthetic.text },

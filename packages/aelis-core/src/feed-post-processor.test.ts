@@ -29,11 +29,17 @@ type WeatherItem = FeedItem<"weather", { temp: number }>
 type CalendarItem = FeedItem<"calendar", { title: string }>
 
 function weatherItem(id: string, temp: number): WeatherItem {
-	return { id, type: "weather", timestamp: new Date(), data: { temp } }
+	return { id, sourceId: "aelis.weather", type: "weather", timestamp: new Date(), data: { temp } }
 }
 
 function calendarItem(id: string, title: string): CalendarItem {
-	return { id, type: "calendar", timestamp: new Date(), data: { title } }
+	return {
+		id,
+		sourceId: "aelis.calendar",
+		type: "calendar",
+		timestamp: new Date(),
+		data: { title },
+	}
 }
 
 // =============================================================================

@@ -40,6 +40,7 @@ function saturday(hour: number, minute = 0): Date {
 function weatherCurrent(id = "w-current"): FeedItem {
 	return {
 		id,
+		sourceId: "aelis.weather",
 		type: WeatherFeedItemType.Current,
 		timestamp: new Date(),
 		data: { temperature: 18, precipitationIntensity: 0 },
@@ -49,6 +50,7 @@ function weatherCurrent(id = "w-current"): FeedItem {
 function weatherCurrentRainy(id = "w-current-rain"): FeedItem {
 	return {
 		id,
+		sourceId: "aelis.weather",
 		type: WeatherFeedItemType.Current,
 		timestamp: new Date(),
 		data: { temperature: 12, precipitationIntensity: 2.5 },
@@ -58,6 +60,7 @@ function weatherCurrentRainy(id = "w-current-rain"): FeedItem {
 function weatherCurrentExtreme(id = "w-current-extreme"): FeedItem {
 	return {
 		id,
+		sourceId: "aelis.weather",
 		type: WeatherFeedItemType.Current,
 		timestamp: new Date(),
 		data: { temperature: -5, precipitationIntensity: 0 },
@@ -67,6 +70,7 @@ function weatherCurrentExtreme(id = "w-current-extreme"): FeedItem {
 function weatherHourly(id = "w-hourly"): FeedItem {
 	return {
 		id,
+		sourceId: "aelis.weather",
 		type: WeatherFeedItemType.Hourly,
 		timestamp: new Date(),
 		data: { forecastTime: new Date(), temperature: 20 },
@@ -76,6 +80,7 @@ function weatherHourly(id = "w-hourly"): FeedItem {
 function weatherDaily(id = "w-daily"): FeedItem {
 	return {
 		id,
+		sourceId: "aelis.weather",
 		type: WeatherFeedItemType.Daily,
 		timestamp: new Date(),
 		data: { forecastDate: new Date() },
@@ -85,6 +90,7 @@ function weatherDaily(id = "w-daily"): FeedItem {
 function weatherAlert(id = "w-alert", urgency = 0.9): FeedItem {
 	return {
 		id,
+		sourceId: "aelis.weather",
 		type: WeatherFeedItemType.Alert,
 		timestamp: new Date(),
 		data: { severity: "extreme" },
@@ -99,6 +105,7 @@ function calendarEvent(
 ): FeedItem {
 	return {
 		id,
+		sourceId: "aelis.google-calendar",
 		type: CalendarFeedItemType.Event,
 		timestamp: new Date(),
 		data: {
@@ -120,6 +127,7 @@ function calendarEvent(
 function calendarAllDay(id: string): FeedItem {
 	return {
 		id,
+		sourceId: "aelis.google-calendar",
 		type: CalendarFeedItemType.AllDay,
 		timestamp: new Date(),
 		data: {
@@ -145,6 +153,7 @@ function caldavEvent(
 ): FeedItem {
 	return {
 		id,
+		sourceId: "aelis.caldav",
 		type: CalDavFeedItemType.Event,
 		timestamp: new Date(),
 		data: {
@@ -170,6 +179,7 @@ function caldavEvent(
 function tflAlert(id = "tfl-1", urgency = 0.8): FeedItem {
 	return {
 		id,
+		sourceId: "aelis.tfl",
 		type: TflFeedItemType.Alert,
 		timestamp: new Date(),
 		data: {
@@ -185,6 +195,7 @@ function tflAlert(id = "tfl-1", urgency = 0.8): FeedItem {
 function unknownItem(id = "unknown-1"): FeedItem {
 	return {
 		id,
+		sourceId: "unknown",
 		type: "some-future-type",
 		timestamp: new Date(),
 		data: { foo: "bar" },

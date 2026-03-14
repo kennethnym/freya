@@ -9,6 +9,7 @@ import { mergeEnhancement } from "./merge.ts"
 function makeItem(overrides: Partial<FeedItem> = {}): FeedItem {
 	return {
 		id: "item-1",
+		sourceId: "test",
 		type: "test",
 		timestamp: new Date("2025-01-01T00:00:00Z"),
 		data: { value: 42 },

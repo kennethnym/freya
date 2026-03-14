@@ -98,6 +98,7 @@ function createWeatherSource(
 			return [
 				{
 					id: `weather-${Date.now()}`,
+					sourceId: "weather",
 					type: "weather",
 					timestamp: new Date(),
 					data: {
@@ -129,6 +130,7 @@ function createAlertSource(): FeedSource<AlertFeedItem> {
 				return [
 					{
 						id: "alert-storm",
+						sourceId: "alert",
 						type: "alert",
 						timestamp: new Date(),
 						data: { message: "Storm warning!" },
