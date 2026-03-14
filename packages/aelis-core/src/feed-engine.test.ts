@@ -99,6 +99,7 @@ function createWeatherSource(
 			return [
 				{
 					id: `weather-${Date.now()}`,
+					sourceId: "weather",
 					type: "weather",
 					timestamp: new Date(),
 					data: {
@@ -130,6 +131,7 @@ function createAlertSource(): FeedSource<AlertFeedItem> {
 				return [
 					{
 						id: "alert-storm",
+						sourceId: "alert",
 						type: "alert",
 						timestamp: new Date(),
 						data: { message: "Storm warning!" },
@@ -423,6 +425,7 @@ describe("FeedEngine", () => {
 					return [
 						{
 							id: "item-1",
+							sourceId: "working",
 							type: "test",
 							priority: 0.5,
 							timestamp: new Date(),
@@ -746,6 +749,7 @@ describe("FeedEngine", () => {
 					return [
 						{
 							id: "item-1",
+							sourceId: "reactive-items",
 							type: "test",
 							priority: 0.5,
 							timestamp: new Date(),
@@ -830,6 +834,7 @@ describe("FeedEngine", () => {
 					return [
 						{
 							id: `item-${fetchCount}`,
+							sourceId: "counter",
 							type: "test",
 							priority: 0.5,
 							timestamp: new Date(),
@@ -895,6 +900,7 @@ describe("FeedEngine", () => {
 					return [
 						{
 							id: `weather-${Date.now()}`,
+							sourceId: "weather",
 							type: "weather",
 							priority: 0.5,
 							timestamp: new Date(),

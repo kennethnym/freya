@@ -76,6 +76,7 @@ describe("UserSession.feed", () => {
 		const items: FeedItem[] = [
 			{
 				id: "item-1",
+				sourceId: "test",
 				type: "test",
 				timestamp: new Date("2025-01-01T00:00:00.000Z"),
 				data: { value: 42 },
@@ -93,6 +94,7 @@ describe("UserSession.feed", () => {
 		const items: FeedItem[] = [
 			{
 				id: "item-1",
+				sourceId: "test",
 				type: "test",
 				timestamp: new Date("2025-01-01T00:00:00.000Z"),
 				data: { value: 42 },
@@ -113,6 +115,7 @@ describe("UserSession.feed", () => {
 		const items: FeedItem[] = [
 			{
 				id: "item-1",
+				sourceId: "test",
 				type: "test",
 				timestamp: new Date("2025-01-01T00:00:00.000Z"),
 				data: { value: 42 },
@@ -139,6 +142,7 @@ describe("UserSession.feed", () => {
 		let currentItems: FeedItem[] = [
 			{
 				id: "item-1",
+				sourceId: "test",
 				type: "test",
 				timestamp: new Date("2025-01-01T00:00:00.000Z"),
 				data: { version: 1 },
@@ -169,6 +173,7 @@ describe("UserSession.feed", () => {
 		currentItems = [
 			{
 				id: "item-1",
+				sourceId: "test",
 				type: "test",
 				timestamp: new Date("2025-01-02T00:00:00.000Z"),
 				data: { version: 2 },
@@ -190,6 +195,7 @@ describe("UserSession.feed", () => {
 		const items: FeedItem[] = [
 			{
 				id: "item-1",
+				sourceId: "test",
 				type: "test",
 				timestamp: new Date("2025-01-01T00:00:00.000Z"),
 				data: { value: 42 },

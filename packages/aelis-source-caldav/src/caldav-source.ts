@@ -133,7 +133,7 @@ export class CalDavSource implements FeedSource<CalDavFeedItem> {
 	async fetchItems(context: Context): Promise<CalDavFeedItem[]> {
 		const now = context.time
 		const events = await this.fetchEvents(context)
-		return events.map((event) => createFeedItem(event, now, this.timeZone))
+		return events.map((event) => createFeedItem(event, now, this.id, this.timeZone))
 	}
 
 	private fetchEvents(context: Context): Promise<CalDavEventData[]> {
@@ -351,9 +351,15 @@ function createEventSlots(): Record<string, Slot> {
 	}
 }
 
-function createFeedItem(event: CalDavEventData, now: Date, timeZone?: string): CalDavFeedItem {
+function createFeedItem(
+	event: CalDavEventData,
+	now: Date,
+	sourceId: string,
+	timeZone?: string,
+): CalDavFeedItem {
 	return {
 		id: `caldav-event-${event.uid}${event.recurrenceId ? `-${event.recurrenceId}` : ""}`,
+		sourceId,
 		type: CalDavFeedItemType.Event,
 		timestamp: now,
 		data: event,

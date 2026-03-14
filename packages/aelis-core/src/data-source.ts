@@ -17,6 +17,7 @@ import type { FeedItem } from "./feed"
  *     const data = await fetchWeather(location)
  *     return [{
  *       id: `weather-${Date.now()}`,
+ *       sourceId: "aelis.weather",
  *       type: this.type,
  *       timestamp: context.time,
  *       data: { temp: data.temperature },

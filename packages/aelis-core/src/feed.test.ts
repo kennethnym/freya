@@ -6,6 +6,7 @@ describe("FeedItem slots", () => {
 	test("FeedItem without slots is valid", () => {
 		const item: FeedItem<"test", { value: number }> = {
 			id: "test-1",
+			sourceId: "test-source",
 			type: "test",
 			timestamp: new Date(),
 			data: { value: 42 },
@@ -17,6 +18,7 @@ describe("FeedItem slots", () => {
 	test("FeedItem with unfilled slots", () => {
 		const item: FeedItem<"weather", { temp: number }> = {
 			id: "weather-1",
+			sourceId: "aelis.weather",
 			type: "weather",
 			timestamp: new Date(),
 			data: { temp: 18 },
@@ -41,6 +43,7 @@ describe("FeedItem slots", () => {
 	test("FeedItem with filled slots", () => {
 		const item: FeedItem<"weather", { temp: number }> = {
 			id: "weather-1",
+			sourceId: "aelis.weather",
 			type: "weather",
 			timestamp: new Date(),
 			data: { temp: 18 },
@@ -75,6 +78,7 @@ describe("FeedItem slots", () => {
 	test("FeedItem with empty slots record", () => {
 		const item: FeedItem<"test", { value: number }> = {
 			id: "test-1",
+			sourceId: "test-source",
 			type: "test",
 			timestamp: new Date(),
 			data: { value: 1 },

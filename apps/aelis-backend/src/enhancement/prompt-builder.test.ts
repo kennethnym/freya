@@ -7,6 +7,7 @@ import { buildPrompt, hasUnfilledSlots } from "./prompt-builder.ts"
 function makeItem(overrides: Partial<FeedItem> = {}): FeedItem {
 	return {
 		id: "item-1",
+		sourceId: "test",
 		type: "test",
 		timestamp: new Date("2025-01-01T00:00:00Z"),
 		data: { value: 42 },
@@ -60,7 +61,9 @@ describe("buildPrompt", () => {
 
 		expect(parsed.items).toHaveLength(1)
 		expect((parsed.items as Array<Record<string, unknown>>)[0]!.id).toBe("item-1")
-		expect((parsed.items as Array<Record<string, unknown>>)[0]!.slots).toEqual({ insight: "Weather insight" })
+		expect((parsed.items as Array<Record<string, unknown>>)[0]!.slots).toEqual({
+			insight: "Weather insight",
+		})
 		expect((parsed.items as Array<Record<string, unknown>>)[0]!.type).toBeUndefined()
 		expect(parsed.context).toHaveLength(0)
 	})

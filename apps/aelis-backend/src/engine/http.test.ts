@@ -64,6 +64,7 @@ describe("GET /api/feed", () => {
 		const items: FeedItem[] = [
 			{
 				id: "item-1",
+				sourceId: "test",
 				type: "test",
 				priority: 0.8,
 				timestamp: new Date("2025-01-01T00:00:00.000Z"),
@@ -96,6 +97,7 @@ describe("GET /api/feed", () => {
 		const items: FeedItem[] = [
 			{
 				id: "fresh-1",
+				sourceId: "test",
 				type: "test",
 				priority: 0.5,
 				timestamp: new Date("2025-06-01T12:00:00.000Z"),

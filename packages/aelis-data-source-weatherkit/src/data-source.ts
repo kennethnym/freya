@@ -47,6 +47,8 @@ interface LocationData {
 
 const LocationKey: ContextKey<LocationData> = contextKey("aelis.location", "location")
 
+const SOURCE_ID = "aelis.weather"
+
 export class WeatherKitDataSource implements DataSource<WeatherFeedItem, WeatherKitQueryConfig> {
 	private readonly DEFAULT_HOURLY_LIMIT = 12
 	private readonly DEFAULT_DAILY_LIMIT = 7
@@ -236,6 +238,7 @@ function createCurrentWeatherFeedItem(
 
 	return {
 		id: `weather-current-${timestamp.getTime()}`,
+		sourceId: SOURCE_ID,
 		type: WeatherFeedItemType.Current,
 		timestamp,
 		data: {
@@ -270,6 +273,7 @@ function createHourlyWeatherFeedItem(
 
 	return {
 		id: `weather-hourly-${timestamp.getTime()}-${index}`,
+		sourceId: SOURCE_ID,
 		type: WeatherFeedItemType.Hourly,
 		timestamp,
 		data: {
@@ -304,6 +308,7 @@ function createDailyWeatherFeedItem(
 
 	return {
 		id: `weather-daily-${timestamp.getTime()}-${index}`,
+		sourceId: SOURCE_ID,
 		type: WeatherFeedItemType.Daily,
 		timestamp,
 		data: {
@@ -331,6 +336,7 @@ function createWeatherAlertFeedItem(alert: WeatherAlert, timestamp: Date): Weath
 
 	return {
 		id: `weather-alert-${alert.id}`,
+		sourceId: SOURCE_ID,
 		type: WeatherFeedItemType.Alert,
 		timestamp,
 		data: {

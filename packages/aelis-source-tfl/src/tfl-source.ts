@@ -151,6 +151,7 @@ export class TflSource implements FeedSource<TflAlertFeedItem> {
 
 			return {
 				id: `tfl-alert-${status.lineId}-${status.severity}`,
+				sourceId: this.id,
 				type: TflFeedItemType.Alert,
 				timestamp: context.time,
 				data,
