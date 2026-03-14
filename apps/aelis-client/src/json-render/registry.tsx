@@ -1,4 +1,3 @@
-import Feather from "@expo/vector-icons/Feather"
 import { defineRegistry } from "@json-render/react-native"
 import { View } from "react-native"
 import tw from "twrnc"
@@ -11,10 +10,7 @@ import { SerifText } from "@/components/ui/serif-text"
 
 import { catalog } from "./catalog"
 
-function featherIcon(name: string | null | undefined) {
-	if (!name) return undefined
-	return <Feather name={name as React.ComponentProps<typeof Feather>["name"]} size={18} color="#e7e5e4" />
-}
+type ButtonIconName = React.ComponentProps<typeof Button.Icon>["name"]
 
 export const { registry } = defineRegistry(catalog, {
 	components: {
@@ -22,8 +18,8 @@ export const { registry } = defineRegistry(catalog, {
 		Button: ({ props, emit }) => (
 			<Button
 				label={props.label}
-				leadingIcon={featherIcon(props.leadingIcon)}
-				trailingIcon={featherIcon(props.trailingIcon)}
+				leadingIcon={props.leadingIcon ? <Button.Icon name={props.leadingIcon as ButtonIconName} /> : undefined}
+				trailingIcon={props.trailingIcon ? <Button.Icon name={props.trailingIcon as ButtonIconName} /> : undefined}
 				onPress={() => emit("press")}
 			/>
 		),

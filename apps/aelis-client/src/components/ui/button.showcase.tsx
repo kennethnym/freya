@@ -1,4 +1,3 @@
-import Feather from "@expo/vector-icons/Feather"
 import { View } from "react-native"
 import tw from "twrnc"
 
@@ -15,22 +14,22 @@ function ButtonShowcase() {
 				<Button
 					style={tw`self-start`}
 					label="Add item"
-					leadingIcon={<Feather name="plus" size={18} color="#e7e5e4" />}
+					leadingIcon={<Button.Icon name="plus" />}
 				/>
 			</Section>
 			<Section title="Trailing icon">
 				<Button
 					style={tw`self-start`}
 					label="Next"
-					trailingIcon={<Feather name="arrow-right" size={18} color="#e7e5e4" />}
+					trailingIcon={<Button.Icon name="arrow-right" />}
 				/>
 			</Section>
 			<Section title="Both icons">
 				<Button
 					style={tw`self-start`}
 					label="Download"
-					leadingIcon={<Feather name="download" size={18} color="#e7e5e4" />}
-					trailingIcon={<Feather name="chevron-down" size={18} color="#e7e5e4" />}
+					leadingIcon={<Button.Icon name="download" />}
+					trailingIcon={<Button.Icon name="chevron-down" />}
 				/>
 			</Section>
 		</View>
