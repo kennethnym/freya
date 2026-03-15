@@ -9,6 +9,7 @@
 		"test:live": "bun run scripts/test-live.ts"
 	},
 	"dependencies": {
+		"@aelis/components": "workspace:*",
 		"@aelis/core": "workspace:*",
 		"ical.js": "^2.1.0",
 		"tsdav": "^2.1.7"
