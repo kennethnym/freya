@@ -1,3 +1,4 @@
+
 import type { FeedItemRenderer } from "@aelis/core"
 
 import { FeedCard, SansSerifText } from "@aelis/components"
