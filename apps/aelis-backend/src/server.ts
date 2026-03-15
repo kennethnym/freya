@@ -3,9 +3,9 @@ import { Hono } from "hono"
 
 import { registerAuthHandlers } from "./auth/http.ts"
 import { mockAuthSessionMiddleware, requireSession } from "./auth/session-middleware.ts"
+import { registerFeedHttpHandlers } from "./engine/http.ts"
 import { createFeedEnhancer } from "./enhancement/enhance-feed.ts"
 import { createLlmClient } from "./enhancement/llm-client.ts"
-import { registerFeedHttpHandlers } from "./engine/http.ts"
 import { registerLocationHttpHandlers } from "./location/http.ts"
 import { UserSessionManager } from "./session/index.ts"
 import { WeatherSourceProvider } from "./weather/provider.ts"
@@ -26,7 +26,7 @@ function main() {
 
 	const sessionManager = new UserSessionManager({
 		providers: [
-			() => new LocationSource(),
+			async () => new LocationSource(),
 			new WeatherSourceProvider({
 				credentials: {
 					privateKey: process.env.WEATHERKIT_PRIVATE_KEY!,

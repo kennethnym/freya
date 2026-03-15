@@ -13,7 +13,7 @@ export class TflSourceProvider implements FeedSourceProvider {
 		this.options = options
 	}
 
-	feedSourceForUser(_userId: string): TflSource {
+	async feedSourceForUser(_userId: string): Promise<TflSource> {
 		return new TflSource(this.options)
 	}
 }

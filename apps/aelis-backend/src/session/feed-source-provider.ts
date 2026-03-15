@@ -1,9 +1,9 @@
 import type { FeedSource } from "@aelis/core"
 
 export interface FeedSourceProvider {
-	feedSourceForUser(userId: string): FeedSource
+	feedSourceForUser(userId: string): Promise<FeedSource>
 }
 
-export type FeedSourceProviderFn = (userId: string) => FeedSource
+export type FeedSourceProviderFn = (userId: string) => Promise<FeedSource>
 
 export type FeedSourceProviderInput = FeedSourceProvider | FeedSourceProviderFn

@@ -9,7 +9,7 @@ export class WeatherSourceProvider implements FeedSourceProvider {
 		this.options = options
 	}
 
-	feedSourceForUser(_userId: string): WeatherSource {
+	async feedSourceForUser(_userId: string): Promise<WeatherSource> {
 		return new WeatherSource(this.options)
 	}
 }

@@ -44,7 +44,15 @@ async function handleUpdateLocation(c: Context<Env>) {
 
 	const user = c.get("user")!
 	const sessionManager = c.get("sessionManager")
-	const session = sessionManager.getOrCreate(user.id)
+
+	let session
+	try {
+		session = await sessionManager.getOrCreate(user.id)
+	} catch (err) {
+		console.error("[handleUpdateLocation] Failed to create session:", err)
+		return c.json({ error: "Service unavailable" }, 503)
+	}
+
 	await session.engine.executeAction("aelis.location", "update-location", {
 		lat: result.lat,
 		lng: result.lng,
