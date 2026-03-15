@@ -1,4 +1,4 @@
-
+/** @jsxImportSource @nym.sh/jrx */
 import { render } from "@nym.sh/jrx"
 import { describe, expect, test } from "bun:test"
 

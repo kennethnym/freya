@@ -1,4 +1,4 @@
-
+/** @jsxImportSource @nym.sh/jrx */
 import type { FeedItemRenderer } from "@aelis/core"
 
 import { FeedCard, SansSerifText } from "@aelis/components"
