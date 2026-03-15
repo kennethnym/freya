@@ -1,7 +1,7 @@
 import type { ActionDefinition, ContextEntry, FeedItem, FeedSource } from "@aelis/core"
 
 import { contextKey } from "@aelis/core"
-import { describe, expect, test } from "bun:test"
+import { describe, expect, spyOn, test } from "bun:test"
 import { Hono } from "hono"
 
 import { mockAuthSessionMiddleware } from "../auth/session-middleware.ts"
@@ -72,12 +72,12 @@ describe("GET /api/feed", () => {
 			},
 		]
 		const manager = new UserSessionManager({
-			providers: [() => createStubSource("test", items)],
+			providers: [async () => createStubSource("test", items)],
 		})
 		const app = buildTestApp(manager, "user-1")
 
 		// Prime the cache
-		const session = manager.getOrCreate("user-1")
+		const session = await manager.getOrCreate("user-1")
 		await session.engine.refresh()
 		expect(session.engine.lastFeed()).not.toBeNull()
 
@@ -105,7 +105,7 @@ describe("GET /api/feed", () => {
 			},
 		]
 		const manager = new UserSessionManager({
-			providers: [() => createStubSource("test", items)],
+			providers: [async () => createStubSource("test", items)],
 		})
 		const app = buildTestApp(manager, "user-1")
 
@@ -136,7 +136,7 @@ describe("GET /api/feed", () => {
 				throw new Error("connection timeout")
 			},
 		}
-		const manager = new UserSessionManager({ providers: [() => failingSource] })
+		const manager = new UserSessionManager({ providers: [async () => failingSource] })
 		const app = buildTestApp(manager, "user-1")
 
 		const res = await app.request("/api/feed")
@@ -148,6 +148,27 @@ describe("GET /api/feed", () => {
 		expect(body.errors[0]!.sourceId).toBe("failing")
 		expect(body.errors[0]!.error).toBe("connection timeout")
 	})
+
+	test("returns 503 when all providers fail", async () => {
+		const manager = new UserSessionManager({
+			providers: [
+				async () => {
+					throw new Error("provider down")
+				},
+			],
+		})
+		const app = buildTestApp(manager, "user-1")
+
+		const spy = spyOn(console, "error").mockImplementation(() => {})
+
+		const res = await app.request("/api/feed")
+
+		expect(res.status).toBe(503)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toBe("Service unavailable")
+
+		spy.mockRestore()
+	})
 })
 
 describe("GET /api/context", () => {
@@ -158,12 +179,12 @@ describe("GET /api/context", () => {
 	// The mock auth middleware always injects this hardcoded user ID
 	const mockUserId = "k7Gx2mPqRvNwYs9TdLfA4bHcJeUo1iZn"
 
-	function buildContextApp(userId?: string) {
+	async function buildContextApp(userId?: string) {
 		const manager = new UserSessionManager({
-			providers: [() => createStubSource("weather", [], contextEntries)],
+			providers: [async () => createStubSource("weather", [], contextEntries)],
 		})
 		const app = buildTestApp(manager, userId)
-		const session = manager.getOrCreate(mockUserId)
+		const session = await manager.getOrCreate(mockUserId)
 		return { app, session }
 	}
 
@@ -177,7 +198,7 @@ describe("GET /api/context", () => {
 	})
 
 	test("returns 400 when key param is missing", async () => {
-		const { app } = buildContextApp("user-1")
+		const { app } = await buildContextApp("user-1")
 
 		const res = await app.request("/api/context")
 
@@ -187,7 +208,7 @@ describe("GET /api/context", () => {
 	})
 
 	test("returns 400 when key is invalid JSON", async () => {
-		const { app } = buildContextApp("user-1")
+		const { app } = await buildContextApp("user-1")
 
 		const res = await app.request("/api/context?key=notjson")
 
@@ -197,7 +218,7 @@ describe("GET /api/context", () => {
 	})
 
 	test("returns 400 when key is not an array", async () => {
-		const { app } = buildContextApp("user-1")
+		const { app } = await buildContextApp("user-1")
 
 		const res = await app.request('/api/context?key="string"')
 
@@ -207,7 +228,7 @@ describe("GET /api/context", () => {
 	})
 
 	test("returns 400 when key contains invalid element types", async () => {
-		const { app } = buildContextApp("user-1")
+		const { app } = await buildContextApp("user-1")
 
 		const res = await app.request("/api/context?key=[true,null,[1,2]]")
 
@@ -217,7 +238,7 @@ describe("GET /api/context", () => {
 	})
 
 	test("returns 400 when key is an empty array", async () => {
-		const { app } = buildContextApp("user-1")
+		const { app } = await buildContextApp("user-1")
 
 		const res = await app.request("/api/context?key=[]")
 
@@ -227,7 +248,7 @@ describe("GET /api/context", () => {
 	})
 
 	test("returns 400 when match param is invalid", async () => {
-		const { app } = buildContextApp("user-1")
+		const { app } = await buildContextApp("user-1")
 
 		const res = await app.request('/api/context?key=["aelis.weather"]&match=invalid')
 
@@ -237,7 +258,7 @@ describe("GET /api/context", () => {
 	})
 
 	test("returns exact match with match=exact", async () => {
-		const { app, session } = buildContextApp("user-1")
+		const { app, session } = await buildContextApp("user-1")
 		await session.engine.refresh()
 
 		const res = await app.request('/api/context?key=["aelis.weather","weather"]&match=exact')
@@ -249,7 +270,7 @@ describe("GET /api/context", () => {
 	})
 
 	test("returns 404 with match=exact when only prefix would match", async () => {
-		const { app, session } = buildContextApp("user-1")
+		const { app, session } = await buildContextApp("user-1")
 		await session.engine.refresh()
 
 		const res = await app.request('/api/context?key=["aelis.weather"]&match=exact')
@@ -258,7 +279,7 @@ describe("GET /api/context", () => {
 	})
 
 	test("returns prefix match with match=prefix", async () => {
-		const { app, session } = buildContextApp("user-1")
+		const { app, session } = await buildContextApp("user-1")
 		await session.engine.refresh()
 
 		const res = await app.request('/api/context?key=["aelis.weather"]&match=prefix')
@@ -275,7 +296,7 @@ describe("GET /api/context", () => {
 	})
 
 	test("default mode returns exact match when available", async () => {
-		const { app, session } = buildContextApp("user-1")
+		const { app, session } = await buildContextApp("user-1")
 		await session.engine.refresh()
 
 		const res = await app.request('/api/context?key=["aelis.weather","weather"]')
@@ -287,7 +308,7 @@ describe("GET /api/context", () => {
 	})
 
 	test("default mode falls back to prefix when no exact match", async () => {
-		const { app, session } = buildContextApp("user-1")
+		const { app, session } = await buildContextApp("user-1")
 		await session.engine.refresh()
 
 		const res = await app.request('/api/context?key=["aelis.weather"]')
@@ -303,7 +324,7 @@ describe("GET /api/context", () => {
 	})
 
 	test("returns 404 when neither exact nor prefix matches", async () => {
-		const { app, session } = buildContextApp("user-1")
+		const { app, session } = await buildContextApp("user-1")
 		await session.engine.refresh()
 
 		const res = await app.request('/api/context?key=["nonexistent"]')

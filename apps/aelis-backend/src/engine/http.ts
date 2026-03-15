@@ -33,7 +33,14 @@ export function registerFeedHttpHandlers(
 async function handleGetFeed(c: Context<Env>) {
 	const user = c.get("user")!
 	const sessionManager = c.get("sessionManager")
-	const session = sessionManager.getOrCreate(user.id)
+
+	let session
+	try {
+		session = await sessionManager.getOrCreate(user.id)
+	} catch (err) {
+		console.error("[handleGetFeed] Failed to create session:", err)
+		return c.json({ error: "Service unavailable" }, 503)
+	}
 
 	const feed = await session.feed()
 
@@ -46,7 +53,7 @@ async function handleGetFeed(c: Context<Env>) {
 	})
 }
 
-function handleGetContext(c: Context<Env>) {
+async function handleGetContext(c: Context<Env>) {
 	const keyParam = c.req.query("key")
 	if (!keyParam) {
 		return c.json({ error: 'Invalid or missing "key" parameter: must be a JSON array' }, 400)
@@ -70,7 +77,15 @@ function handleGetContext(c: Context<Env>) {
 
 	const user = c.get("user")!
 	const sessionManager = c.get("sessionManager")
-	const session = sessionManager.getOrCreate(user.id)
+
+	let session
+	try {
+		session = await sessionManager.getOrCreate(user.id)
+	} catch (err) {
+		console.error("[handleGetContext] Failed to create session:", err)
+		return c.json({ error: "Service unavailable" }, 503)
+	}
+
 	const context = session.engine.currentContext()
 	const key = contextKey(...parsed)
 

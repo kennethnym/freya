@@ -1,3 +1,5 @@
+import type { FeedSource } from "@aelis/core"
+
 import type { FeedEnhancer } from "../enhancement/enhance-feed.ts"
 import type { FeedSourceProviderInput } from "./feed-source-provider.ts"
 
@@ -10,6 +12,7 @@ export interface UserSessionManagerConfig {
 
 export class UserSessionManager {
 	private sessions = new Map<string, UserSession>()
+	private pending = new Map<string, Promise<UserSession>>()
 	private readonly providers: FeedSourceProviderInput[]
 	private readonly feedEnhancer: FeedEnhancer | null
 
@@ -18,16 +21,28 @@ export class UserSessionManager {
 		this.feedEnhancer = config.feedEnhancer ?? null
 	}
 
-	getOrCreate(userId: string): UserSession {
-		let session = this.sessions.get(userId)
-		if (!session) {
-			const sources = this.providers.map((p) =>
-				typeof p === "function" ? p(userId) : p.feedSourceForUser(userId),
-			)
-			session = new UserSession(sources, this.feedEnhancer)
+	async getOrCreate(userId: string): Promise<UserSession> {
+		const existing = this.sessions.get(userId)
+		if (existing) return existing
+
+		const inflight = this.pending.get(userId)
+		if (inflight) return inflight
+
+		const promise = this.createSession(userId)
+		this.pending.set(userId, promise)
+		try {
+			const session = await promise
+			// If remove() was called while we were awaiting, it clears the
+			// pending entry. Detect that and destroy the session immediately.
+			if (!this.pending.has(userId)) {
+				session.destroy()
+				throw new Error(`Session for user ${userId} was removed during creation`)
+			}
 			this.sessions.set(userId, session)
+			return session
+		} finally {
+			this.pending.delete(userId)
 		}
-		return session
 	}
 
 	remove(userId: string): void {
@@ -36,5 +51,36 @@ export class UserSessionManager {
 			session.destroy()
 			this.sessions.delete(userId)
 		}
+		// Cancel any in-flight creation so getOrCreate won't store the session
+		this.pending.delete(userId)
+	}
+
+	private async createSession(userId: string): Promise<UserSession> {
+		const results = await Promise.allSettled(
+			this.providers.map((p) =>
+				typeof p === "function" ? p(userId) : p.feedSourceForUser(userId),
+			),
+		)
+
+		const sources: FeedSource[] = []
+		const errors: unknown[] = []
+
+		for (const result of results) {
+			if (result.status === "fulfilled") {
+				sources.push(result.value)
+			} else {
+				errors.push(result.reason)
+			}
+		}
+
+		if (sources.length === 0 && errors.length > 0) {
+			throw new AggregateError(errors, "All feed source providers failed")
+		}
+
+		for (const error of errors) {
+			console.error("[UserSessionManager] Feed source provider failed:", error)
+		}
+
+		return new UserSession(sources, this.feedEnhancer)
 	}
 }
