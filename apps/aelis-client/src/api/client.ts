@@ -28,7 +28,9 @@ export class ApiClient {
 		const finalInit = init
 			? this.middlewares.reduce((prevInit, middleware) => middleware(url, prevInit), init)
 			: undefined
-		return fetch(url, finalInit).then((res) => Promise.all([Promise.resolve(res), res.json()]))
+		return fetch(url instanceof Request ? url : new URL(url, this.baseUrl), finalInit).then((res) =>
+			Promise.all([Promise.resolve(res), res.json()]),
+		)
 	}
 }
 
