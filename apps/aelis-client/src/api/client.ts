@@ -9,8 +9,6 @@ export class ApiClient {
 	private readonly baseUrl: string
 	private readonly middlewares: readonly ApiRequestMiddleware[]
 
-	private publicRoutes = new Set<string>(["/login", "/signup"])
-
 	static noop = new ApiClient({ baseUrl: "" })
 
 	constructor({
