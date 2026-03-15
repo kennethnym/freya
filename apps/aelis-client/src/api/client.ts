@@ -27,7 +27,7 @@ export class ApiClient {
 			(prevInit, middleware) => middleware(url, prevInit),
 			init,
 		)
-		return fetch(url instanceof Request ? url : new URL(url, this.baseUrl), finalInit).then((res) =>
+		return fetch(this.baseUrl ? new URL(url.toString(), this.baseUrl) : url, finalInit).then((res) =>
 			Promise.all([Promise.resolve(res), res.json()]),
 		)
 	}
