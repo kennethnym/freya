@@ -10,7 +10,12 @@
 	},
 	"dependencies": {
 		"@aelis/core": "workspace:*",
+		"@aelis/components": "workspace:*",
 		"@aelis/source-location": "workspace:*",
 		"arktype": "^2.1.0"
+	},
+	"peerDependencies": {
+		"@json-render/core": "*",
+		"@nym.sh/jrx": "*"
 	}
 }

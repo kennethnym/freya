@@ -178,9 +178,14 @@
       "name": "@aelis/source-tfl",
       "version": "0.0.0",
       "dependencies": {
+        "@aelis/components": "workspace:*",
         "@aelis/core": "workspace:*",
         "@aelis/source-location": "workspace:*",
         "arktype": "^2.1.0",
+      },
+      "peerDependencies": {
+        "@json-render/core": "*",
+        "@nym.sh/jrx": "*",
       },
     },
     "packages/aelis-source-weatherkit": {

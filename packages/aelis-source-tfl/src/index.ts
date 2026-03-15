@@ -11,3 +11,4 @@ export {
 	type TflLineStatus,
 	type TflSourceOptions,
 } from "./types.ts"
+export { renderTflAlert } from "./renderer.tsx"
