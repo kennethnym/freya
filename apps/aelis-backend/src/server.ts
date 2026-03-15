@@ -2,7 +2,7 @@ import { LocationSource } from "@aelis/source-location"
 import { Hono } from "hono"
 
 import { registerAuthHandlers } from "./auth/http.ts"
-import { mockAuthSessionMiddleware, requireSession } from "./auth/session-middleware.ts"
+import { requireSession } from "./auth/session-middleware.ts"
 import { registerFeedHttpHandlers } from "./engine/http.ts"
 import { createFeedEnhancer } from "./enhancement/enhance-feed.ts"
 import { createLlmClient } from "./enhancement/llm-client.ts"
@@ -43,16 +43,11 @@ function main() {
 
 	app.get("/health", (c) => c.json({ status: "ok" }))
 
-	const isDev = process.env.NODE_ENV !== "production"
-	const authSessionMiddleware = isDev ? mockAuthSessionMiddleware("dev-user") : requireSession
-
-	if (!isDev) {
-		registerAuthHandlers(app)
-	}
+	registerAuthHandlers(app)
 
 	registerFeedHttpHandlers(app, {
 		sessionManager,
-		authSessionMiddleware,
+		authSessionMiddleware: requireSession,
 	})
 	registerLocationHttpHandlers(app, { sessionManager })
 
