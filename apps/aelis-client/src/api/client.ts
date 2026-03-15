@@ -24,10 +24,11 @@ export class ApiClient {
 		this.middlewares = middlewares
 	}
 
-	async request<T>(...[url, init]: Parameters<typeof fetch>): Promise<[Response, T]> {
-		const finalInit = init
-			? this.middlewares.reduce((prevInit, middleware) => middleware(url, prevInit), init)
-			: undefined
+	async request<T>(...[url, init = {}]: Parameters<typeof fetch>): Promise<[Response, T]> {
+		const finalInit = this.middlewares.reduce(
+			(prevInit, middleware) => middleware(url, prevInit),
+			init,
+		)
 		return fetch(url instanceof Request ? url : new URL(url, this.baseUrl), finalInit).then((res) =>
 			Promise.all([Promise.resolve(res), res.json()]),
 		)
