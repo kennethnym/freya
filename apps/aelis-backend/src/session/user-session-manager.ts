@@ -32,6 +32,12 @@ export class UserSessionManager {
 		this.pending.set(userId, promise)
 		try {
 			const session = await promise
+			// If remove() was called while we were awaiting, it clears the
+			// pending entry. Detect that and destroy the session immediately.
+			if (!this.pending.has(userId)) {
+				session.destroy()
+				throw new Error(`Session for user ${userId} was removed during creation`)
+			}
 			this.sessions.set(userId, session)
 			return session
 		} finally {
@@ -45,6 +51,8 @@ export class UserSessionManager {
 			session.destroy()
 			this.sessions.delete(userId)
 		}
+		// Cancel any in-flight creation so getOrCreate won't store the session
+		this.pending.delete(userId)
 	}
 
 	private async createSession(userId: string): Promise<UserSession> {

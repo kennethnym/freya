@@ -225,4 +225,35 @@ describe("UserSessionManager", () => {
 		expect(session1).toBe(session2)
 		expect(callCount).toBe(1)
 	})
+
+	test("remove during in-flight getOrCreate prevents session from being stored", async () => {
+		let resolveProvider: () => void
+		const providerGate = new Promise<void>((r) => {
+			resolveProvider = r
+		})
+
+		const manager = new UserSessionManager({
+			providers: [
+				async () => {
+					await providerGate
+					return new LocationSource()
+				},
+			],
+		})
+
+		const sessionPromise = manager.getOrCreate("user-1")
+
+		// remove() while provider is still resolving
+		manager.remove("user-1")
+
+		// Let the provider finish
+		resolveProvider!()
+
+		await expect(sessionPromise).rejects.toThrow("removed during creation")
+
+		// A fresh getOrCreate should produce a new session, not the cancelled one
+		const freshSession = await manager.getOrCreate("user-1")
+		expect(freshSession).toBeDefined()
+		expect(freshSession.engine).toBeDefined()
+	})
 })
