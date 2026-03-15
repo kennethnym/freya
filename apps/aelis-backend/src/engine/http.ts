@@ -1,6 +1,7 @@
 import type { Context, Hono } from "hono"
 
 import { contextKey } from "@aelis/core"
+import { render } from "@nym.sh/jrx"
 import { createMiddleware } from "hono/factory"
 
 import type { AuthSessionMiddleware } from "../auth/session-middleware.ts"
@@ -36,6 +37,31 @@ async function handleGetFeed(c: Context<Env>) {
 	const session = sessionManager.getOrCreate(user.id)
 
 	const feed = await session.feed()
+
+	const renderParam = c.req.query("render")
+
+	if (renderParam !== undefined) {
+		if (renderParam !== "json-render") {
+			return c.json({ error: `Unknown render format: "${renderParam}"` }, 400)
+		}
+
+		if (!session.renderer) {
+			return c.json({ error: "Rendering is not available" }, 500)
+		}
+
+		const renderedItems = session.renderer.render(feed.items).map((item) => ({
+			...item,
+			ui: render(item.ui),
+		}))
+
+		return c.json({
+			items: renderedItems,
+			errors: feed.errors.map((e) => ({
+				sourceId: e.sourceId,
+				error: e.error.message,
+			})),
+		})
+	}
 
 	return c.json({
 		items: feed.items,
