@@ -1,8 +1,16 @@
-import type { ActionDefinition, ContextEntry, FeedItem, FeedSource } from "@aelis/core"
+import type {
+	ActionDefinition,
+	ContextEntry,
+	FeedItem,
+	FeedItemRenderer,
+	FeedSource,
+} from "@aelis/core"
 
 import { LocationSource } from "@aelis/source-location"
+import { JRX_NODE } from "@nym.sh/jrx"
 import { describe, expect, test } from "bun:test"
 
+import { FeedRenderer } from "./feed-renderer.ts"
 import { UserSession } from "./user-session.ts"
 
 function createStubSource(id: string, items: FeedItem[] = []): FeedSource {
@@ -25,7 +33,9 @@ function createStubSource(id: string, items: FeedItem[] = []): FeedSource {
 
 describe("UserSession", () => {
 	test("registers sources and starts engine", async () => {
-		const session = new UserSession([createStubSource("test-a"), createStubSource("test-b")])
+		const session = new UserSession({
+			sources: [createStubSource("test-a"), createStubSource("test-b")],
+		})
 
 		const result = await session.engine.refresh()
 
@@ -34,7 +44,7 @@ describe("UserSession", () => {
 
 	test("getSource returns registered source", () => {
 		const location = new LocationSource()
-		const session = new UserSession([location])
+		const session = new UserSession({ sources: [location] })
 
 		const result = session.getSource<LocationSource>("aelis.location")
 
@@ -42,13 +52,13 @@ describe("UserSession", () => {
 	})
 
 	test("getSource returns undefined for unknown source", () => {
-		const session = new UserSession([createStubSource("test")])
+		const session = new UserSession({ sources: [createStubSource("test")] })
 
 		expect(session.getSource("unknown")).toBeUndefined()
 	})
 
 	test("destroy stops engine and clears sources", () => {
-		const session = new UserSession([createStubSource("test")])
+		const session = new UserSession({ sources: [createStubSource("test")] })
 
 		session.destroy()
 
@@ -57,7 +67,7 @@ describe("UserSession", () => {
 
 	test("engine.executeAction routes to correct source", async () => {
 		const location = new LocationSource()
-		const session = new UserSession([location])
+		const session = new UserSession({ sources: [location] })
 
 		await session.engine.executeAction("aelis.location", "update-location", {
 			lat: 51.5,
@@ -82,7 +92,7 @@ describe("UserSession.feed", () => {
 				data: { value: 42 },
 			},
 		]
-		const session = new UserSession([createStubSource("test", items)])
+		const session = new UserSession({ sources: [createStubSource("test", items)] })
 
 		const result = await session.feed()
 
@@ -103,7 +113,7 @@ describe("UserSession.feed", () => {
 		const enhancer = async (feedItems: FeedItem[]) =>
 			feedItems.map((item) => ({ ...item, data: { ...item.data, enhanced: true } }))
 
-		const session = new UserSession([createStubSource("test", items)], enhancer)
+		const session = new UserSession({ sources: [createStubSource("test", items)], enhancer })
 
 		const result = await session.feed()
 
@@ -127,7 +137,7 @@ describe("UserSession.feed", () => {
 			return feedItems.map((item) => ({ ...item, data: { ...item.data, enhanced: true } }))
 		}
 
-		const session = new UserSession([createStubSource("test", items)], enhancer)
+		const session = new UserSession({ sources: [createStubSource("test", items)], enhancer })
 
 		const result1 = await session.feed()
 		expect(result1.items[0]!.data.enhanced).toBe(true)
@@ -162,7 +172,7 @@ describe("UserSession.feed", () => {
 			}))
 		}
 
-		const session = new UserSession([source], enhancer)
+		const session = new UserSession({ sources: [source], enhancer })
 
 		// First feed triggers refresh + enhancement
 		const result1 = await session.feed()
@@ -205,12 +215,90 @@ describe("UserSession.feed", () => {
 			throw new Error("enhancement exploded")
 		}
 
-		const session = new UserSession([createStubSource("test", items)], enhancer)
+		const session = new UserSession({ sources: [createStubSource("test", items)], enhancer })
 
 		const result = await session.feed()
 
 		expect(result.items).toHaveLength(1)
 		expect(result.items[0]!.id).toBe("item-1")
 		expect(result.items[0]!.data.value).toBe(42)
+	})
+})
+
+describe("FeedRenderer", () => {
+	const stubRenderer: FeedItemRenderer = (item) => ({
+		$$typeof: JRX_NODE,
+		type: "FeedCard",
+		props: { content: item.data.value },
+		children: [],
+		key: undefined,
+		visible: undefined,
+		on: undefined,
+		repeat: undefined,
+		watch: undefined,
+	})
+
+	function makeItem(sourceId: string): FeedItem {
+		return {
+			id: `item-${sourceId}`,
+			sourceId,
+			type: "some-type",
+			timestamp: new Date("2025-01-01T00:00:00.000Z"),
+			data: { value: 42 },
+		}
+	}
+
+	test("renders items with matching sourceId", () => {
+		const renderer = new FeedRenderer({ "test-source": stubRenderer })
+
+		const result = renderer.render([makeItem("test-source")])
+
+		expect(result).toHaveLength(1)
+		expect(result[0]!.ui).toBeDefined()
+		expect(result[0]!.id).toBe("item-test-source")
+	})
+
+	test("drops items without a matching renderer", () => {
+		const renderer = new FeedRenderer({ "test-source": stubRenderer })
+
+		const result = renderer.render([makeItem("unknown-source")])
+
+		expect(result).toHaveLength(0)
+	})
+
+	test("filters mixed items", () => {
+		const renderer = new FeedRenderer({ "test-source": stubRenderer })
+
+		const result = renderer.render([makeItem("test-source"), makeItem("unknown-source")])
+
+		expect(result).toHaveLength(1)
+		expect(result[0]!.id).toBe("item-test-source")
+	})
+
+	test("renders empty array for empty input", () => {
+		const renderer = new FeedRenderer({ "test-source": stubRenderer })
+
+		expect(renderer.render([])).toHaveLength(0)
+	})
+
+	test("renders with no renderers registered", () => {
+		const renderer = new FeedRenderer({})
+
+		expect(renderer.render([makeItem("test-source")])).toHaveLength(0)
+	})
+})
+
+describe("UserSession.renderer", () => {
+	test("exposes renderer when provided", () => {
+		const renderer = new FeedRenderer({})
+		const session = new UserSession({ sources: [createStubSource("test")], renderer })
+
+		expect(session.renderer).toBe(renderer)
+	})
+
+	test("renderer is null when not provided", () => {
+		const session = new UserSession({ sources: [createStubSource("test")] })
+
+		expect(session.renderer).toBeNull()
 	})
 })

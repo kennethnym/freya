@@ -3,11 +3,13 @@ import { Hono } from "hono"
 
 import { registerAuthHandlers } from "./auth/http.ts"
 import { mockAuthSessionMiddleware, requireSession } from "./auth/session-middleware.ts"
+import { CALDAV_SOURCE_ID, calDavRenderer } from "./caldav/renderer-provider.ts"
+import { registerFeedHttpHandlers } from "./engine/http.ts"
 import { createFeedEnhancer } from "./enhancement/enhance-feed.ts"
 import { createLlmClient } from "./enhancement/llm-client.ts"
-import { registerFeedHttpHandlers } from "./engine/http.ts"
 import { registerLocationHttpHandlers } from "./location/http.ts"
-import { UserSessionManager } from "./session/index.ts"
+import { FeedRenderer, UserSessionManager } from "./session/index.ts"
+import { TFL_SOURCE_ID, tflRenderer } from "./tfl/renderer-provider.ts"
 import { WeatherSourceProvider } from "./weather/provider.ts"
 
 function main() {
@@ -24,6 +26,11 @@ function main() {
 		console.warn("[enhancement] OPENROUTER_API_KEY not set — feed enhancement disabled")
 	}
 
+	const allRenderers = {
+		[TFL_SOURCE_ID]: tflRenderer,
+		[CALDAV_SOURCE_ID]: calDavRenderer,
+	}
+
 	const sessionManager = new UserSessionManager({
 		providers: [
 			() => new LocationSource(),
@@ -36,6 +43,9 @@ function main() {
 				},
 			}),
 		],
+		rendererProvider: {
+			feedRendererForUser: (_userId) => new FeedRenderer(allRenderers),
+		},
 		feedEnhancer,
 	})
 

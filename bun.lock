@@ -25,6 +25,7 @@
         "@aelis/source-location": "workspace:*",
         "@aelis/source-tfl": "workspace:*",
         "@aelis/source-weatherkit": "workspace:*",
+        "@nym.sh/jrx": "^0.2.0",
         "@openrouter/sdk": "^0.9.11",
         "arktype": "^2.1.29",
         "better-auth": "^1",

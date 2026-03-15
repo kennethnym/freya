@@ -1,9 +1,17 @@
 import { FeedEngine, type FeedItem, type FeedResult, type FeedSource } from "@aelis/core"
 
 import type { FeedEnhancer } from "../enhancement/enhance-feed.ts"
+import type { FeedRenderer } from "./feed-renderer.ts"
+
+export interface UserSessionOptions {
+	sources: FeedSource[]
+	enhancer?: FeedEnhancer | null
+	renderer?: FeedRenderer | null
+}
 
 export class UserSession {
 	readonly engine: FeedEngine
+	readonly renderer: FeedRenderer | null
 	private sources = new Map<string, FeedSource>()
 	private readonly enhancer: FeedEnhancer | null
 	private enhancedItems: FeedItem[] | null = null
@@ -12,10 +20,11 @@ export class UserSession {
 	private enhancingPromise: Promise<void> | null = null
 	private unsubscribe: (() => void) | null = null
 
-	constructor(sources: FeedSource[], enhancer?: FeedEnhancer | null) {
+	constructor(options: UserSessionOptions) {
 		this.engine = new FeedEngine()
-		this.enhancer = enhancer ?? null
-		for (const source of sources) {
+		this.enhancer = options.enhancer ?? null
+		this.renderer = options.renderer ?? null
+		for (const source of options.sources) {
 			this.sources.set(source.id, source)
 			this.engine.register(source)
 		}
