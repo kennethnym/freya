@@ -61,6 +61,15 @@ describe("renderTflAlert", () => {
 		expect(caption.props.content).toBe("Nearest station: 2.5km away")
 	})
 
+	test("formats near-1km boundary as km not meters", () => {
+		const node = renderTflAlert(makeItem({ closestStationDistance: 0.9999 }))
+		const spec = render(node)
+
+		const root = spec.elements[spec.root]!
+		const caption = spec.elements[root.children![2]!]!
+		expect(caption.props.content).toBe("Nearest station: 1.0km away")
+	})
+
 	test("omits station distance when null", () => {
 		const node = renderTflAlert(makeItem({ closestStationDistance: null }))
 		const spec = render(node)

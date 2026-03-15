@@ -14,10 +14,11 @@ const SEVERITY_LABEL: Record<TflAlertSeverity, string> = {
 }
 
 function formatDistance(km: number): string {
-	if (km < 1) {
-		return `${Math.round(km * 1000)}m away`
+	const meters = Math.round(km * 1000)
+	if (meters < 1000) {
+		return `${meters}m away`
 	}
-	return `${km.toFixed(1)}km away`
+	return `${(meters / 1000).toFixed(1)}km away`
 }
 
 export const renderTflAlert: FeedItemRenderer<"tfl-alert", TflAlertData> = (item) => {
