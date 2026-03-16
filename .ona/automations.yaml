@@ -6,3 +6,14 @@ services:
       - postDevcontainerStart
     commands:
       start: cd apps/aelis-client && ./scripts/run-dev-server.sh
+
+  drizzle-studio:
+    name: Drizzle Studio
+    description: Drizzle Studio database browser for aelis-backend
+    triggeredBy:
+      - manual
+    commands:
+      start: |
+        FORWARD_URL=$(gitpod environment port open 4983 --name drizzle-studio-server | sed 's|https://||')
+        echo "Drizzle Studio: https://local.drizzle.studio/?host=${FORWARD_URL}&port=443"
+        cd apps/aelis-backend && bunx drizzle-kit studio --host 0.0.0.0 --port 4983
