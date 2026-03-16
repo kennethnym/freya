@@ -57,9 +57,7 @@ export function createRequireSession(auth: Auth): AuthSessionMiddleware {
  * Creates a function to get session from headers. Useful for WebSocket upgrade validation.
  */
 export function createGetSessionFromHeaders(auth: Auth) {
-	return async (
-		headers: Headers,
-	): Promise<{ user: AuthUser; session: AuthSession } | null> => {
+	return async (headers: Headers): Promise<{ user: AuthUser; session: AuthSession } | null> => {
 		const session = await auth.api.getSession({ headers })
 		return session
 	}
@@ -86,6 +84,10 @@ export function mockAuthSessionMiddleware(userId?: string): AuthSessionMiddlewar
 			image: null,
 			createdAt: now,
 			updatedAt: now,
+			role: "admin",
+			banned: false,
+			banReason: null,
+			banExpires: null,
 		}
 
 		const session: AuthSession = {

@@ -9,8 +9,10 @@
 		"test": "bun test src/",
 		"db:generate": "bunx drizzle-kit generate",
 		"db:generate-auth": "bunx --bun auth@latest generate --config auth.ts --output src/db/auth-schema.ts -y",
+		"db:push": "bunx drizzle-kit push",
 		"db:migrate": "bunx drizzle-kit migrate",
-		"db:studio": "bunx drizzle-kit studio"
+		"db:studio": "bunx drizzle-kit studio",
+		"create-admin": "bun run src/scripts/create-admin.ts"
 	},
 	"dependencies": {
 		"@aelis/core": "workspace:*",

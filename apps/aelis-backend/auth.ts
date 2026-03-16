@@ -2,6 +2,7 @@
 // Run: bunx --bun auth@latest generate --config auth.ts --output src/db/auth-schema.ts
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
+import { admin } from "better-auth/plugins"
 import { SQL } from "bun"
 import { drizzle } from "drizzle-orm/bun-sql"
 
@@ -13,6 +14,7 @@ export const auth = betterAuth({
 	emailAndPassword: {
 		enabled: true,
 	},
+	plugins: [admin()],
 })
 
 export default auth
