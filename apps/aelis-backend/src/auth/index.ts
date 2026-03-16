@@ -1,7 +1,9 @@
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
+import { admin } from "better-auth/plugins"
 
 import type { Database } from "../db/index.ts"
+
 import * as schema from "../db/schema.ts"
 
 export function createAuth(db: Database) {
@@ -13,6 +15,7 @@ export function createAuth(db: Database) {
 		emailAndPassword: {
 			enabled: true,
 		},
+		plugins: [admin()],
 	})
 }
 
