@@ -1,0 +1,1 @@
+CREATE INDEX "user_sources_user_id_enabled_idx" ON "user_sources" USING btree ("user_id","enabled");

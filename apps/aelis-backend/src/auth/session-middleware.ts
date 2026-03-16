@@ -1,8 +1,7 @@
 import type { Context, MiddlewareHandler, Next } from "hono"
 
+import type { Auth } from "./index.ts"
 import type { AuthSession, AuthUser } from "./session.ts"
-
-import { auth } from "./index.ts"
 
 export interface SessionVariables {
 	user: AuthUser | null
@@ -18,46 +17,52 @@ declare module "hono" {
 }
 
 /**
- * Middleware that attaches session and user to the context.
- * Does not reject unauthenticated requests - use requireSession for that.
+ * Creates a middleware that attaches session and user to the context.
+ * Does not reject unauthenticated requests - use createRequireSession for that.
  */
-export async function sessionMiddleware(c: Context, next: Next): Promise<void> {
-	const session = await auth.api.getSession({ headers: c.req.raw.headers })
+export function createSessionMiddleware(auth: Auth): AuthSessionMiddleware {
+	return async (c: Context, next: Next): Promise<void> => {
+		const session = await auth.api.getSession({ headers: c.req.raw.headers })
 
-	if (session) {
+		if (session) {
+			c.set("user", session.user)
+			c.set("session", session.session)
+		} else {
+			c.set("user", null)
+			c.set("session", null)
+		}
+
+		await next()
+	}
+}
+
+/**
+ * Creates a middleware that requires a valid session. Returns 401 if not authenticated.
+ */
+export function createRequireSession(auth: Auth): AuthSessionMiddleware {
+	return async (c: Context, next: Next): Promise<Response | void> => {
+		const session = await auth.api.getSession({ headers: c.req.raw.headers })
+
+		if (!session) {
+			return c.json({ error: "Unauthorized" }, 401)
+		}
+
 		c.set("user", session.user)
 		c.set("session", session.session)
-	} else {
-		c.set("user", null)
-		c.set("session", null)
+		await next()
 	}
-
-	await next()
 }
 
 /**
- * Middleware that requires a valid session. Returns 401 if not authenticated.
+ * Creates a function to get session from headers. Useful for WebSocket upgrade validation.
  */
-export async function requireSession(c: Context, next: Next): Promise<Response | void> {
-	const session = await auth.api.getSession({ headers: c.req.raw.headers })
-
-	if (!session) {
-		return c.json({ error: "Unauthorized" }, 401)
+export function createGetSessionFromHeaders(auth: Auth) {
+	return async (
+		headers: Headers,
+	): Promise<{ user: AuthUser; session: AuthSession } | null> => {
+		const session = await auth.api.getSession({ headers })
+		return session
 	}
-
-	c.set("user", session.user)
-	c.set("session", session.session)
-	await next()
-}
-
-/**
- * Get session from headers. Useful for WebSocket upgrade validation.
- */
-export async function getSessionFromHeaders(
-	headers: Headers,
-): Promise<{ user: AuthUser; session: AuthSession } | null> {
-	const session = await auth.api.getSession({ headers })
-	return session
 }
 
 /**

@@ -1,4 +1,4 @@
-import type { auth } from "./index.ts"
+import type { Auth } from "./index.ts"
 
-export type AuthUser = typeof auth.$Infer.Session.user
-export type AuthSession = typeof auth.$Infer.Session.session
+export type AuthUser = Auth["$Infer"]["Session"]["user"]
+export type AuthSession = Auth["$Infer"]["Session"]["session"]

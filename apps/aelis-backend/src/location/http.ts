@@ -3,9 +3,8 @@ import type { Context, Hono } from "hono"
 import { type } from "arktype"
 import { createMiddleware } from "hono/factory"
 
+import type { AuthSessionMiddleware } from "../auth/session-middleware.ts"
 import type { UserSessionManager } from "../session/index.ts"
-
-import { requireSession } from "../auth/session-middleware.ts"
 
 type Env = { Variables: { sessionManager: UserSessionManager } }
 
@@ -16,16 +15,21 @@ const locationInput = type({
 	timestamp: "string.date.iso",
 })
 
+interface LocationHttpHandlersDeps {
+	sessionManager: UserSessionManager
+	authSessionMiddleware: AuthSessionMiddleware
+}
+
 export function registerLocationHttpHandlers(
 	app: Hono,
-	{ sessionManager }: { sessionManager: UserSessionManager },
+	{ sessionManager, authSessionMiddleware }: LocationHttpHandlersDeps,
 ) {
 	const inject = createMiddleware<Env>(async (c, next) => {
 		c.set("sessionManager", sessionManager)
 		await next()
 	})
 
-	app.post("/api/location", inject, requireSession, handleUpdateLocation)
+	app.post("/api/location", inject, authSessionMiddleware, handleUpdateLocation)
 }
 
 async function handleUpdateLocation(c: Context<Env>) {
