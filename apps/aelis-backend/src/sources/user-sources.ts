@@ -30,7 +30,7 @@ export function sources(db: Database, userId: string) {
 		async enableSource(sourceId: string) {
 			const rows = await db
 				.update(userSources)
-				.set({ enabled: true })
+				.set({ enabled: true, updatedAt: new Date() })
 				.where(and(eq(userSources.userId, userId), eq(userSources.sourceId, sourceId)))
 				.returning({ id: userSources.id })
 
@@ -43,7 +43,7 @@ export function sources(db: Database, userId: string) {
 		async disableSource(sourceId: string) {
 			const rows = await db
 				.update(userSources)
-				.set({ enabled: false })
+				.set({ enabled: false, updatedAt: new Date() })
 				.where(and(eq(userSources.userId, userId), eq(userSources.sourceId, sourceId)))
 				.returning({ id: userSources.id })
 
@@ -59,7 +59,7 @@ export function sources(db: Database, userId: string) {
 				.values({ userId, sourceId, config })
 				.onConflictDoUpdate({
 					target: [userSources.userId, userSources.sourceId],
-					set: { config },
+					set: { config, updatedAt: new Date() },
 				})
 		},
 
@@ -67,7 +67,7 @@ export function sources(db: Database, userId: string) {
 		async updateCredentials(sourceId: string, credentials: Buffer) {
 			const rows = await db
 				.update(userSources)
-				.set({ credentials })
+				.set({ credentials, updatedAt: new Date() })
 				.where(and(eq(userSources.userId, userId), eq(userSources.sourceId, sourceId)))
 				.returning({ id: userSources.id })
 
