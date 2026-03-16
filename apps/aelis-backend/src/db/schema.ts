@@ -1,6 +1,7 @@
 import {
 	boolean,
 	customType,
+	index,
 	jsonb,
 	pgTable,
 	text,
@@ -54,5 +55,8 @@ export const userSources = pgTable(
 			.defaultNow()
 			.$onUpdate(() => new Date()),
 	},
-	(t) => [unique("user_sources_user_id_source_id_unique").on(t.userId, t.sourceId)],
+	(t) => [
+		unique("user_sources_user_id_source_id_unique").on(t.userId, t.sourceId),
+		index("user_sources_user_id_enabled_idx").on(t.userId, t.enabled),
+	],
 )
