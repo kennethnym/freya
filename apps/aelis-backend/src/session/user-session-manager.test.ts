@@ -1,14 +1,11 @@
-import type { WeatherKitClient, WeatherKitResponse } from "@aelis/source-weatherkit"
-
 import { LocationSource } from "@aelis/source-location"
+import { WeatherSource } from "@aelis/source-weatherkit"
 import { describe, expect, mock, spyOn, test } from "bun:test"
 
-import { WeatherSourceProvider } from "../weather/provider.ts"
 import { UserSessionManager } from "./user-session-manager.ts"
 
-const mockWeatherClient: WeatherKitClient = {
-	fetch: async () => ({}) as WeatherKitResponse,
-}
+const mockWeatherProvider = async () =>
+	new WeatherSource({ client: { fetch: async () => ({}) as never } })
 
 describe("UserSessionManager", () => {
 	test("getOrCreate creates session on first call", async () => {
@@ -76,9 +73,8 @@ describe("UserSessionManager", () => {
 	})
 
 	test("accepts object providers", async () => {
-		const provider = new WeatherSourceProvider({ client: mockWeatherClient })
 		const manager = new UserSessionManager({
-			providers: [async () => new LocationSource(), provider],
+			providers: [async () => new LocationSource(), mockWeatherProvider],
 		})
 
 		const session = await manager.getOrCreate("user-1")
@@ -87,9 +83,8 @@ describe("UserSessionManager", () => {
 	})
 
 	test("accepts mixed providers", async () => {
-		const provider = new WeatherSourceProvider({ client: mockWeatherClient })
 		const manager = new UserSessionManager({
-			providers: [async () => new LocationSource(), provider],
+			providers: [async () => new LocationSource(), mockWeatherProvider],
 		})
 
 		const session = await manager.getOrCreate("user-1")

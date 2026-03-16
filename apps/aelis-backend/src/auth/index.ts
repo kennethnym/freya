@@ -1,10 +1,19 @@
 import { betterAuth } from "better-auth"
+import { drizzleAdapter } from "better-auth/adapters/drizzle"
 
-import { pool } from "../db.ts"
+import type { Database } from "../db/index.ts"
+import * as schema from "../db/schema.ts"
 
-export const auth = betterAuth({
-	database: pool,
-	emailAndPassword: {
-		enabled: true,
-	},
-})
+export function createAuth(db: Database) {
+	return betterAuth({
+		database: drizzleAdapter(db, {
+			provider: "pg",
+			schema,
+		}),
+		emailAndPassword: {
+			enabled: true,
+		},
+	})
+}
+
+export type Auth = ReturnType<typeof createAuth>

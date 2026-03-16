@@ -6,7 +6,11 @@
 	"scripts": {
 		"dev": "bun run --watch src/server.ts",
 		"start": "bun run src/server.ts",
-		"test": "bun test src/"
+		"test": "bun test src/",
+		"db:generate": "bunx drizzle-kit generate",
+		"db:generate-auth": "bunx --bun auth@latest generate --config auth.ts --output src/db/auth-schema.ts -y",
+		"db:migrate": "bunx drizzle-kit migrate",
+		"db:studio": "bunx drizzle-kit studio"
 	},
 	"dependencies": {
 		"@aelis/core": "workspace:*",
@@ -18,10 +22,10 @@
 		"@openrouter/sdk": "^0.9.11",
 		"arktype": "^2.1.29",
 		"better-auth": "^1",
-		"hono": "^4",
-		"pg": "^8"
+		"drizzle-orm": "^0.45.1",
+		"hono": "^4"
 	},
 	"devDependencies": {
-		"@types/pg": "^8"
+		"drizzle-kit": "^0.31.9"
 	}
 }

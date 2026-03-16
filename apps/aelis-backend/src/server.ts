@@ -1,16 +1,21 @@
-import { LocationSource } from "@aelis/source-location"
 import { Hono } from "hono"
 
 import { registerAuthHandlers } from "./auth/http.ts"
-import { requireSession } from "./auth/session-middleware.ts"
+import { createAuth } from "./auth/index.ts"
+import { createRequireSession } from "./auth/session-middleware.ts"
+import { createDatabase } from "./db/index.ts"
 import { registerFeedHttpHandlers } from "./engine/http.ts"
 import { createFeedEnhancer } from "./enhancement/enhance-feed.ts"
 import { createLlmClient } from "./enhancement/llm-client.ts"
 import { registerLocationHttpHandlers } from "./location/http.ts"
+import { LocationSourceProvider } from "./location/provider.ts"
 import { UserSessionManager } from "./session/index.ts"
 import { WeatherSourceProvider } from "./weather/provider.ts"
 
 function main() {
+	const { db, close: closeDb } = createDatabase(process.env.DATABASE_URL!)
+	const auth = createAuth(db)
+
 	const openrouterApiKey = process.env.OPENROUTER_API_KEY
 	const feedEnhancer = openrouterApiKey
 		? createFeedEnhancer({
@@ -26,8 +31,9 @@ function main() {
 
 	const sessionManager = new UserSessionManager({
 		providers: [
-			async () => new LocationSource(),
+			new LocationSourceProvider(db),
 			new WeatherSourceProvider({
+				db,
 				credentials: {
 					privateKey: process.env.WEATHERKIT_PRIVATE_KEY!,
 					keyId: process.env.WEATHERKIT_KEY_ID!,
@@ -43,13 +49,20 @@ function main() {
 
 	app.get("/health", (c) => c.json({ status: "ok" }))
 
-	registerAuthHandlers(app)
+	const authSessionMiddleware = createRequireSession(auth)
+
+	registerAuthHandlers(app, auth)
 
 	registerFeedHttpHandlers(app, {
 		sessionManager,
-		authSessionMiddleware: requireSession,
+		authSessionMiddleware,
 	})
-	registerLocationHttpHandlers(app, { sessionManager })
+	registerLocationHttpHandlers(app, { sessionManager, authSessionMiddleware })
+
+	process.on("SIGTERM", async () => {
+		await closeDb()
+		process.exit(0)
+	})
 
 	return app
 }
