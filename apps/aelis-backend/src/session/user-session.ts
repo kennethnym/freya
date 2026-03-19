@@ -67,6 +67,59 @@ export class UserSession {
 		return this.sources.get(sourceId) as T | undefined
 	}
 
+	/**
+	 * Replaces a source in the engine and invalidates all caches.
+	 * Stops and restarts the engine to re-establish reactive subscriptions.
+	 */
+	replaceSource(oldSourceId: string, newSource: FeedSource): void {
+		if (!this.sources.has(oldSourceId)) {
+			throw new Error(`Cannot replace source "${oldSourceId}": not registered`)
+		}
+
+		const wasStarted = this.engine.isStarted()
+
+		if (wasStarted) {
+			this.engine.stop()
+		}
+
+		this.engine.unregister(oldSourceId)
+		this.sources.delete(oldSourceId)
+
+		this.engine.register(newSource)
+		this.sources.set(newSource.id, newSource)
+
+		this.invalidateEnhancement()
+		this.enhancingPromise = null
+
+		if (wasStarted) {
+			this.engine.start()
+		}
+	}
+
+	/**
+	 * Removes a source from the engine and invalidates all caches.
+	 * Stops and restarts the engine to clean up reactive subscriptions.
+	 */
+	removeSource(sourceId: string): void {
+		if (!this.sources.has(sourceId)) return
+
+		const wasStarted = this.engine.isStarted()
+
+		if (wasStarted) {
+			this.engine.stop()
+		}
+
+		this.engine.unregister(sourceId)
+		this.sources.delete(sourceId)
+
+		this.invalidateEnhancement()
+		this.enhancingPromise = null
+
+		if (wasStarted) {
+			this.engine.start()
+		}
+	}
+
 	destroy(): void {
 		this.unsubscribe?.()
 		this.unsubscribe = null

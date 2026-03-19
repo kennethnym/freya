@@ -20,6 +20,7 @@ const weatherConfig = type({
 })
 
 export class WeatherSourceProvider implements FeedSourceProvider {
+	readonly sourceId = "aelis.weather"
 	private readonly db: Database
 	private readonly credentials: WeatherSourceOptions["credentials"]
 	private readonly client: WeatherSourceOptions["client"]

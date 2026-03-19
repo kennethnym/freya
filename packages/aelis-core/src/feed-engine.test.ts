@@ -180,6 +180,31 @@ describe("FeedEngine", () => {
 
 			expect(engine.refresh()).resolves.toBeDefined()
 		})
+
+		test("register invalidates feed cache", async () => {
+			const location = createLocationSource()
+			const engine = new FeedEngine().register(location)
+
+			await engine.refresh()
+			expect(engine.lastFeed()).not.toBeNull()
+
+			engine.register(createWeatherSource())
+
+			expect(engine.lastFeed()).toBeNull()
+		})
+
+		test("unregister invalidates feed cache", async () => {
+			const location = createLocationSource()
+			const weather = createWeatherSource()
+			const engine = new FeedEngine().register(location).register(weather)
+
+			await engine.refresh()
+			expect(engine.lastFeed()).not.toBeNull()
+
+			engine.unregister("weather")
+
+			expect(engine.lastFeed()).toBeNull()
+		})
 	})
 
 	describe("graph validation", () => {
@@ -932,6 +957,56 @@ describe("FeedEngine", () => {
 			expect(fetchCount).toBe(countAfterUpdate)
 
 			engine.stop()
+		})
+	})
+
+	describe("invalidateCache", () => {
+		test("clears cached result", async () => {
+			const location = createLocationSource()
+			const engine = new FeedEngine().register(location)
+
+			await engine.refresh()
+			expect(engine.lastFeed()).not.toBeNull()
+
+			engine.invalidateCache()
+
+			expect(engine.lastFeed()).toBeNull()
+		})
+
+		test("is safe to call when no cache exists", () => {
+			const engine = new FeedEngine()
+
+			expect(() => engine.invalidateCache()).not.toThrow()
+			expect(engine.lastFeed()).toBeNull()
+		})
+	})
+
+	describe("isStarted", () => {
+		test("returns false before start", () => {
+			const engine = new FeedEngine()
+
+			expect(engine.isStarted()).toBe(false)
+		})
+
+		test("returns true after start", () => {
+			const location = createLocationSource()
+			const engine = new FeedEngine().register(location)
+
+			engine.start()
+
+			expect(engine.isStarted()).toBe(true)
+
+			engine.stop()
+		})
+
+		test("returns false after stop", () => {
+			const location = createLocationSource()
+			const engine = new FeedEngine().register(location)
+
+			engine.start()
+			engine.stop()
+
+			expect(engine.isStarted()).toBe(false)
 		})
 	})
 })

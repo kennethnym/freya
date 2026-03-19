@@ -7,6 +7,7 @@ import { SourceDisabledError } from "../sources/errors.ts"
 import { sources } from "../sources/user-sources.ts"
 
 export class LocationSourceProvider implements FeedSourceProvider {
+	readonly sourceId = "aelis.location"
 	private readonly db: Database
 
 	constructor(db: Database) {

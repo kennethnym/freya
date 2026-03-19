@@ -97,21 +97,31 @@ export class FeedEngine<TItems extends FeedItem = FeedItem> {
 	}
 
 	/**
-	 * Registers a FeedSource. Invalidates the cached graph.
+	 * Registers a FeedSource. Invalidates the cached graph and feed cache.
 	 */
 	register<TItem extends FeedItem>(source: FeedSource<TItem>): FeedEngine<TItems | TItem> {
 		this.sources.set(source.id, source)
 		this.graph = null
+		this.invalidateCache()
 		return this as FeedEngine<TItems | TItem>
 	}
 
 	/**
-	 * Unregisters a FeedSource by ID. Invalidates the cached graph.
+	 * Unregisters a FeedSource by ID. Invalidates the cached graph and feed cache.
 	 */
 	unregister(sourceId: string): this {
 		this.sources.delete(sourceId)
 		this.graph = null
+		this.invalidateCache()
 		return this
+	}
+
+	/**
+	 * Clears the cached feed result so the next access triggers a fresh refresh.
+	 */
+	invalidateCache(): void {
+		this.cachedResult = null
+		this.cachedAt = null
 	}
 
 	/**
@@ -247,6 +257,13 @@ export class FeedEngine<TItems extends FeedItem = FeedItem> {
 			cleanup()
 		}
 		this.cleanups = []
+	}
+
+	/**
+	 * Returns whether the engine is currently running reactive subscriptions.
+	 */
+	isStarted(): boolean {
+		return this.started
 	}
 
 	/**

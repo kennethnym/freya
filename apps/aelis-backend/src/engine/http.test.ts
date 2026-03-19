@@ -72,7 +72,14 @@ describe("GET /api/feed", () => {
 			},
 		]
 		const manager = new UserSessionManager({
-			providers: [async () => createStubSource("test", items)],
+			providers: [
+				{
+					sourceId: "test",
+					async feedSourceForUser() {
+						return createStubSource("test", items)
+					},
+				},
+			],
 		})
 		const app = buildTestApp(manager, "user-1")
 
@@ -105,7 +112,14 @@ describe("GET /api/feed", () => {
 			},
 		]
 		const manager = new UserSessionManager({
-			providers: [async () => createStubSource("test", items)],
+			providers: [
+				{
+					sourceId: "test",
+					async feedSourceForUser() {
+						return createStubSource("test", items)
+					},
+				},
+			],
 		})
 		const app = buildTestApp(manager, "user-1")
 
@@ -136,7 +150,16 @@ describe("GET /api/feed", () => {
 				throw new Error("connection timeout")
 			},
 		}
-		const manager = new UserSessionManager({ providers: [async () => failingSource] })
+		const manager = new UserSessionManager({
+			providers: [
+				{
+					sourceId: "failing",
+					async feedSourceForUser() {
+						return failingSource
+					},
+				},
+			],
+		})
 		const app = buildTestApp(manager, "user-1")
 
 		const res = await app.request("/api/feed")
@@ -152,8 +175,11 @@ describe("GET /api/feed", () => {
 	test("returns 503 when all providers fail", async () => {
 		const manager = new UserSessionManager({
 			providers: [
-				async () => {
-					throw new Error("provider down")
+				{
+					sourceId: "test",
+					async feedSourceForUser() {
+						throw new Error("provider down")
+					},
 				},
 			],
 		})
@@ -181,7 +207,14 @@ describe("GET /api/context", () => {
 
 	async function buildContextApp(userId?: string) {
 		const manager = new UserSessionManager({
-			providers: [async () => createStubSource("weather", [], contextEntries)],
+			providers: [
+				{
+					sourceId: "weather",
+					async feedSourceForUser() {
+						return createStubSource("weather", [], contextEntries)
+					},
+				},
+			],
 		})
 		const app = buildTestApp(manager, userId)
 		const session = await manager.getOrCreate(mockUserId)
