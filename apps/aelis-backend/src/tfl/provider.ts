@@ -16,6 +16,7 @@ const tflConfig = type({
 })
 
 export class TflSourceProvider implements FeedSourceProvider {
+	readonly sourceId = "aelis.tfl"
 	private readonly db: Database
 	private readonly apiKey: string | undefined
 	private readonly client: ITflApi | undefined
