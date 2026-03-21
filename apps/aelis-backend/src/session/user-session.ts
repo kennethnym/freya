@@ -73,7 +73,7 @@ export class UserSession {
 	/**
 	 * Re-resolves a source from its provider using this session's userId.
 	 * The source must already be registered. Throws if it isn't.
-	 * If the provider fails, the source is removed from the session.
+	 * If the provider fails, the existing source is kept.
 	 */
 	async refreshSource(provider: FeedSourceProvider): Promise<void> {
 		if (!this.sources.has(provider.sourceId)) {

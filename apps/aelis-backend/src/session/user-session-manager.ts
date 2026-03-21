@@ -65,7 +65,7 @@ export class UserSessionManager {
 	 * Replaces a provider and updates all active sessions.
 	 * The new provider must have the same sourceId as an existing one.
 	 * For each active session, re-resolves the source via session.refreshSource.
-	 * If the provider fails for a user, the old source is removed from that session.
+	 * If the provider fails for a user, the existing source is kept.
 	 */
 	async replaceProvider(provider: FeedSourceProvider): Promise<void> {
 		if (!this.providers.has(provider.sourceId)) {
