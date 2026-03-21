@@ -1,5 +1,7 @@
 import { Hono } from "hono"
 
+import { registerAdminHttpHandlers } from "./admin/http.ts"
+import { createRequireAdmin } from "./auth/admin-middleware.ts"
 import { registerAuthHandlers } from "./auth/http.ts"
 import { createAuth } from "./auth/index.ts"
 import { createRequireSession } from "./auth/session-middleware.ts"
@@ -50,6 +52,7 @@ function main() {
 	app.get("/health", (c) => c.json({ status: "ok" }))
 
 	const authSessionMiddleware = createRequireSession(auth)
+	const adminMiddleware = createRequireAdmin(auth)
 
 	registerAuthHandlers(app, auth)
 
@@ -58,6 +61,7 @@ function main() {
 		authSessionMiddleware,
 	})
 	registerLocationHttpHandlers(app, { sessionManager, authSessionMiddleware })
+	registerAdminHttpHandlers(app, { sessionManager, adminMiddleware, db })
 
 	process.on("SIGTERM", async () => {
 		await closeDb()
