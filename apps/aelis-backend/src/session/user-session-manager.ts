@@ -23,6 +23,10 @@ export class UserSessionManager {
 		this.feedEnhancer = config.feedEnhancer ?? null
 	}
 
+	getProvider(sourceId: string): FeedSourceProvider | undefined {
+		return this.providers.get(sourceId)
+	}
+
 	async getOrCreate(userId: string): Promise<UserSession> {
 		const existing = this.sessions.get(userId)
 		if (existing) return existing.session

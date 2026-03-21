@@ -1,0 +1,180 @@
+import type { ActionDefinition, ContextEntry, FeedItem, FeedSource } from "@aelis/core"
+
+import { Hono } from "hono"
+import { describe, expect, test } from "bun:test"
+
+import type { AdminMiddleware } from "../auth/admin-middleware.ts"
+import type { AuthSession, AuthUser } from "../auth/session.ts"
+import type { Database } from "../db/index.ts"
+import type { FeedSourceProvider } from "../session/feed-source-provider.ts"
+
+import { UserSessionManager } from "../session/user-session-manager.ts"
+import { registerAdminHttpHandlers } from "./http.ts"
+
+function createStubSource(id: string): FeedSource {
+	return {
+		id,
+		async listActions(): Promise<Record<string, ActionDefinition>> {
+			return {}
+		},
+		async executeAction(): Promise<unknown> {
+			return undefined
+		},
+		async fetchContext(): Promise<readonly ContextEntry[] | null> {
+			return null
+		},
+		async fetchItems(): Promise<FeedItem[]> {
+			return []
+		},
+	}
+}
+
+function createStubProvider(sourceId: string): FeedSourceProvider {
+	return {
+		sourceId,
+		async feedSourceForUser() {
+			return createStubSource(sourceId)
+		},
+	}
+}
+
+/** Passthrough admin middleware for testing (assumes admin). */
+function passthroughAdminMiddleware(): AdminMiddleware {
+	const now = new Date()
+	return async (c, next) => {
+		c.set("user", {
+			id: "admin-1",
+			name: "Admin",
+			email: "admin@test.com",
+			emailVerified: true,
+			image: null,
+			createdAt: now,
+			updatedAt: now,
+			role: "admin",
+			banned: false,
+			banReason: null,
+			banExpires: null,
+		} as AuthUser)
+		c.set("session", { id: "sess-1" } as AuthSession)
+		await next()
+	}
+}
+
+const fakeDb = {} as Database
+
+function createApp(providers: FeedSourceProvider[]) {
+	const sessionManager = new UserSessionManager({ providers })
+	const app = new Hono()
+	registerAdminHttpHandlers(app, {
+		sessionManager,
+		adminMiddleware: passthroughAdminMiddleware(),
+		db: fakeDb,
+	})
+	return { app, sessionManager }
+}
+
+const validWeatherConfig = {
+	credentials: {
+		privateKey: "pk-123",
+		keyId: "key-456",
+		teamId: "team-789",
+		serviceId: "svc-abc",
+	},
+}
+
+describe("PUT /api/admin/:sourceId/config", () => {
+	test("returns 404 for unknown provider", async () => {
+		const { app } = createApp([createStubProvider("aelis.location")])
+
+		const res = await app.request("/api/admin/aelis.nonexistent/config", {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ key: "value" }),
+		})
+
+		expect(res.status).toBe(404)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toContain("not found")
+	})
+
+	test("returns 404 for provider without runtime config support", async () => {
+		const { app } = createApp([createStubProvider("aelis.location")])
+
+		const res = await app.request("/api/admin/aelis.location/config", {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ key: "value" }),
+		})
+
+		expect(res.status).toBe(404)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toContain("not found")
+	})
+
+	test("returns 400 for invalid JSON body", async () => {
+		const { app } = createApp([createStubProvider("aelis.weather")])
+
+		const res = await app.request("/api/admin/aelis.weather/config", {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: "not json",
+		})
+
+		expect(res.status).toBe(400)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toContain("Invalid JSON")
+	})
+
+	test("returns 400 when weather config fails validation", async () => {
+		const { app } = createApp([createStubProvider("aelis.weather")])
+
+		const res = await app.request("/api/admin/aelis.weather/config", {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ credentials: { privateKey: 123 } }),
+		})
+
+		expect(res.status).toBe(400)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toBeDefined()
+	})
+
+	test("returns 204 and applies valid weather config", async () => {
+		const { app, sessionManager } = createApp([createStubProvider("aelis.weather")])
+
+		const originalProvider = sessionManager.getProvider("aelis.weather")
+
+		const res = await app.request("/api/admin/aelis.weather/config", {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(validWeatherConfig),
+		})
+
+		expect(res.status).toBe(204)
+
+		// Provider was replaced with a new instance
+		const provider = sessionManager.getProvider("aelis.weather")
+		expect(provider).toBeDefined()
+		expect(provider!.sourceId).toBe("aelis.weather")
+		expect(provider).not.toBe(originalProvider)
+	})
+
+	test("updates active sessions when config is applied", async () => {
+		const { app, sessionManager } = createApp([createStubProvider("aelis.weather")])
+
+		// Create an active session
+		await sessionManager.getOrCreate("user-1")
+
+		const res = await app.request("/api/admin/aelis.weather/config", {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(validWeatherConfig),
+		})
+
+		expect(res.status).toBe(204)
+
+		// Session still works after provider replacement
+		const session = await sessionManager.getOrCreate("user-1")
+		expect(session).toBeDefined()
+	})
+})
