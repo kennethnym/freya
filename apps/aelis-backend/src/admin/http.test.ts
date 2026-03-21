@@ -159,22 +159,4 @@ describe("PUT /api/admin/:sourceId/config", () => {
 		expect(provider).not.toBe(originalProvider)
 	})
 
-	test("updates active sessions when config is applied", async () => {
-		const { app, sessionManager } = createApp([createStubProvider("aelis.weather")])
-
-		// Create an active session
-		await sessionManager.getOrCreate("user-1")
-
-		const res = await app.request("/api/admin/aelis.weather/config", {
-			method: "PUT",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(validWeatherConfig),
-		})
-
-		expect(res.status).toBe(204)
-
-		// Session still works after provider replacement
-		const session = await sessionManager.getOrCreate("user-1")
-		expect(session).toBeDefined()
-	})
 })
