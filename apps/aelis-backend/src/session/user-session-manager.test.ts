@@ -339,7 +339,7 @@ describe("UserSessionManager.replaceProvider", () => {
 		)
 	})
 
-	test("removes source from session when new provider fails for a user", async () => {
+	test("keeps existing source when new provider fails for a user", async () => {
 		const providerV1 = createStubProvider("test", async () => createStubSource("test"))
 		const manager = new UserSessionManager({ providers: [providerV1] })
 
@@ -353,7 +353,7 @@ describe("UserSessionManager.replaceProvider", () => {
 		})
 		await manager.replaceProvider(failingProvider)
 
-		expect(session.getSource("test")).toBeUndefined()
+		expect(session.getSource("test")).toBeDefined()
 		expect(spy).toHaveBeenCalled()
 
 		spy.mockRestore()

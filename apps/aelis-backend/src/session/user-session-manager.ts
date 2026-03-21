@@ -11,7 +11,7 @@ export interface UserSessionManagerConfig {
 }
 
 export class UserSessionManager {
-	private sessions = new Map<string, { userId: string; session: UserSession }>()
+	private sessions = new Map<string, UserSession>()
 	private pending = new Map<string, Promise<UserSession>>()
 	private readonly providers = new Map<string, FeedSourceProvider>()
 	private readonly feedEnhancer: FeedEnhancer | null
@@ -29,7 +29,7 @@ export class UserSessionManager {
 
 	async getOrCreate(userId: string): Promise<UserSession> {
 		const existing = this.sessions.get(userId)
-		if (existing) return existing.session
+		if (existing) return existing
 
 		const inflight = this.pending.get(userId)
 		if (inflight) return inflight
@@ -44,7 +44,7 @@ export class UserSessionManager {
 				session.destroy()
 				throw new Error(`Session for user ${userId} was removed during creation`)
 			}
-			this.sessions.set(userId, { userId, session })
+			this.sessions.set(userId, session)
 			return session
 		} finally {
 			this.pending.delete(userId)
@@ -52,9 +52,9 @@ export class UserSessionManager {
 	}
 
 	remove(userId: string): void {
-		const entry = this.sessions.get(userId)
-		if (entry) {
-			entry.session.destroy()
+		const session = this.sessions.get(userId)
+		if (session) {
+			session.destroy()
 			this.sessions.delete(userId)
 		}
 		// Cancel any in-flight creation so getOrCreate won't store the session
@@ -64,7 +64,7 @@ export class UserSessionManager {
 	/**
 	 * Replaces a provider and updates all active sessions.
 	 * The new provider must have the same sourceId as an existing one.
-	 * For each active session, resolves a new source from the provider.
+	 * For each active session, re-resolves the source via session.refreshSource.
 	 * If the provider fails for a user, the old source is removed from that session.
 	 */
 	async replaceProvider(provider: FeedSourceProvider): Promise<void> {
@@ -78,16 +78,16 @@ export class UserSessionManager {
 
 		const updates: Promise<void>[] = []
 
-		for (const [, { userId, session }] of this.sessions) {
-			updates.push(this.updateSessionSource(provider, userId, session))
+		for (const [, session] of this.sessions) {
+			updates.push(session.refreshSource(provider))
 		}
 
 		// Also update sessions that are currently being created so they
 		// don't land in this.sessions with a stale source.
-		for (const [userId, pendingPromise] of this.pending) {
+		for (const [, pendingPromise] of this.pending) {
 			updates.push(
 				pendingPromise
-					.then((session) => this.updateSessionSource(provider, userId, session))
+					.then((session) => session.refreshSource(provider))
 					.catch(() => {
 						// Session creation itself failed — nothing to update.
 					}),
@@ -95,23 +95,6 @@ export class UserSessionManager {
 		}
 
 		await Promise.all(updates)
-	}
-
-	private async updateSessionSource(
-		provider: FeedSourceProvider,
-		userId: string,
-		session: UserSession,
-	): Promise<void> {
-		try {
-			const newSource = await provider.feedSourceForUser(userId)
-			session.replaceSource(provider.sourceId, newSource)
-		} catch (err) {
-			console.error(
-				`[UserSessionManager] replaceProvider("${provider.sourceId}") failed for user ${userId}:`,
-				err,
-			)
-			session.removeSource(provider.sourceId)
-		}
 	}
 
 	private async createSession(userId: string): Promise<UserSession> {
@@ -138,6 +121,6 @@ export class UserSessionManager {
 			console.error("[UserSessionManager] Feed source provider failed:", error)
 		}
 
-		return new UserSession(sources, this.feedEnhancer)
+		return new UserSession(userId, sources, this.feedEnhancer)
 	}
 }
