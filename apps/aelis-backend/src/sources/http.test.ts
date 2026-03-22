@@ -287,6 +287,31 @@ describe("PATCH /api/sources/:sourceId", () => {
 		expect(body.error).toContain("Invalid JSON")
 	})
 
+	test("returns 400 when request body contains unknown fields", async () => {
+		activeStore = createInMemoryStore()
+		activeStore.seed(MOCK_USER_ID, "aelis.weather")
+		const { app } = createApp([createStubProvider("aelis.weather", weatherConfig)], MOCK_USER_ID)
+
+		const res = await patch(app, "aelis.weather", {
+			enabled: true,
+			unknownField: "hello",
+		})
+
+		expect(res.status).toBe(400)
+	})
+
+	test("returns 400 when weather config contains unknown fields", async () => {
+		activeStore = createInMemoryStore()
+		activeStore.seed(MOCK_USER_ID, "aelis.weather")
+		const { app } = createApp([createStubProvider("aelis.weather", weatherConfig)], MOCK_USER_ID)
+
+		const res = await patch(app, "aelis.weather", {
+			config: { units: "metric", unknownField: "hello" },
+		})
+
+		expect(res.status).toBe(400)
+	})
+
 	test("returns 400 when weather config fails validation", async () => {
 		activeStore = createInMemoryStore()
 		activeStore.seed(MOCK_USER_ID, "aelis.weather")
@@ -410,7 +435,7 @@ describe("PATCH /api/sources/:sourceId", () => {
 		removeSpy.mockRestore()
 	})
 
-	test("accepts location source with arbitrary config (no schema)", async () => {
+	test("returns 400 when config is provided for source without schema", async () => {
 		activeStore = createInMemoryStore()
 		activeStore.seed(MOCK_USER_ID, "aelis.location")
 		const { app } = createApp([createStubProvider("aelis.location")], MOCK_USER_ID)
@@ -419,7 +444,19 @@ describe("PATCH /api/sources/:sourceId", () => {
 			config: { something: "value" },
 		})
 
-		expect(res.status).toBe(204)
+		expect(res.status).toBe(400)
+	})
+
+	test("returns 400 when empty config is provided for source without schema", async () => {
+		activeStore = createInMemoryStore()
+		activeStore.seed(MOCK_USER_ID, "aelis.location")
+		const { app } = createApp([createStubProvider("aelis.location")], MOCK_USER_ID)
+
+		const res = await patch(app, "aelis.location", {
+			config: {},
+		})
+
+		expect(res.status).toBe(400)
 	})
 
 	test("updates enabled on location source", async () => {
@@ -489,6 +526,31 @@ describe("PUT /api/sources/:sourceId", () => {
 		const { app } = createApp([createStubProvider("aelis.weather", weatherConfig)], MOCK_USER_ID)
 
 		const res = await put(app, "aelis.weather", { enabled: true })
+
+		expect(res.status).toBe(400)
+	})
+
+	test("returns 400 when request body contains unknown fields", async () => {
+		activeStore = createInMemoryStore()
+		const { app } = createApp([createStubProvider("aelis.weather", weatherConfig)], MOCK_USER_ID)
+
+		const res = await put(app, "aelis.weather", {
+			enabled: true,
+			config: { units: "metric" },
+			unknownField: "hello",
+		})
+
+		expect(res.status).toBe(400)
+	})
+
+	test("returns 400 when weather config contains unknown fields", async () => {
+		activeStore = createInMemoryStore()
+		const { app } = createApp([createStubProvider("aelis.weather", weatherConfig)], MOCK_USER_ID)
+
+		const res = await put(app, "aelis.weather", {
+			enabled: true,
+			config: { units: "metric", unknownField: "hello" },
+		})
 
 		expect(res.status).toBe(400)
 	})
@@ -611,7 +673,7 @@ describe("PUT /api/sources/:sourceId", () => {
 		expect(session.hasSource("aelis.weather")).toBe(true)
 	})
 
-	test("accepts location source with arbitrary config (no schema)", async () => {
+	test("returns 400 when config is provided for source without schema", async () => {
 		activeStore = createInMemoryStore()
 		const { app } = createApp([createStubProvider("aelis.location")], MOCK_USER_ID)
 
@@ -620,9 +682,29 @@ describe("PUT /api/sources/:sourceId", () => {
 			config: { something: "value" },
 		})
 
+		expect(res.status).toBe(400)
+	})
+
+	test("returns 400 when empty config is provided for source without schema", async () => {
+		activeStore = createInMemoryStore()
+		const { app } = createApp([createStubProvider("aelis.location")], MOCK_USER_ID)
+
+		const res = await put(app, "aelis.location", {
+			enabled: true,
+			config: {},
+		})
+
+		expect(res.status).toBe(400)
+	})
+
+	test("returns 204 without config field for source without schema", async () => {
+		activeStore = createInMemoryStore()
+		const { app } = createApp([createStubProvider("aelis.location")], MOCK_USER_ID)
+
+		const res = await put(app, "aelis.location", {
+			enabled: true,
+		})
+
 		expect(res.status).toBe(204)
-		const row = activeStore.rows.get(`${MOCK_USER_ID}:aelis.location`)
-		expect(row).toBeDefined()
-		expect(row!.config).toEqual({ something: "value" })
 	})
 })

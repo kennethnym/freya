@@ -20,13 +20,20 @@ interface SourcesHttpHandlersDeps {
 }
 
 const UpdateSourceConfigRequestBody = type({
+	"+": "reject",
 	"enabled?": "boolean",
 	"config?": "unknown",
 })
 
 const ReplaceSourceConfigRequestBody = type({
+	"+": "reject",
 	enabled: "boolean",
 	config: "unknown",
+})
+
+const ReplaceSourceConfigNoConfigRequestBody = type({
+	"+": "reject",
+	enabled: "boolean",
 })
 
 export function registerSourcesHttpHandlers(
@@ -90,6 +97,10 @@ async function handleUpdateSource(c: Context<Env>) {
 		return c.json({ error: parsed.summary }, 400)
 	}
 
+	if (!provider.configSchema && "config" in parsed) {
+		return c.json({ error: `Source "${sourceId}" does not accept config` }, 400)
+	}
+
 	const { enabled, config: newConfig } = parsed
 	const user = c.get("user")!
 
@@ -131,12 +142,16 @@ async function handleReplaceSource(c: Context<Env>) {
 		return c.json({ error: "Invalid JSON" }, 400)
 	}
 
-	const parsed = ReplaceSourceConfigRequestBody(body)
+	const schema = provider.configSchema
+		? ReplaceSourceConfigRequestBody
+		: ReplaceSourceConfigNoConfigRequestBody
+	const parsed = schema(body)
 	if (parsed instanceof type.errors) {
 		return c.json({ error: parsed.summary }, 400)
 	}
 
-	const { enabled, config } = parsed
+	const { enabled } = parsed
+	const config = "config" in parsed ? parsed.config : undefined
 	const user = c.get("user")!
 
 	try {

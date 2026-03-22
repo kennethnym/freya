@@ -9,6 +9,7 @@ export interface WeatherSourceProviderOptions {
 }
 
 export const weatherConfig = type({
+	"+": "reject",
 	"units?": "'metric' | 'imperial'",
 	"hourlyLimit?": "number",
 	"dailyLimit?": "number",
