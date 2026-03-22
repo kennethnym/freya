@@ -1,10 +1,14 @@
 import type { FeedSource } from "@aelis/core"
 
+import { type } from "arktype"
+import merge from "lodash.merge"
+
 import type { Database } from "../db/index.ts"
 import type { FeedEnhancer } from "../enhancement/enhance-feed.ts"
+import { InvalidSourceConfigError, SourceNotFoundError } from "../sources/errors.ts"
+import { sources } from "../sources/user-sources.ts"
 import type { FeedSourceProvider } from "./feed-source-provider.ts"
 
-import { sources } from "../sources/user-sources.ts"
 import { UserSession } from "./user-session.ts"
 
 export interface UserSessionManagerConfig {
@@ -19,6 +23,7 @@ export class UserSessionManager {
 	private readonly db: Database
 	private readonly providers = new Map<string, FeedSourceProvider>()
 	private readonly feedEnhancer: FeedEnhancer | null
+	private readonly db: Database
 
 	constructor(config: UserSessionManagerConfig) {
 		this.db = config.db
@@ -26,6 +31,7 @@ export class UserSessionManager {
 			this.providers.set(provider.sourceId, provider)
 		}
 		this.feedEnhancer = config.feedEnhancer ?? null
+		this.db = config.db
 	}
 
 	getProvider(sourceId: string): FeedSourceProvider | undefined {
@@ -64,6 +70,70 @@ export class UserSessionManager {
 		}
 		// Cancel any in-flight creation so getOrCreate won't store the session
 		this.pending.delete(userId)
+	}
+
+	/**
+	 * Merges, validates, and persists a user's source config and/or enabled
+	 * state, then invalidates the cached session.
+	 *
+	 * @throws {SourceNotFoundError} if the source row doesn't exist
+	 * @throws {InvalidSourceConfigError} if the merged config fails schema validation
+	 */
+	async updateSourceConfig(
+		userId: string,
+		sourceId: string,
+		update: { enabled?: boolean; config?: unknown },
+	): Promise<void> {
+		const provider = this.providers.get(sourceId)
+		if (!provider) {
+			throw new SourceNotFoundError(sourceId, userId)
+		}
+
+		// Nothing to update
+		if (update.enabled === undefined && update.config === undefined) {
+			// Still validate existence — updateConfig would throw, but
+			// we can avoid the DB write entirely.
+			if (!(await sources(this.db, userId).find(sourceId))) {
+				throw new SourceNotFoundError(sourceId, userId)
+			}
+			return
+		}
+
+		// When config is provided, fetch existing to deep-merge before validating.
+		// NOTE: find + updateConfig is not atomic. A concurrent update could
+		// read stale config. Use SELECT FOR UPDATE or atomic jsonb merge if
+		// this becomes a problem.
+		let mergedConfig: Record<string, unknown> | undefined
+		if (update.config !== undefined) {
+			const existing = await sources(this.db, userId).find(sourceId)
+			const existingConfig = (existing?.config ?? {}) as Record<string, unknown>
+			mergedConfig = merge({}, existingConfig, update.config)
+
+			if (provider.configSchema) {
+				const validated = provider.configSchema(mergedConfig)
+				if (validated instanceof type.errors) {
+					throw new InvalidSourceConfigError(sourceId, validated.summary)
+				}
+			}
+		}
+
+		// Throws SourceNotFoundError if the row doesn't exist
+		await sources(this.db, userId).updateConfig(sourceId, {
+			enabled: update.enabled,
+			config: mergedConfig,
+		})
+
+		// Refresh the specific source in the active session instead of
+		// destroying the entire session.
+		const session = this.sessions.get(userId)
+		if (session) {
+			if (update.enabled === false) {
+				session.removeSource(sourceId)
+			} else {
+				const source = await provider.feedSourceForUser(userId, mergedConfig ?? {})
+				session.replaceSource(sourceId, source)
+			}
+		}
 	}
 
 	/**

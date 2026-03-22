@@ -52,15 +52,24 @@ export function sources(db: Database, userId: string) {
 			}
 		},
 
-		/** Creates or updates the config for a source. */
-		async upsertConfig(sourceId: string, config: Record<string, unknown>) {
-			await db
-				.insert(userSources)
-				.values({ userId, sourceId, config })
-				.onConflictDoUpdate({
-					target: [userSources.userId, userSources.sourceId],
-					set: { config, updatedAt: new Date() },
-				})
+		/** Updates an existing user source row. Throws if the row doesn't exist. */
+		async updateConfig(sourceId: string, update: { enabled?: boolean; config?: unknown }) {
+			const set: Record<string, unknown> = { updatedAt: new Date() }
+			if (update.enabled !== undefined) {
+				set.enabled = update.enabled
+			}
+			if (update.config !== undefined) {
+				set.config = update.config
+			}
+			const rows = await db
+				.update(userSources)
+				.set(set)
+				.where(and(eq(userSources.userId, userId), eq(userSources.sourceId, sourceId)))
+				.returning({ id: userSources.id })
+
+			if (rows.length === 0) {
+				throw new SourceNotFoundError(sourceId, userId)
+			}
 		},
 
 		/** Updates the encrypted credentials for a source. Throws if the source row doesn't exist. */

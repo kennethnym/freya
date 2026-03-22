@@ -12,3 +12,15 @@ export class SourceNotFoundError extends Error {
 		this.userId = userId
 	}
 }
+
+/**
+ * Thrown when a source config update fails schema validation.
+ */
+export class InvalidSourceConfigError extends Error {
+	readonly sourceId: string
+
+	constructor(sourceId: string, summary: string) {
+		super(summary)
+		this.sourceId = sourceId
+	}
+}
