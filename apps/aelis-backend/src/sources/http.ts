@@ -38,8 +38,29 @@ export function registerSourcesHttpHandlers(
 		await next()
 	})
 
+	app.get("/api/sources/:sourceId", inject, authSessionMiddleware, handleGetSource)
 	app.patch("/api/sources/:sourceId", inject, authSessionMiddleware, handleUpdateSource)
 	app.put("/api/sources/:sourceId", inject, authSessionMiddleware, handleReplaceSource)
+}
+
+async function handleGetSource(c: Context<Env>) {
+	const sourceId = c.req.param("sourceId")
+	if (!sourceId) {
+		return c.body(null, 404)
+	}
+
+	const sessionManager = c.get("sessionManager")
+	const user = c.get("user")!
+
+	try {
+		const result = await sessionManager.fetchSourceConfig(user.id, sourceId)
+		return c.json(result)
+	} catch (err) {
+		if (err instanceof SourceNotFoundError) {
+			return c.json({ error: err.message }, 404)
+		}
+		throw err
+	}
 }
 
 async function handleUpdateSource(c: Context<Env>) {
