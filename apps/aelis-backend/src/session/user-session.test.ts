@@ -1,7 +1,9 @@
 import type { ActionDefinition, ContextEntry, FeedItem, FeedSource } from "@aelis/core"
 
 import { LocationSource } from "@aelis/source-location"
-import { describe, expect, test } from "bun:test"
+import { describe, expect, spyOn, test } from "bun:test"
+
+import type { FeedSourceProvider } from "./feed-source-provider.ts"
 
 import { UserSession } from "./user-session.ts"
 
@@ -25,7 +27,10 @@ function createStubSource(id: string, items: FeedItem[] = []): FeedSource {
 
 describe("UserSession", () => {
 	test("registers sources and starts engine", async () => {
-		const session = new UserSession([createStubSource("test-a"), createStubSource("test-b")])
+		const session = new UserSession("test-user", [
+			createStubSource("test-a"),
+			createStubSource("test-b"),
+		])
 
 		const result = await session.engine.refresh()
 
@@ -34,7 +39,7 @@ describe("UserSession", () => {
 
 	test("getSource returns registered source", () => {
 		const location = new LocationSource()
-		const session = new UserSession([location])
+		const session = new UserSession("test-user", [location])
 
 		const result = session.getSource<LocationSource>("aelis.location")
 
@@ -42,13 +47,13 @@ describe("UserSession", () => {
 	})
 
 	test("getSource returns undefined for unknown source", () => {
-		const session = new UserSession([createStubSource("test")])
+		const session = new UserSession("test-user", [createStubSource("test")])
 
 		expect(session.getSource("unknown")).toBeUndefined()
 	})
 
 	test("destroy stops engine and clears sources", () => {
-		const session = new UserSession([createStubSource("test")])
+		const session = new UserSession("test-user", [createStubSource("test")])
 
 		session.destroy()
 
@@ -57,7 +62,7 @@ describe("UserSession", () => {
 
 	test("engine.executeAction routes to correct source", async () => {
 		const location = new LocationSource()
-		const session = new UserSession([location])
+		const session = new UserSession("test-user", [location])
 
 		await session.engine.executeAction("aelis.location", "update-location", {
 			lat: 51.5,
@@ -82,7 +87,7 @@ describe("UserSession.feed", () => {
 				data: { value: 42 },
 			},
 		]
-		const session = new UserSession([createStubSource("test", items)])
+		const session = new UserSession("test-user", [createStubSource("test", items)])
 
 		const result = await session.feed()
 
@@ -103,7 +108,7 @@ describe("UserSession.feed", () => {
 		const enhancer = async (feedItems: FeedItem[]) =>
 			feedItems.map((item) => ({ ...item, data: { ...item.data, enhanced: true } }))
 
-		const session = new UserSession([createStubSource("test", items)], enhancer)
+		const session = new UserSession("test-user", [createStubSource("test", items)], enhancer)
 
 		const result = await session.feed()
 
@@ -127,7 +132,7 @@ describe("UserSession.feed", () => {
 			return feedItems.map((item) => ({ ...item, data: { ...item.data, enhanced: true } }))
 		}
 
-		const session = new UserSession([createStubSource("test", items)], enhancer)
+		const session = new UserSession("test-user", [createStubSource("test", items)], enhancer)
 
 		const result1 = await session.feed()
 		expect(result1.items[0]!.data.enhanced).toBe(true)
@@ -162,7 +167,7 @@ describe("UserSession.feed", () => {
 			}))
 		}
 
-		const session = new UserSession([source], enhancer)
+		const session = new UserSession("test-user", [source], enhancer)
 
 		// First feed triggers refresh + enhancement
 		const result1 = await session.feed()
@@ -205,7 +210,7 @@ describe("UserSession.feed", () => {
 			throw new Error("enhancement exploded")
 		}
 
-		const session = new UserSession([createStubSource("test", items)], enhancer)
+		const session = new UserSession("test-user", [createStubSource("test", items)], enhancer)
 
 		const result = await session.feed()
 
@@ -237,7 +242,7 @@ describe("UserSession.replaceSource", () => {
 		]
 
 		const sourceA = createStubSource("test", itemsA)
-		const session = new UserSession([sourceA])
+		const session = new UserSession("test-user", [sourceA])
 
 		const result1 = await session.feed()
 		expect(result1.items).toHaveLength(1)
@@ -253,7 +258,7 @@ describe("UserSession.replaceSource", () => {
 
 	test("getSource returns new source after replace", () => {
 		const sourceA = createStubSource("test")
-		const session = new UserSession([sourceA])
+		const session = new UserSession("test-user", [sourceA])
 
 		const sourceB = createStubSource("test")
 		session.replaceSource("test", sourceB)
@@ -263,7 +268,7 @@ describe("UserSession.replaceSource", () => {
 	})
 
 	test("throws when replacing a source that is not registered", () => {
-		const session = new UserSession([createStubSource("test")])
+		const session = new UserSession("test-user", [createStubSource("test")])
 
 		expect(() => session.replaceSource("nonexistent", createStubSource("other"))).toThrow(
 			'Cannot replace source "nonexistent": not registered',
@@ -289,7 +294,7 @@ describe("UserSession.replaceSource", () => {
 				data: { from: "b" },
 			},
 		])
-		const session = new UserSession([sourceA, sourceB])
+		const session = new UserSession("test-user", [sourceA, sourceB])
 
 		const replacement = createStubSource("source-a", [
 			{
@@ -325,7 +330,7 @@ describe("UserSession.replaceSource", () => {
 			return feedItems.map((item) => ({ ...item, data: { ...item.data, enhanced: true } }))
 		}
 
-		const session = new UserSession([createStubSource("test", items)], enhancer)
+		const session = new UserSession("test-user", [createStubSource("test", items)], enhancer)
 
 		await session.feed()
 		expect(enhanceCount).toBe(1)
@@ -350,7 +355,10 @@ describe("UserSession.replaceSource", () => {
 
 describe("UserSession.removeSource", () => {
 	test("removes source from engine and sources map", () => {
-		const session = new UserSession([createStubSource("test-a"), createStubSource("test-b")])
+		const session = new UserSession("test-user", [
+			createStubSource("test-a"),
+			createStubSource("test-b"),
+		])
 
 		session.removeSource("test-a")
 
@@ -368,7 +376,7 @@ describe("UserSession.removeSource", () => {
 				data: {},
 			},
 		]
-		const session = new UserSession([createStubSource("test", items)])
+		const session = new UserSession("test-user", [createStubSource("test", items)])
 
 		const result1 = await session.feed()
 		expect(result1.items).toHaveLength(1)
@@ -380,9 +388,79 @@ describe("UserSession.removeSource", () => {
 	})
 
 	test("is a no-op for unknown source", () => {
-		const session = new UserSession([createStubSource("test")])
+		const session = new UserSession("test-user", [createStubSource("test")])
 
 		expect(() => session.removeSource("unknown")).not.toThrow()
 		expect(session.getSource("test")).toBeDefined()
+	})
+})
+
+describe("UserSession.refreshSource", () => {
+	test("replaces existing source via provider", async () => {
+		const itemsV1: FeedItem[] = [
+			{
+				id: "v1",
+				sourceId: "test",
+				type: "test",
+				timestamp: new Date(),
+				data: { version: 1 },
+			},
+		]
+		const itemsV2: FeedItem[] = [
+			{
+				id: "v2",
+				sourceId: "test",
+				type: "test",
+				timestamp: new Date(),
+				data: { version: 2 },
+			},
+		]
+
+		const session = new UserSession("test-user", [createStubSource("test", itemsV1)])
+
+		const provider: FeedSourceProvider = {
+			sourceId: "test",
+			async feedSourceForUser() {
+				return createStubSource("test", itemsV2)
+			},
+		}
+
+		await session.refreshSource(provider)
+
+		const result = await session.feed()
+		expect(result.items[0]!.data.version).toBe(2)
+	})
+
+	test("throws when source is not registered", async () => {
+		const session = new UserSession("test-user", [createStubSource("existing")])
+
+		const provider: FeedSourceProvider = {
+			sourceId: "new-source",
+			async feedSourceForUser() {
+				return createStubSource("new-source")
+			},
+		}
+
+		await expect(session.refreshSource(provider)).rejects.toThrow()
+	})
+
+	test("keeps existing source when provider fails", async () => {
+		const session = new UserSession("test-user", [createStubSource("test")])
+
+		const spy = spyOn(console, "error").mockImplementation(() => {})
+
+		const provider: FeedSourceProvider = {
+			sourceId: "test",
+			async feedSourceForUser() {
+				throw new Error("source disabled")
+			},
+		}
+
+		await session.refreshSource(provider)
+
+		expect(session.getSource("test")).toBeDefined()
+		expect(spy).toHaveBeenCalled()
+
+		spy.mockRestore()
 	})
 })

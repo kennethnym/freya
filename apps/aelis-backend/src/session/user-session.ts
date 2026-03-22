@@ -1,8 +1,10 @@
 import { FeedEngine, type FeedItem, type FeedResult, type FeedSource } from "@aelis/core"
 
 import type { FeedEnhancer } from "../enhancement/enhance-feed.ts"
+import type { FeedSourceProvider } from "./feed-source-provider.ts"
 
 export class UserSession {
+	readonly userId: string
 	readonly engine: FeedEngine
 	private sources = new Map<string, FeedSource>()
 	private readonly enhancer: FeedEnhancer | null
@@ -12,7 +14,8 @@ export class UserSession {
 	private enhancingPromise: Promise<void> | null = null
 	private unsubscribe: (() => void) | null = null
 
-	constructor(sources: FeedSource[], enhancer?: FeedEnhancer | null) {
+	constructor(userId: string, sources: FeedSource[], enhancer?: FeedEnhancer | null) {
+		this.userId = userId
 		this.engine = new FeedEngine()
 		this.enhancer = enhancer ?? null
 		for (const source of sources) {
@@ -65,6 +68,27 @@ export class UserSession {
 
 	getSource<T extends FeedSource>(sourceId: string): T | undefined {
 		return this.sources.get(sourceId) as T | undefined
+	}
+
+	/**
+	 * Re-resolves a source from its provider using this session's userId.
+	 * The source must already be registered. Throws if it isn't.
+	 * If the provider fails, the existing source is kept.
+	 */
+	async refreshSource(provider: FeedSourceProvider): Promise<void> {
+		if (!this.sources.has(provider.sourceId)) {
+			throw new Error(`Cannot refresh source "${provider.sourceId}": not registered`)
+		}
+
+		try {
+			const newSource = await provider.feedSourceForUser(this.userId)
+			this.replaceSource(provider.sourceId, newSource)
+		} catch (err) {
+			console.error(
+				`[UserSession] refreshSource("${provider.sourceId}") failed for user ${this.userId}:`,
+				err,
+			)
+		}
 	}
 
 	/**
