@@ -32,10 +32,10 @@ function main() {
 	}
 
 	const sessionManager = new UserSessionManager({
+		db,
 		providers: [
-			new LocationSourceProvider(db),
+			new LocationSourceProvider(),
 			new WeatherSourceProvider({
-				db,
 				credentials: {
 					privateKey: process.env.WEATHERKIT_PRIVATE_KEY!,
 					keyId: process.env.WEATHERKIT_KEY_ID!,

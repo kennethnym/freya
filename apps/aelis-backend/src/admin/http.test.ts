@@ -1,7 +1,7 @@
 import type { ActionDefinition, ContextEntry, FeedItem, FeedSource } from "@aelis/core"
 
+import { describe, expect, mock, test } from "bun:test"
 import { Hono } from "hono"
-import { describe, expect, test } from "bun:test"
 
 import type { AdminMiddleware } from "../auth/admin-middleware.ts"
 import type { AuthSession, AuthUser } from "../auth/session.ts"
@@ -10,6 +10,39 @@ import type { FeedSourceProvider } from "../session/feed-source-provider.ts"
 
 import { UserSessionManager } from "../session/user-session-manager.ts"
 import { registerAdminHttpHandlers } from "./http.ts"
+
+let mockEnabledSourceIds: string[] = []
+
+mock.module("../sources/user-sources.ts", () => ({
+	sources: (_db: Database, _userId: string) => ({
+		async enabled() {
+			const now = new Date()
+			return mockEnabledSourceIds.map((sourceId) => ({
+				id: crypto.randomUUID(),
+				userId: _userId,
+				sourceId,
+				enabled: true,
+				config: {},
+				credentials: null,
+				createdAt: now,
+				updatedAt: now,
+			}))
+		},
+		async find(sourceId: string) {
+			const now = new Date()
+			return {
+				id: crypto.randomUUID(),
+				userId: _userId,
+				sourceId,
+				enabled: true,
+				config: {},
+				credentials: null,
+				createdAt: now,
+				updatedAt: now,
+			}
+		},
+	}),
+}))
 
 function createStubSource(id: string): FeedSource {
 	return {
@@ -63,7 +96,8 @@ function passthroughAdminMiddleware(): AdminMiddleware {
 const fakeDb = {} as Database
 
 function createApp(providers: FeedSourceProvider[]) {
-	const sessionManager = new UserSessionManager({ providers })
+	mockEnabledSourceIds = providers.map((p) => p.sourceId)
+	const sessionManager = new UserSessionManager({ db: fakeDb, providers })
 	const app = new Hono()
 	registerAdminHttpHandlers(app, {
 		sessionManager,
@@ -158,5 +192,4 @@ describe("PUT /api/admin/:sourceId/config", () => {
 		expect(provider!.sourceId).toBe("aelis.weather")
 		expect(provider).not.toBe(originalProvider)
 	})
-
 })

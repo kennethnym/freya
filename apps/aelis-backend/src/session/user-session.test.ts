@@ -3,8 +3,6 @@ import type { ActionDefinition, ContextEntry, FeedItem, FeedSource } from "@aeli
 import { LocationSource } from "@aelis/source-location"
 import { describe, expect, spyOn, test } from "bun:test"
 
-import type { FeedSourceProvider } from "./feed-source-provider.ts"
-
 import { UserSession } from "./user-session.ts"
 
 function createStubSource(id: string, items: FeedItem[] = []): FeedSource {
@@ -392,75 +390,5 @@ describe("UserSession.removeSource", () => {
 
 		expect(() => session.removeSource("unknown")).not.toThrow()
 		expect(session.getSource("test")).toBeDefined()
-	})
-})
-
-describe("UserSession.refreshSource", () => {
-	test("replaces existing source via provider", async () => {
-		const itemsV1: FeedItem[] = [
-			{
-				id: "v1",
-				sourceId: "test",
-				type: "test",
-				timestamp: new Date(),
-				data: { version: 1 },
-			},
-		]
-		const itemsV2: FeedItem[] = [
-			{
-				id: "v2",
-				sourceId: "test",
-				type: "test",
-				timestamp: new Date(),
-				data: { version: 2 },
-			},
-		]
-
-		const session = new UserSession("test-user", [createStubSource("test", itemsV1)])
-
-		const provider: FeedSourceProvider = {
-			sourceId: "test",
-			async feedSourceForUser() {
-				return createStubSource("test", itemsV2)
-			},
-		}
-
-		await session.refreshSource(provider)
-
-		const result = await session.feed()
-		expect(result.items[0]!.data.version).toBe(2)
-	})
-
-	test("throws when source is not registered", async () => {
-		const session = new UserSession("test-user", [createStubSource("existing")])
-
-		const provider: FeedSourceProvider = {
-			sourceId: "new-source",
-			async feedSourceForUser() {
-				return createStubSource("new-source")
-			},
-		}
-
-		await expect(session.refreshSource(provider)).rejects.toThrow()
-	})
-
-	test("keeps existing source when provider fails", async () => {
-		const session = new UserSession("test-user", [createStubSource("test")])
-
-		const spy = spyOn(console, "error").mockImplementation(() => {})
-
-		const provider: FeedSourceProvider = {
-			sourceId: "test",
-			async feedSourceForUser() {
-				throw new Error("source disabled")
-			},
-		}
-
-		await session.refreshSource(provider)
-
-		expect(session.getSource("test")).toBeDefined()
-		expect(spy).toHaveBeenCalled()
-
-		spy.mockRestore()
 	})
 })

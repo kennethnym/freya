@@ -2,11 +2,76 @@ import type { ActionDefinition, ContextEntry, FeedItem, FeedSource } from "@aeli
 
 import { LocationSource } from "@aelis/source-location"
 import { WeatherSource } from "@aelis/source-weatherkit"
-import { describe, expect, mock, spyOn, test } from "bun:test"
+import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 
+import type { Database } from "../db/index.ts"
 import type { FeedSourceProvider } from "./feed-source-provider.ts"
 
 import { UserSessionManager } from "./user-session-manager.ts"
+
+/**
+ * Per-user enabled source IDs used by the mocked `sources` module.
+ * Tests configure this before calling getOrCreate.
+ * Key = userId (or "*" for a default), value = array of enabled sourceIds.
+ */
+const enabledByUser = new Map<string, string[]>()
+
+/** Set which sourceIds are enabled for all users. */
+function setEnabledSources(sourceIds: string[]) {
+	enabledByUser.clear()
+	enabledByUser.set("*", sourceIds)
+}
+
+/** Set which sourceIds are enabled for a specific user. */
+function setEnabledSourcesForUser(userId: string, sourceIds: string[]) {
+	enabledByUser.set(userId, sourceIds)
+}
+
+function getEnabledSourceIds(userId: string): string[] {
+	return enabledByUser.get(userId) ?? enabledByUser.get("*") ?? []
+}
+
+/**
+ * Controls what `find()` returns in the mock. When `undefined` (the default),
+ * `find()` returns a standard enabled row. Set to a specific value (including
+ * `null`) to override the return value for all `find()` calls.
+ */
+let mockFindResult: unknown | undefined
+
+// Mock the sources module so UserSessionManager's DB query returns controlled data.
+mock.module("../sources/user-sources.ts", () => ({
+	sources: (_db: Database, userId: string) => ({
+		async enabled() {
+			const now = new Date()
+			return getEnabledSourceIds(userId).map((sourceId) => ({
+				id: crypto.randomUUID(),
+				userId,
+				sourceId,
+				enabled: true,
+				config: {},
+				credentials: null,
+				createdAt: now,
+				updatedAt: now,
+			}))
+		},
+		async find(sourceId: string) {
+			if (mockFindResult !== undefined) return mockFindResult
+			const now = new Date()
+			return {
+				id: crypto.randomUUID(),
+				userId,
+				sourceId,
+				enabled: true,
+				config: {},
+				credentials: null,
+				createdAt: now,
+				updatedAt: now,
+			}
+		},
+	}),
+}))
+
+const fakeDb = {} as Database
 
 function createStubSource(id: string, items: FeedItem[] = []): FeedSource {
 	return {
@@ -28,7 +93,8 @@ function createStubSource(id: string, items: FeedItem[] = []): FeedSource {
 
 function createStubProvider(
 	sourceId: string,
-	factory: (userId: string) => Promise<FeedSource> = async () => createStubSource(sourceId),
+	factory: (userId: string, config: Record<string, unknown>) => Promise<FeedSource> = async () =>
+		createStubSource(sourceId),
 ): FeedSourceProvider {
 	return { sourceId, feedSourceForUser: factory }
 }
@@ -47,9 +113,15 @@ const weatherProvider: FeedSourceProvider = {
 	},
 }
 
+beforeEach(() => {
+	enabledByUser.clear()
+	mockFindResult = undefined
+})
+
 describe("UserSessionManager", () => {
 	test("getOrCreate creates session on first call", async () => {
-		const manager = new UserSessionManager({ providers: [locationProvider] })
+		setEnabledSources(["aelis.location"])
+		const manager = new UserSessionManager({ db: fakeDb, providers: [locationProvider] })
 
 		const session = await manager.getOrCreate("user-1")
 
@@ -58,7 +130,8 @@ describe("UserSessionManager", () => {
 	})
 
 	test("getOrCreate returns same session for same user", async () => {
-		const manager = new UserSessionManager({ providers: [locationProvider] })
+		setEnabledSources(["aelis.location"])
+		const manager = new UserSessionManager({ db: fakeDb, providers: [locationProvider] })
 
 		const session1 = await manager.getOrCreate("user-1")
 		const session2 = await manager.getOrCreate("user-1")
@@ -67,7 +140,8 @@ describe("UserSessionManager", () => {
 	})
 
 	test("getOrCreate returns different sessions for different users", async () => {
-		const manager = new UserSessionManager({ providers: [locationProvider] })
+		setEnabledSources(["aelis.location"])
+		const manager = new UserSessionManager({ db: fakeDb, providers: [locationProvider] })
 
 		const session1 = await manager.getOrCreate("user-1")
 		const session2 = await manager.getOrCreate("user-2")
@@ -76,7 +150,8 @@ describe("UserSessionManager", () => {
 	})
 
 	test("each user gets independent source instances", async () => {
-		const manager = new UserSessionManager({ providers: [locationProvider] })
+		setEnabledSources(["aelis.location"])
+		const manager = new UserSessionManager({ db: fakeDb, providers: [locationProvider] })
 
 		const session1 = await manager.getOrCreate("user-1")
 		const session2 = await manager.getOrCreate("user-2")
@@ -88,7 +163,8 @@ describe("UserSessionManager", () => {
 	})
 
 	test("remove destroys session and allows re-creation", async () => {
-		const manager = new UserSessionManager({ providers: [locationProvider] })
+		setEnabledSources(["aelis.location"])
+		const manager = new UserSessionManager({ db: fakeDb, providers: [locationProvider] })
 
 		const session1 = await manager.getOrCreate("user-1")
 		manager.remove("user-1")
@@ -98,13 +174,16 @@ describe("UserSessionManager", () => {
 	})
 
 	test("remove is no-op for unknown user", () => {
-		const manager = new UserSessionManager({ providers: [locationProvider] })
+		setEnabledSources(["aelis.location"])
+		const manager = new UserSessionManager({ db: fakeDb, providers: [locationProvider] })
 
 		expect(() => manager.remove("unknown")).not.toThrow()
 	})
 
 	test("registers multiple providers", async () => {
+		setEnabledSources(["aelis.location", "aelis.weather"])
 		const manager = new UserSessionManager({
+			db: fakeDb,
 			providers: [locationProvider, weatherProvider],
 		})
 
@@ -115,7 +194,8 @@ describe("UserSessionManager", () => {
 	})
 
 	test("refresh returns feed result through session", async () => {
-		const manager = new UserSessionManager({ providers: [locationProvider] })
+		setEnabledSources(["aelis.location"])
+		const manager = new UserSessionManager({ db: fakeDb, providers: [locationProvider] })
 
 		const session = await manager.getOrCreate("user-1")
 		const result = await session.engine.refresh()
@@ -127,7 +207,8 @@ describe("UserSessionManager", () => {
 	})
 
 	test("location update via executeAction works", async () => {
-		const manager = new UserSessionManager({ providers: [locationProvider] })
+		setEnabledSources(["aelis.location"])
+		const manager = new UserSessionManager({ db: fakeDb, providers: [locationProvider] })
 
 		const session = await manager.getOrCreate("user-1")
 		await session.engine.executeAction("aelis.location", "update-location", {
@@ -142,7 +223,8 @@ describe("UserSessionManager", () => {
 	})
 
 	test("subscribe receives updates after location push", async () => {
-		const manager = new UserSessionManager({ providers: [locationProvider] })
+		setEnabledSources(["aelis.location"])
+		const manager = new UserSessionManager({ db: fakeDb, providers: [locationProvider] })
 		const callback = mock()
 
 		const session = await manager.getOrCreate("user-1")
@@ -162,7 +244,8 @@ describe("UserSessionManager", () => {
 	})
 
 	test("remove stops reactive updates", async () => {
-		const manager = new UserSessionManager({ providers: [locationProvider] })
+		setEnabledSources(["aelis.location"])
+		const manager = new UserSessionManager({ db: fakeDb, providers: [locationProvider] })
 		const callback = mock()
 
 		const session = await manager.getOrCreate("user-1")
@@ -185,6 +268,7 @@ describe("UserSessionManager", () => {
 	})
 
 	test("creates session with successful providers when some fail", async () => {
+		setEnabledSources(["aelis.location", "aelis.failing"])
 		const failingProvider: FeedSourceProvider = {
 			sourceId: "aelis.failing",
 			async feedSourceForUser() {
@@ -193,6 +277,7 @@ describe("UserSessionManager", () => {
 		}
 
 		const manager = new UserSessionManager({
+			db: fakeDb,
 			providers: [locationProvider, failingProvider],
 		})
 
@@ -208,7 +293,9 @@ describe("UserSessionManager", () => {
 	})
 
 	test("throws AggregateError when all providers fail", async () => {
+		setEnabledSources(["aelis.fail-1", "aelis.fail-2"])
 		const manager = new UserSessionManager({
+			db: fakeDb,
 			providers: [
 				{
 					sourceId: "aelis.fail-1",
@@ -229,8 +316,10 @@ describe("UserSessionManager", () => {
 	})
 
 	test("concurrent getOrCreate for same user returns same session", async () => {
+		setEnabledSources(["aelis.location"])
 		let callCount = 0
 		const manager = new UserSessionManager({
+			db: fakeDb,
 			providers: [
 				{
 					sourceId: "aelis.location",
@@ -253,12 +342,14 @@ describe("UserSessionManager", () => {
 	})
 
 	test("remove during in-flight getOrCreate prevents session from being stored", async () => {
+		setEnabledSources(["aelis.location"])
 		let resolveProvider: () => void
 		const providerGate = new Promise<void>((r) => {
 			resolveProvider = r
 		})
 
 		const manager = new UserSessionManager({
+			db: fakeDb,
 			providers: [
 				{
 					sourceId: "aelis.location",
@@ -285,10 +376,67 @@ describe("UserSessionManager", () => {
 		expect(freshSession).toBeDefined()
 		expect(freshSession.engine).toBeDefined()
 	})
+
+	test("only invokes providers for sources enabled for the user", async () => {
+		setEnabledSources(["aelis.location"])
+		const locationFactory = mock(async () => createStubSource("aelis.location"))
+		const weatherFactory = mock(async () => createStubSource("aelis.weather"))
+
+		const manager = new UserSessionManager({
+			db: fakeDb,
+			providers: [
+				{ sourceId: "aelis.location", feedSourceForUser: locationFactory },
+				{ sourceId: "aelis.weather", feedSourceForUser: weatherFactory },
+			],
+		})
+
+		const session = await manager.getOrCreate("user-1")
+
+		expect(locationFactory).toHaveBeenCalledTimes(1)
+		expect(weatherFactory).not.toHaveBeenCalled()
+		expect(session.getSource("aelis.location")).toBeDefined()
+		expect(session.getSource("aelis.weather")).toBeUndefined()
+	})
+
+	test("creates empty session when no sources are enabled", async () => {
+		setEnabledSources([])
+		const factory = mock(async () => createStubSource("aelis.location"))
+
+		const manager = new UserSessionManager({
+			db: fakeDb,
+			providers: [{ sourceId: "aelis.location", feedSourceForUser: factory }],
+		})
+
+		const session = await manager.getOrCreate("user-1")
+
+		expect(factory).not.toHaveBeenCalled()
+		expect(session).toBeDefined()
+		expect(session.getSource("aelis.location")).toBeUndefined()
+	})
+
+	test("per-user enabled sources are respected", async () => {
+		enabledByUser.clear()
+		setEnabledSourcesForUser("user-1", ["aelis.location"])
+		setEnabledSourcesForUser("user-2", ["aelis.weather"])
+
+		const manager = new UserSessionManager({
+			db: fakeDb,
+			providers: [createStubProvider("aelis.location"), createStubProvider("aelis.weather")],
+		})
+
+		const session1 = await manager.getOrCreate("user-1")
+		const session2 = await manager.getOrCreate("user-2")
+
+		expect(session1.getSource("aelis.location")).toBeDefined()
+		expect(session1.getSource("aelis.weather")).toBeUndefined()
+		expect(session2.getSource("aelis.location")).toBeUndefined()
+		expect(session2.getSource("aelis.weather")).toBeDefined()
+	})
 })
 
 describe("UserSessionManager.replaceProvider", () => {
 	test("replaces source in all active sessions", async () => {
+		setEnabledSources(["test"])
 		const itemsV1: FeedItem[] = [
 			{
 				id: "v1",
@@ -309,7 +457,7 @@ describe("UserSessionManager.replaceProvider", () => {
 		]
 
 		const providerV1 = createStubProvider("test", async () => createStubSource("test", itemsV1))
-		const manager = new UserSessionManager({ providers: [providerV1] })
+		const manager = new UserSessionManager({ db: fakeDb, providers: [providerV1] })
 
 		const session1 = await manager.getOrCreate("user-1")
 		const session2 = await manager.getOrCreate("user-2")
@@ -330,7 +478,8 @@ describe("UserSessionManager.replaceProvider", () => {
 	})
 
 	test("throws for unknown provider sourceId", async () => {
-		const manager = new UserSessionManager({ providers: [locationProvider] })
+		setEnabledSources(["aelis.location"])
+		const manager = new UserSessionManager({ db: fakeDb, providers: [locationProvider] })
 
 		const unknownProvider = createStubProvider("aelis.unknown")
 
@@ -340,8 +489,9 @@ describe("UserSessionManager.replaceProvider", () => {
 	})
 
 	test("keeps existing source when new provider fails for a user", async () => {
+		setEnabledSources(["test"])
 		const providerV1 = createStubProvider("test", async () => createStubSource("test"))
-		const manager = new UserSessionManager({ providers: [providerV1] })
+		const manager = new UserSessionManager({ db: fakeDb, providers: [providerV1] })
 
 		const session = await manager.getOrCreate("user-1")
 		expect(session.getSource("test")).toBeDefined()
@@ -360,6 +510,7 @@ describe("UserSessionManager.replaceProvider", () => {
 	})
 
 	test("new sessions use the replaced provider", async () => {
+		setEnabledSources(["test"])
 		const itemsV1: FeedItem[] = [
 			{
 				id: "v1",
@@ -380,7 +531,7 @@ describe("UserSessionManager.replaceProvider", () => {
 		]
 
 		const providerV1 = createStubProvider("test", async () => createStubSource("test", itemsV1))
-		const manager = new UserSessionManager({ providers: [providerV1] })
+		const manager = new UserSessionManager({ db: fakeDb, providers: [providerV1] })
 
 		const providerV2 = createStubProvider("test", async () => createStubSource("test", itemsV2))
 		await manager.replaceProvider(providerV2)
@@ -392,6 +543,7 @@ describe("UserSessionManager.replaceProvider", () => {
 	})
 
 	test("does not affect other providers' sources", async () => {
+		setEnabledSources(["source-a", "source-b"])
 		const providerA = createStubProvider("source-a", async () =>
 			createStubSource("source-a", [
 				{
@@ -415,7 +567,7 @@ describe("UserSessionManager.replaceProvider", () => {
 			]),
 		)
 
-		const manager = new UserSessionManager({ providers: [providerA, providerB] })
+		const manager = new UserSessionManager({ db: fakeDb, providers: [providerA, providerB] })
 		const session = await manager.getOrCreate("user-1")
 
 		// Replace only source-a
@@ -440,6 +592,7 @@ describe("UserSessionManager.replaceProvider", () => {
 	})
 
 	test("updates sessions that are still being created", async () => {
+		setEnabledSources(["test"])
 		const itemsV1: FeedItem[] = [
 			{
 				id: "v1",
@@ -468,7 +621,7 @@ describe("UserSessionManager.replaceProvider", () => {
 			await creationGate
 			return createStubSource("test", itemsV1)
 		})
-		const manager = new UserSessionManager({ providers: [providerV1] })
+		const manager = new UserSessionManager({ db: fakeDb, providers: [providerV1] })
 
 		// Start session creation but don't let it finish yet
 		const sessionPromise = manager.getOrCreate("user-1")
@@ -486,5 +639,45 @@ describe("UserSessionManager.replaceProvider", () => {
 		// Session should have been updated to v2
 		const feed = await session.feed()
 		expect(feed.items[0]!.data.version).toBe(2)
+	})
+
+	test("skips source replacement when source was disabled between creation and replace", async () => {
+		setEnabledSources(["test"])
+		const itemsV1: FeedItem[] = [
+			{
+				id: "v1",
+				sourceId: "test",
+				type: "test",
+				timestamp: new Date(),
+				data: { version: 1 },
+			},
+		]
+
+		const providerV1 = createStubProvider("test", async () => createStubSource("test", itemsV1))
+		const manager = new UserSessionManager({ db: fakeDb, providers: [providerV1] })
+
+		const session = await manager.getOrCreate("user-1")
+		const feedBefore = await session.feed()
+		expect(feedBefore.items[0]!.data.version).toBe(1)
+
+		// Simulate the source being disabled/deleted between session creation and replace
+		mockFindResult = null
+
+		const providerV2 = createStubProvider("test", async () =>
+			createStubSource("test", [
+				{
+					id: "v2",
+					sourceId: "test",
+					type: "test",
+					timestamp: new Date(),
+					data: { version: 2 },
+				},
+			]),
+		)
+		await manager.replaceProvider(providerV2)
+
+		// Session should still have v1 — the replace was skipped
+		const feedAfter = await session.feed()
+		expect(feedAfter.items[0]!.data.version).toBe(1)
 	})
 })

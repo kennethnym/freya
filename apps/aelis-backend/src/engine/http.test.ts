@@ -1,8 +1,10 @@
 import type { ActionDefinition, ContextEntry, FeedItem, FeedSource } from "@aelis/core"
 
 import { contextKey } from "@aelis/core"
-import { describe, expect, spyOn, test } from "bun:test"
+import { describe, expect, mock, spyOn, test } from "bun:test"
 import { Hono } from "hono"
+
+import type { Database } from "../db/index.ts"
 
 import { mockAuthSessionMiddleware } from "../auth/session-middleware.ts"
 import { UserSessionManager } from "../session/index.ts"
@@ -50,9 +52,45 @@ function buildTestApp(sessionManager: UserSessionManager, userId?: string) {
 	return app
 }
 
+let mockEnabledSourceIds: string[] = []
+
+mock.module("../sources/user-sources.ts", () => ({
+	sources: (_db: Database, _userId: string) => ({
+		async enabled() {
+			const now = new Date()
+			return mockEnabledSourceIds.map((sourceId) => ({
+				id: crypto.randomUUID(),
+				userId: _userId,
+				sourceId,
+				enabled: true,
+				config: {},
+				credentials: null,
+				createdAt: now,
+				updatedAt: now,
+			}))
+		},
+		async find(sourceId: string) {
+			const now = new Date()
+			return {
+				id: crypto.randomUUID(),
+				userId: _userId,
+				sourceId,
+				enabled: true,
+				config: {},
+				credentials: null,
+				createdAt: now,
+				updatedAt: now,
+			}
+		},
+	}),
+}))
+
+const fakeDb = {} as Database
+
 describe("GET /api/feed", () => {
 	test("returns 401 without auth", async () => {
-		const manager = new UserSessionManager({ providers: [] })
+		mockEnabledSourceIds = []
+		const manager = new UserSessionManager({ db: fakeDb, providers: [] })
 		const app = buildTestApp(manager)
 
 		const res = await app.request("/api/feed")
@@ -71,7 +109,9 @@ describe("GET /api/feed", () => {
 				data: { value: 42 },
 			},
 		]
+		mockEnabledSourceIds = ["test"]
 		const manager = new UserSessionManager({
+			db: fakeDb,
 			providers: [
 				{
 					sourceId: "test",
@@ -111,7 +151,9 @@ describe("GET /api/feed", () => {
 				data: { fresh: true },
 			},
 		]
+		mockEnabledSourceIds = ["test"]
 		const manager = new UserSessionManager({
+			db: fakeDb,
 			providers: [
 				{
 					sourceId: "test",
@@ -150,7 +192,9 @@ describe("GET /api/feed", () => {
 				throw new Error("connection timeout")
 			},
 		}
+		mockEnabledSourceIds = ["failing"]
 		const manager = new UserSessionManager({
+			db: fakeDb,
 			providers: [
 				{
 					sourceId: "failing",
@@ -173,7 +217,9 @@ describe("GET /api/feed", () => {
 	})
 
 	test("returns 503 when all providers fail", async () => {
+		mockEnabledSourceIds = ["test"]
 		const manager = new UserSessionManager({
+			db: fakeDb,
 			providers: [
 				{
 					sourceId: "test",
@@ -206,7 +252,9 @@ describe("GET /api/context", () => {
 	const mockUserId = "k7Gx2mPqRvNwYs9TdLfA4bHcJeUo1iZn"
 
 	async function buildContextApp(userId?: string) {
+		mockEnabledSourceIds = ["weather"]
 		const manager = new UserSessionManager({
+			db: fakeDb,
 			providers: [
 				{
 					sourceId: "weather",
@@ -222,7 +270,8 @@ describe("GET /api/context", () => {
 	}
 
 	test("returns 401 without auth", async () => {
-		const manager = new UserSessionManager({ providers: [] })
+		mockEnabledSourceIds = []
+		const manager = new UserSessionManager({ db: fakeDb, providers: [] })
 		const app = buildTestApp(manager)
 
 		const res = await app.request('/api/context?key=["aelis.weather","weather"]')

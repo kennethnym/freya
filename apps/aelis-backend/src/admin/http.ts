@@ -51,7 +51,6 @@ async function handleUpdateProviderConfig(c: Context<Env>) {
 	}
 
 	const sessionManager = c.get("sessionManager")
-	const db = c.get("db")
 
 	let body: unknown
 	try {
@@ -68,7 +67,6 @@ async function handleUpdateProviderConfig(c: Context<Env>) {
 			}
 
 			const updated = new WeatherSourceProvider({
-				db,
 				credentials: parsed.credentials,
 			})
 
