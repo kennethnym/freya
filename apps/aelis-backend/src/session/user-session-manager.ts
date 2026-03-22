@@ -5,10 +5,10 @@ import merge from "lodash.merge"
 
 import type { Database } from "../db/index.ts"
 import type { FeedEnhancer } from "../enhancement/enhance-feed.ts"
-import { InvalidSourceConfigError, SourceNotFoundError } from "../sources/errors.ts"
-import { sources } from "../sources/user-sources.ts"
 import type { FeedSourceProvider } from "./feed-source-provider.ts"
 
+import { InvalidSourceConfigError, SourceNotFoundError } from "../sources/errors.ts"
+import { sources } from "../sources/user-sources.ts"
 import { UserSession } from "./user-session.ts"
 
 export interface UserSessionManagerConfig {
@@ -104,16 +104,14 @@ export class UserSessionManager {
 		// read stale config. Use SELECT FOR UPDATE or atomic jsonb merge if
 		// this becomes a problem.
 		let mergedConfig: Record<string, unknown> | undefined
-		if (update.config !== undefined) {
+		if (update.config !== undefined && provider.configSchema) {
 			const existing = await sources(this.db, userId).find(sourceId)
 			const existingConfig = (existing?.config ?? {}) as Record<string, unknown>
 			mergedConfig = merge({}, existingConfig, update.config)
 
-			if (provider.configSchema) {
-				const validated = provider.configSchema(mergedConfig)
-				if (validated instanceof type.errors) {
-					throw new InvalidSourceConfigError(sourceId, validated.summary)
-				}
+			const validated = provider.configSchema(mergedConfig)
+			if (validated instanceof type.errors) {
+				throw new InvalidSourceConfigError(sourceId, validated.summary)
 			}
 		}
 
@@ -148,23 +146,24 @@ export class UserSessionManager {
 	async upsertSourceConfig(
 		userId: string,
 		sourceId: string,
-		data: { enabled: boolean; config: unknown },
+		data: { enabled: boolean; config?: unknown },
 	): Promise<void> {
 		const provider = this.providers.get(sourceId)
 		if (!provider) {
 			throw new SourceNotFoundError(sourceId, userId)
 		}
 
-		if (provider.configSchema) {
+		if (provider.configSchema && data.config !== undefined) {
 			const validated = provider.configSchema(data.config)
 			if (validated instanceof type.errors) {
 				throw new InvalidSourceConfigError(sourceId, validated.summary)
 			}
 		}
 
+		const config = data.config ?? {}
 		await sources(this.db, userId).upsertConfig(sourceId, {
 			enabled: data.enabled,
-			config: data.config,
+			config,
 		})
 
 		const session = this.sessions.get(userId)
@@ -172,7 +171,7 @@ export class UserSessionManager {
 			if (!data.enabled) {
 				session.removeSource(sourceId)
 			} else {
-				const source = await provider.feedSourceForUser(userId, data.config)
+				const source = await provider.feedSourceForUser(userId, config)
 				if (session.hasSource(sourceId)) {
 					session.replaceSource(sourceId, source)
 				} else {

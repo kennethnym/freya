@@ -8,6 +8,7 @@ export type TflSourceProviderOptions =
 	| { apiKey?: never; client: ITflApi }
 
 export const tflConfig = type({
+	"+": "reject",
 	"lines?": "string[]",
 })
 
