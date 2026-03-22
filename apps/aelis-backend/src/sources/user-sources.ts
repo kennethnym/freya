@@ -72,6 +72,29 @@ export function sources(db: Database, userId: string) {
 			}
 		},
 
+		/** Inserts a new user source row or fully replaces enabled/config on an existing one. */
+		async upsertConfig(sourceId: string, data: { enabled: boolean; config: unknown }) {
+			const now = new Date()
+			await db
+				.insert(userSources)
+				.values({
+					userId,
+					sourceId,
+					enabled: data.enabled,
+					config: data.config,
+					createdAt: now,
+					updatedAt: now,
+				})
+				.onConflictDoUpdate({
+					target: [userSources.userId, userSources.sourceId],
+					set: {
+						enabled: data.enabled,
+						config: data.config,
+						updatedAt: now,
+					},
+				})
+		},
+
 		/** Updates the encrypted credentials for a source. Throws if the source row doesn't exist. */
 		async updateCredentials(sourceId: string, credentials: Buffer) {
 			const rows = await db
