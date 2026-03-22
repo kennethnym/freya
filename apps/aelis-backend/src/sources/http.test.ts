@@ -138,6 +138,10 @@ function patch(app: Hono, sourceId: string, body: unknown) {
 	})
 }
 
+function get(app: Hono, sourceId: string) {
+	return app.request(`/api/sources/${sourceId}`, { method: "GET" })
+}
+
 function put(app: Hono, sourceId: string, body: unknown) {
 	return app.request(`/api/sources/${sourceId}`, {
 		method: "PUT",
@@ -149,6 +153,72 @@ function put(app: Hono, sourceId: string, body: unknown) {
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
+
+describe("GET /api/sources/:sourceId", () => {
+	test("returns 401 without auth", async () => {
+		activeStore = createInMemoryStore()
+		const { app } = createApp([createStubProvider("aelis.weather", weatherConfig)])
+
+		const res = await get(app, "aelis.weather")
+
+		expect(res.status).toBe(401)
+	})
+
+	test("returns 404 for unknown source", async () => {
+		activeStore = createInMemoryStore()
+		const { app } = createApp([createStubProvider("aelis.weather", weatherConfig)], MOCK_USER_ID)
+
+		const res = await get(app, "unknown.source")
+
+		expect(res.status).toBe(404)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toContain("not found")
+	})
+
+	test("returns enabled and config for existing source", async () => {
+		activeStore = createInMemoryStore()
+		activeStore.seed(MOCK_USER_ID, "aelis.weather", {
+			enabled: true,
+			config: { units: "metric" },
+		})
+		const { app } = createApp([createStubProvider("aelis.weather", weatherConfig)], MOCK_USER_ID)
+
+		const res = await get(app, "aelis.weather")
+
+		expect(res.status).toBe(200)
+		const body = (await res.json()) as { enabled: boolean; config: unknown }
+		expect(body.enabled).toBe(true)
+		expect(body.config).toEqual({ units: "metric" })
+	})
+
+	test("returns defaults when user has no row for source", async () => {
+		activeStore = createInMemoryStore()
+		const { app } = createApp([createStubProvider("aelis.weather", weatherConfig)], MOCK_USER_ID)
+
+		const res = await get(app, "aelis.weather")
+
+		expect(res.status).toBe(200)
+		const body = (await res.json()) as { enabled: boolean; config: unknown }
+		expect(body.enabled).toBe(false)
+		expect(body.config).toEqual({})
+	})
+
+	test("returns disabled source", async () => {
+		activeStore = createInMemoryStore()
+		activeStore.seed(MOCK_USER_ID, "aelis.weather", {
+			enabled: false,
+			config: { units: "imperial" },
+		})
+		const { app } = createApp([createStubProvider("aelis.weather", weatherConfig)], MOCK_USER_ID)
+
+		const res = await get(app, "aelis.weather")
+
+		expect(res.status).toBe(200)
+		const body = (await res.json()) as { enabled: boolean; config: unknown }
+		expect(body.enabled).toBe(false)
+		expect(body.config).toEqual({ units: "imperial" })
+	})
+})
 
 describe("PATCH /api/sources/:sourceId", () => {
 	test("returns 401 without auth", async () => {

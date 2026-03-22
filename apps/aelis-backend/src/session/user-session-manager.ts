@@ -38,6 +38,27 @@ export class UserSessionManager {
 		return this.providers.get(sourceId)
 	}
 
+	/**
+	 * Returns the user's config for a source, or defaults if no row exists.
+	 *
+	 * @throws {SourceNotFoundError} if the sourceId has no registered provider
+	 */
+	async fetchSourceConfig(
+		userId: string,
+		sourceId: string,
+	): Promise<{ enabled: boolean; config: unknown }> {
+		const provider = this.providers.get(sourceId)
+		if (!provider) {
+			throw new SourceNotFoundError(sourceId, userId)
+		}
+
+		const row = await sources(this.db, userId).find(sourceId)
+		return {
+			enabled: row?.enabled ?? false,
+			config: row?.config ?? {},
+		}
+	}
+
 	async getOrCreate(userId: string): Promise<UserSession> {
 		const existing = this.sessions.get(userId)
 		if (existing) return existing
