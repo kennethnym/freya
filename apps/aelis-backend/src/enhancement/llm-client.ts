@@ -50,11 +50,13 @@ export function createLlmClient(config: LlmClientConfig): LlmClient {
 							schema: enhancementResultJsonSchema,
 						},
 					},
+					reasoning: { effort: "none" },
 					stream: false,
 				},
 			})
 
-			const content = response.choices?.[0]?.message?.content
+			const message = response.choices?.[0]?.message
+			const content = message?.content ?? message?.reasoning
 			if (typeof content !== "string") {
 				console.warn("[enhancement] LLM returned no content in response")
 				return null
