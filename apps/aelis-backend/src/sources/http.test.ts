@@ -91,6 +91,20 @@ function createInMemoryStore() {
 						existing.config = update.config as Record<string, unknown>
 					}
 				},
+				async upsertConfig(sourceId: string, data: { enabled: boolean; config: unknown }) {
+					const existing = rows.get(key(userId, sourceId))
+					if (existing) {
+						existing.enabled = data.enabled
+						existing.config = data.config as Record<string, unknown>
+					} else {
+						rows.set(key(userId, sourceId), {
+							userId,
+							sourceId,
+							enabled: data.enabled,
+							config: (data.config ?? {}) as Record<string, unknown>,
+						})
+					}
+				},
 			}
 		},
 	}
@@ -119,6 +133,14 @@ function createApp(providers: FeedSourceProvider[], userId?: string) {
 function patch(app: Hono, sourceId: string, body: unknown) {
 	return app.request(`/api/sources/${sourceId}`, {
 		method: "PATCH",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(body),
+	})
+}
+
+function put(app: Hono, sourceId: string, body: unknown) {
+	return app.request(`/api/sources/${sourceId}`, {
+		method: "PUT",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(body),
 	})
@@ -340,5 +362,197 @@ describe("PATCH /api/sources/:sourceId", () => {
 		expect(res.status).toBe(204)
 		const row = activeStore.rows.get(`${MOCK_USER_ID}:aelis.location`)
 		expect(row!.enabled).toBe(false)
+	})
+})
+
+// ---------------------------------------------------------------------------
+// PUT /api/sources/:sourceId
+// ---------------------------------------------------------------------------
+
+describe("PUT /api/sources/:sourceId", () => {
+	test("returns 401 without auth", async () => {
+		activeStore = createInMemoryStore()
+		const { app } = createApp([createStubProvider("aelis.weather", weatherConfig)])
+
+		const res = await put(app, "aelis.weather", { enabled: true, config: {} })
+
+		expect(res.status).toBe(401)
+	})
+
+	test("returns 404 for unknown source", async () => {
+		activeStore = createInMemoryStore()
+		const { app } = createApp([createStubProvider("aelis.weather", weatherConfig)], MOCK_USER_ID)
+
+		const res = await put(app, "unknown.source", { enabled: true, config: {} })
+
+		expect(res.status).toBe(404)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toContain("not found")
+	})
+
+	test("returns 400 for invalid JSON", async () => {
+		activeStore = createInMemoryStore()
+		const { app } = createApp([createStubProvider("aelis.weather", weatherConfig)], MOCK_USER_ID)
+
+		const res = await app.request("/api/sources/aelis.weather", {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: "not json",
+		})
+
+		expect(res.status).toBe(400)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toContain("Invalid JSON")
+	})
+
+	test("returns 400 when enabled is missing", async () => {
+		activeStore = createInMemoryStore()
+		const { app } = createApp([createStubProvider("aelis.weather", weatherConfig)], MOCK_USER_ID)
+
+		const res = await put(app, "aelis.weather", { config: {} })
+
+		expect(res.status).toBe(400)
+	})
+
+	test("returns 400 when config is missing", async () => {
+		activeStore = createInMemoryStore()
+		const { app } = createApp([createStubProvider("aelis.weather", weatherConfig)], MOCK_USER_ID)
+
+		const res = await put(app, "aelis.weather", { enabled: true })
+
+		expect(res.status).toBe(400)
+	})
+
+	test("returns 400 when config fails schema validation", async () => {
+		activeStore = createInMemoryStore()
+		const { app } = createApp([createStubProvider("aelis.weather", weatherConfig)], MOCK_USER_ID)
+
+		const res = await put(app, "aelis.weather", {
+			enabled: true,
+			config: { units: "invalid" },
+		})
+
+		expect(res.status).toBe(400)
+	})
+
+	test("returns 204 and inserts when row does not exist", async () => {
+		activeStore = createInMemoryStore()
+		const { app } = createApp([createStubProvider("aelis.weather", weatherConfig)], MOCK_USER_ID)
+
+		const res = await put(app, "aelis.weather", {
+			enabled: true,
+			config: { units: "metric" },
+		})
+
+		expect(res.status).toBe(204)
+		const row = activeStore.rows.get(`${MOCK_USER_ID}:aelis.weather`)
+		expect(row).toBeDefined()
+		expect(row!.enabled).toBe(true)
+		expect(row!.config).toEqual({ units: "metric" })
+	})
+
+	test("returns 204 and fully replaces existing row", async () => {
+		activeStore = createInMemoryStore()
+		activeStore.seed(MOCK_USER_ID, "aelis.weather", {
+			enabled: true,
+			config: { units: "metric", hourlyLimit: 12 },
+		})
+		const { app } = createApp([createStubProvider("aelis.weather", weatherConfig)], MOCK_USER_ID)
+
+		const res = await put(app, "aelis.weather", {
+			enabled: false,
+			config: { units: "imperial" },
+		})
+
+		expect(res.status).toBe(204)
+		const row = activeStore.rows.get(`${MOCK_USER_ID}:aelis.weather`)
+		expect(row!.enabled).toBe(false)
+		// hourlyLimit should be gone — full replace, not merge
+		expect(row!.config).toEqual({ units: "imperial" })
+	})
+
+	test("refreshes source in active session after upsert", async () => {
+		activeStore = createInMemoryStore()
+		activeStore.seed(MOCK_USER_ID, "aelis.weather", {
+			config: { units: "metric" },
+		})
+		const { app, sessionManager } = createApp(
+			[createStubProvider("aelis.weather", weatherConfig)],
+			MOCK_USER_ID,
+		)
+
+		const session = await sessionManager.getOrCreate(MOCK_USER_ID)
+		const replaceSpy = spyOn(session, "replaceSource")
+
+		const res = await put(app, "aelis.weather", {
+			enabled: true,
+			config: { units: "imperial" },
+		})
+
+		expect(res.status).toBe(204)
+		expect(replaceSpy).toHaveBeenCalled()
+		replaceSpy.mockRestore()
+	})
+
+	test("removes source from session when disabled via upsert", async () => {
+		activeStore = createInMemoryStore()
+		activeStore.seed(MOCK_USER_ID, "aelis.weather", {
+			enabled: true,
+			config: { units: "metric" },
+		})
+		const { app, sessionManager } = createApp(
+			[createStubProvider("aelis.weather", weatherConfig)],
+			MOCK_USER_ID,
+		)
+
+		const session = await sessionManager.getOrCreate(MOCK_USER_ID)
+		const removeSpy = spyOn(session, "removeSource")
+
+		const res = await put(app, "aelis.weather", {
+			enabled: false,
+			config: { units: "metric" },
+		})
+
+		expect(res.status).toBe(204)
+		expect(removeSpy).toHaveBeenCalledWith("aelis.weather")
+		removeSpy.mockRestore()
+	})
+
+	test("adds source to active session when inserting a new source", async () => {
+		activeStore = createInMemoryStore()
+		// Seed a different source so the session can be created
+		activeStore.seed(MOCK_USER_ID, "aelis.location", { enabled: true })
+		const { app, sessionManager } = createApp(
+			[createStubProvider("aelis.location"), createStubProvider("aelis.weather", weatherConfig)],
+			MOCK_USER_ID,
+		)
+
+		// Create session — only has aelis.location
+		const session = await sessionManager.getOrCreate(MOCK_USER_ID)
+		expect(session.hasSource("aelis.weather")).toBe(false)
+
+		// PUT a new source that didn't exist before
+		const res = await put(app, "aelis.weather", {
+			enabled: true,
+			config: { units: "metric" },
+		})
+
+		expect(res.status).toBe(204)
+		expect(session.hasSource("aelis.weather")).toBe(true)
+	})
+
+	test("accepts location source with arbitrary config (no schema)", async () => {
+		activeStore = createInMemoryStore()
+		const { app } = createApp([createStubProvider("aelis.location")], MOCK_USER_ID)
+
+		const res = await put(app, "aelis.location", {
+			enabled: true,
+			config: { something: "value" },
+		})
+
+		expect(res.status).toBe(204)
+		const row = activeStore.rows.get(`${MOCK_USER_ID}:aelis.location`)
+		expect(row).toBeDefined()
+		expect(row!.config).toEqual({ something: "value" })
 	})
 })

@@ -137,6 +137,52 @@ export class UserSessionManager {
 	}
 
 	/**
+	 * Validates, persists, and upserts a user's source config, then
+	 * refreshes the cached session. Unlike updateSourceConfig, this
+	 * inserts a new row if one doesn't exist and fully replaces config
+	 * (no merge).
+	 *
+	 * @throws {SourceNotFoundError} if the sourceId has no registered provider
+	 * @throws {InvalidSourceConfigError} if config fails schema validation
+	 */
+	async upsertSourceConfig(
+		userId: string,
+		sourceId: string,
+		data: { enabled: boolean; config: unknown },
+	): Promise<void> {
+		const provider = this.providers.get(sourceId)
+		if (!provider) {
+			throw new SourceNotFoundError(sourceId, userId)
+		}
+
+		if (provider.configSchema) {
+			const validated = provider.configSchema(data.config)
+			if (validated instanceof type.errors) {
+				throw new InvalidSourceConfigError(sourceId, validated.summary)
+			}
+		}
+
+		await sources(this.db, userId).upsertConfig(sourceId, {
+			enabled: data.enabled,
+			config: data.config,
+		})
+
+		const session = this.sessions.get(userId)
+		if (session) {
+			if (!data.enabled) {
+				session.removeSource(sourceId)
+			} else {
+				const source = await provider.feedSourceForUser(userId, data.config)
+				if (session.hasSource(sourceId)) {
+					session.replaceSource(sourceId, source)
+				} else {
+					session.addSource(source)
+				}
+			}
+		}
+	}
+
+	/**
 	 * Replaces a provider and updates all active sessions.
 	 * The new provider must have the same sourceId as an existing one.
 	 * For each active session, queries the user's source config from the DB

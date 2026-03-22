@@ -74,6 +74,32 @@ export class UserSession {
 	}
 
 	/**
+	 * Registers a new source in the engine and invalidates all caches.
+	 * Stops and restarts the engine to establish reactive subscriptions.
+	 */
+	addSource(source: FeedSource): void {
+		if (this.sources.has(source.id)) {
+			throw new Error(`Cannot add source "${source.id}": already registered`)
+		}
+
+		const wasStarted = this.engine.isStarted()
+
+		if (wasStarted) {
+			this.engine.stop()
+		}
+
+		this.engine.register(source)
+		this.sources.set(source.id, source)
+
+		this.invalidateEnhancement()
+		this.enhancingPromise = null
+
+		if (wasStarted) {
+			this.engine.start()
+		}
+	}
+
+	/**
 	 * Replaces a source in the engine and invalidates all caches.
 	 * Stops and restarts the engine to re-establish reactive subscriptions.
 	 */
