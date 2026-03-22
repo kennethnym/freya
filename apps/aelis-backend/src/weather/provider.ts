@@ -8,7 +8,7 @@ export interface WeatherSourceProviderOptions {
 	client?: WeatherSourceOptions["client"]
 }
 
-const weatherConfig = type({
+export const weatherConfig = type({
 	"units?": "'metric' | 'imperial'",
 	"hourlyLimit?": "number",
 	"dailyLimit?": "number",
@@ -16,6 +16,7 @@ const weatherConfig = type({
 
 export class WeatherSourceProvider implements FeedSourceProvider {
 	readonly sourceId = "aelis.weather"
+	readonly configSchema = weatherConfig
 	private readonly credentials: WeatherSourceOptions["credentials"]
 	private readonly client: WeatherSourceOptions["client"]
 

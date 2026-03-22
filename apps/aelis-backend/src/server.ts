@@ -12,6 +12,7 @@ import { createLlmClient } from "./enhancement/llm-client.ts"
 import { registerLocationHttpHandlers } from "./location/http.ts"
 import { LocationSourceProvider } from "./location/provider.ts"
 import { UserSessionManager } from "./session/index.ts"
+import { registerSourcesHttpHandlers } from "./sources/http.ts"
 import { WeatherSourceProvider } from "./weather/provider.ts"
 
 function main() {
@@ -61,6 +62,7 @@ function main() {
 		authSessionMiddleware,
 	})
 	registerLocationHttpHandlers(app, { sessionManager, authSessionMiddleware })
+	registerSourcesHttpHandlers(app, { sessionManager, authSessionMiddleware })
 	registerAdminHttpHandlers(app, { sessionManager, adminMiddleware, db })
 
 	process.on("SIGTERM", async () => {

@@ -7,12 +7,13 @@ export type TflSourceProviderOptions =
 	| { apiKey: string; client?: never }
 	| { apiKey?: never; client: ITflApi }
 
-const tflConfig = type({
+export const tflConfig = type({
 	"lines?": "string[]",
 })
 
 export class TflSourceProvider implements FeedSourceProvider {
 	readonly sourceId = "aelis.tfl"
+	readonly configSchema = tflConfig
 	private readonly apiKey: string | undefined
 	private readonly client: ITflApi | undefined
 

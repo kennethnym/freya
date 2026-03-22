@@ -25,9 +25,11 @@
 		"arktype": "^2.1.29",
 		"better-auth": "^1",
 		"drizzle-orm": "^0.45.1",
-		"hono": "^4"
+		"hono": "^4",
+		"lodash.merge": "^4.6.2"
 	},
 	"devDependencies": {
+		"@types/lodash.merge": "^4.6.9",
 		"drizzle-kit": "^0.31.9"
 	}
 }
