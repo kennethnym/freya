@@ -1,5 +1,5 @@
 import { createRoute } from "@tanstack/react-router"
-import { useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { fetchSources } from "@/lib/api"
 import { SourceConfigPanel } from "@/components/source-config-panel"
@@ -14,7 +14,10 @@ export const Route = createRoute({
 function SourceRoute() {
   const { sourceId } = Route.useParams()
   const queryClient = useQueryClient()
-  const sources = queryClient.getQueryData<Awaited<ReturnType<typeof fetchSources>>>(["sources"]) ?? []
+  const { data: sources = [] } = useQuery({
+    queryKey: ["sources"],
+    queryFn: fetchSources,
+  })
   const source = sources.find((s) => s.id === sourceId)
 
   if (!source) {
