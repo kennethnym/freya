@@ -51,10 +51,18 @@ function main() {
 
 	const app = new Hono()
 
+	const isDev = process.env.NODE_ENV !== "production"
+	const allowedOrigins = process.env.CORS_ORIGINS?.split(",").map((o) => o.trim()) ?? []
+
+	function resolveOrigin(origin: string): string | undefined {
+		if (isDev) return origin
+		return allowedOrigins.includes(origin) ? origin : undefined
+	}
+
 	app.use(
 		"/api/auth/*",
 		cors({
-			origin: (origin) => origin,
+			origin: resolveOrigin,
 			allowHeaders: ["Content-Type", "Authorization"],
 			allowMethods: ["POST", "GET", "OPTIONS"],
 			exposeHeaders: ["Content-Length"],
@@ -66,7 +74,7 @@ function main() {
 	app.use(
 		"*",
 		cors({
-			origin: (origin) => origin,
+			origin: resolveOrigin,
 			credentials: true,
 		}),
 	)
