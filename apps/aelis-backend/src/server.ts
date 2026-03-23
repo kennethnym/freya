@@ -1,5 +1,4 @@
 import { Hono } from "hono"
-import { cors } from "hono/cors"
 
 import { registerAdminHttpHandlers } from "./admin/http.ts"
 import { createRequireAdmin } from "./auth/admin-middleware.ts"
@@ -50,26 +49,6 @@ function main() {
 	})
 
 	const app = new Hono()
-
-	app.use(
-		"/api/auth/*",
-		cors({
-			origin: (origin) => origin,
-			allowHeaders: ["Content-Type", "Authorization"],
-			allowMethods: ["POST", "GET", "OPTIONS"],
-			exposeHeaders: ["Content-Length"],
-			maxAge: 600,
-			credentials: true,
-		}),
-	)
-
-	app.use(
-		"*",
-		cors({
-			origin: (origin) => origin,
-			credentials: true,
-		}),
-	)
 
 	app.get("/health", (c) => c.json({ status: "ok" }))
 

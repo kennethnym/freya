@@ -16,9 +16,6 @@ export function createAuth(db: Database) {
 			provider: "pg",
 			schema,
 		}),
-		advanced: {
-			disableCSRFCheck: process.env.NODE_ENV !== "production",
-		},
 		emailAndPassword: {
 			enabled: true,
 		},
