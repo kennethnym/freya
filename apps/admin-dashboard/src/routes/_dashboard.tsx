@@ -47,10 +47,15 @@ export const Route = createRoute({
   getParentRoute: () => rootRoute,
   id: "dashboard",
   beforeLoad: async ({ context }) => {
-    const session = await context.queryClient.ensureQueryData({
-      queryKey: ["session"],
-      queryFn: getSession,
-    })
+    let session: Awaited<ReturnType<typeof getSession>> | null = null
+    try {
+      session = await context.queryClient.ensureQueryData({
+        queryKey: ["session"],
+        queryFn: getSession,
+      })
+    } catch {
+      throw redirect({ to: "/login" })
+    }
     if (!session?.user) {
       throw redirect({ to: "/login" })
     }
