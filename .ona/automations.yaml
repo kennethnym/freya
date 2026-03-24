@@ -36,4 +36,4 @@ services:
     commands:
       start: |
         gitpod --context environment environment port open 5174 --name "Admin Dashboard" --protocol https
-        cd apps/admin-dashboard && bun run dev
+        cd apps/admin-dashboard && bun run dev --host
