@@ -17,3 +17,23 @@ services:
         FORWARD_URL=$(gitpod environment port open 4983 --name drizzle-studio-server | sed 's|https://||')
         echo "Drizzle Studio: https://local.drizzle.studio/?host=${FORWARD_URL}&port=443"
         cd apps/aelis-backend && bunx drizzle-kit studio --host 0.0.0.0 --port 4983
+
+  aelis-backend:
+    name: Aelis Backend
+    description: Hono API server for aelis-backend (port 3000)
+    triggeredBy:
+      - manual
+    commands:
+      start: |
+        gitpod --context environment environment port open 3000 --name "Aelis Backend" --protocol https
+        cd apps/aelis-backend && bun run dev
+
+  admin-dashboard:
+    name: Admin Dashboard
+    description: Vite dev server for admin-dashboard (port 5174)
+    triggeredBy:
+      - manual
+    commands:
+      start: |
+        gitpod --context environment environment port open 5174 --name "Admin Dashboard" --protocol https
+        cd apps/admin-dashboard && bun run dev
