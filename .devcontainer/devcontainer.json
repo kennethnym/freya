@@ -10,8 +10,8 @@
 		"context": ".",
 		"dockerfile": "Dockerfile"
 	},
-	"postCreateCommand": "bun install && ./scripts/setup-tailscale.sh",
-	"postStartCommand": "./scripts/setup-git.sh && ./scripts/setup-nvim.sh",
+	"postCreateCommand": "bun install",
+	"postStartCommand": "./scripts/setup-git.sh && ./scripts/setup-nvim.sh && ./scripts/setup-tailscale.sh",
 	// Features add additional features to your environment. See https://containers.dev/features
 	// Beware: features are not supported on all platforms and may have unintended side-effects.
 	"features": {
