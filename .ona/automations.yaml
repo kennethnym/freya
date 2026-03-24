@@ -25,7 +25,7 @@ services:
       - manual
     commands:
       start: |
-        gitpod --context environment environment port open 3000 --name "Aelis Backend" --protocol https
+        gitpod --context environment environment port open 3000 --name "Aelis Backend" --protocol http
         cd apps/aelis-backend && bun run dev
 
   admin-dashboard:
@@ -35,5 +35,5 @@ services:
       - manual
     commands:
       start: |
-        gitpod --context environment environment port open 5174 --name "Admin Dashboard" --protocol https
+        gitpod --context environment environment port open 5174 --name "Admin Dashboard" --protocol http
         cd apps/admin-dashboard && bun run dev --host
