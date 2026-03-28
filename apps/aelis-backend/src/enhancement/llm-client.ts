@@ -46,7 +46,7 @@ export function createLlmClient(config: LlmClientConfig): LlmClient {
 						type: "json_schema" as const,
 						jsonSchema: {
 							name: "enhancement_result",
-							strict: true,
+							strict: false,
 							schema: enhancementResultJsonSchema,
 						},
 					},

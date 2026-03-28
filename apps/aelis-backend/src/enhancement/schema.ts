@@ -31,7 +31,7 @@ export const enhancementResultJsonSchema = {
 			additionalProperties: {
 				type: "object",
 				additionalProperties: {
-					type: ["string", "null"],
+					anyOf: [{ type: "string" }, { type: "null" }],
 				},
 			},
 		},
