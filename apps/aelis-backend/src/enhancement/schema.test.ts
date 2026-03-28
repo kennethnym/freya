@@ -166,11 +166,12 @@ describe("schema sync", () => {
 		expect(parseEnhancementResult(JSON.stringify(bad))).toBeNull()
 
 		// JSON Schema only allows string or null for slot values
-		const slotValueTypes =
+		const slotValueSchema =
 			enhancementResultJsonSchema.properties.slotFills.additionalProperties
-				.additionalProperties.type
-		expect(slotValueTypes).toContain("string")
-		expect(slotValueTypes).toContain("null")
-		expect(slotValueTypes).not.toContain("number")
+				.additionalProperties
+		expect(slotValueSchema.anyOf).toEqual([
+			{ type: "string" },
+			{ type: "null" },
+		])
 	})
 })
