@@ -4,7 +4,7 @@
 	"type": "module",
 	"main": "src/server.ts",
 	"scripts": {
-		"dev": "bun run --watch src/server.ts",
+		"dev": "bun run --watch --inspect=0.0.0.0:6499 src/server.ts",
 		"start": "bun run src/server.ts",
 		"test": "bun test src/",
 		"db:generate": "bunx drizzle-kit generate",

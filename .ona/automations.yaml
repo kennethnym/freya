@@ -26,6 +26,12 @@ services:
     commands:
       start: |
         gitpod --context environment environment port open 3000 --name "Aelis Backend" --protocol http
+        TS_IP=$(tailscale ip -4)
+        echo ""
+        echo "------------------ Bun Debugger ------------------"
+        echo "https://debug.bun.sh/#${TS_IP}:6499"
+        echo "------------------ Bun Debugger ------------------"
+        echo ""
         cd apps/aelis-backend && bun run dev
 
   admin-dashboard:
