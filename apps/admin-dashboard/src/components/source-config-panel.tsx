@@ -408,6 +408,40 @@ function FieldInput({
     )
   }
 
+  if (field.type === "multiselect" && field.options) {
+    const selected = Array.isArray(value) ? (value as string[]) : []
+
+    function toggle(optValue: string) {
+      const next = selected.includes(optValue)
+        ? selected.filter((v) => v !== optValue)
+        : [...selected, optValue]
+      onChange(next)
+    }
+
+    return (
+      <div className="space-y-2">
+        <Label className="text-xs font-medium">
+          {labelContent}
+        </Label>
+        <div className="flex flex-wrap gap-1.5">
+          {field.options!.map((opt) => {
+            const isSelected = selected.includes(opt.value)
+            return (
+              <Badge
+                key={opt.value}
+                variant={isSelected ? "default" : "outline"}
+                className={`cursor-pointer select-none ${isSelected ? "" : "opacity-60 hover:opacity-100"}`}
+                onClick={() => !disabled && toggle(opt.value)}
+              >
+                {opt.label}
+              </Badge>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
   if (field.type === "number") {
     return (
       <div className="space-y-2">
@@ -456,6 +490,8 @@ function buildInitialValues(
       values[name] = saved[name]
     } else if (field.defaultValue !== undefined) {
       values[name] = field.defaultValue
+    } else if (field.type === "multiselect") {
+      values[name] = []
     } else {
       values[name] = field.type === "number" ? undefined : ""
     }

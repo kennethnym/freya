@@ -6,6 +6,7 @@ import {
   CircleDot,
   CloudSun,
   Loader2,
+  TrainFront,
   LogOut,
   MapPin,
   Rss,
@@ -41,6 +42,7 @@ const SOURCE_ICONS: Record<string, React.ComponentType<{ className?: string }>> 
   "aelis.weather": CloudSun,
   "aelis.caldav": CalendarDays,
   "aelis.google-calendar": Calendar,
+  "aelis.tfl": TrainFront,
 }
 
 export const Route = createRoute({
