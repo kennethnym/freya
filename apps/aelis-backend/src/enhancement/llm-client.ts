@@ -4,7 +4,7 @@ import type { EnhancementResult } from "./schema.ts"
 
 import { enhancementResultJsonSchema, parseEnhancementResult } from "./schema.ts"
 
-const DEFAULT_MODEL = "openai/gpt-4.1-mini"
+const DEFAULT_MODEL = "z-ai/glm-4.7-flash"
 const DEFAULT_TIMEOUT_MS = 30_000
 
 export interface LlmClientConfig {
