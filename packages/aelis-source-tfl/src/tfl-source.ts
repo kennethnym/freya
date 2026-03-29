@@ -84,7 +84,7 @@ export class TflSource implements FeedSource<TflAlertFeedItem> {
 			throw new Error("Either client or apiKey must be provided")
 		}
 		this.client = options.client ?? new TflApi(options.apiKey!)
-		this.lines = options.lines ?? [...TflSource.DEFAULT_LINES_OF_INTEREST]
+		this.lines = options.lines?.length ? options.lines : [...TflSource.DEFAULT_LINES_OF_INTEREST]
 	}
 
 	async listActions(): Promise<Record<string, ActionDefinition>> {
