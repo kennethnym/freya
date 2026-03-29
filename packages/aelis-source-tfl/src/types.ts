@@ -22,11 +22,18 @@ export interface TflAlertData extends Record<string, unknown> {
 
 export const TflFeedItemType = {
 	Alert: "tfl-alert",
+	Status: "tfl-status",
 } as const
 
 export type TflFeedItemType = (typeof TflFeedItemType)[keyof typeof TflFeedItemType]
 
 export type TflAlertFeedItem = FeedItem<typeof TflFeedItemType.Alert, TflAlertData>
+
+export interface TflStatusData extends Record<string, unknown> {
+	alerts: TflAlertData[]
+}
+
+export type TflStatusFeedItem = FeedItem<typeof TflFeedItemType.Status, TflStatusData>
 
 export interface TflSourceOptions {
 	apiKey?: string

@@ -138,13 +138,15 @@ describe("TflSource", () => {
 		test("changes which lines are fetched", async () => {
 			const source = new TflSource({ client: lineFilteringApi })
 			const before = await source.fetchItems(createContext())
-			expect(before.length).toBe(2)
+			expect(before).toHaveLength(1)
+			expect(before[0]!.data.alerts).toHaveLength(2)
 
 			source.setLinesOfInterest(["northern"])
 			const after = await source.fetchItems(createContext())
 
-			expect(after.length).toBe(1)
-			expect(after[0]!.data.line).toBe("northern")
+			expect(after).toHaveLength(1)
+			expect(after[0]!.data.alerts).toHaveLength(1)
+			expect(after[0]!.data.alerts[0]!.line).toBe("northern")
 		})
 
 		test("DEFAULT_LINES_OF_INTEREST restores all lines", async () => {
@@ -153,23 +155,52 @@ describe("TflSource", () => {
 				lines: ["northern"],
 			})
 			const filtered = await source.fetchItems(createContext())
-			expect(filtered.length).toBe(1)
+			expect(filtered[0]!.data.alerts).toHaveLength(1)
 
 			source.setLinesOfInterest([...TflSource.DEFAULT_LINES_OF_INTEREST])
 			const all = await source.fetchItems(createContext())
 
-			expect(all.length).toBe(2)
+			expect(all[0]!.data.alerts).toHaveLength(2)
 		})
 	})
 
 	describe("fetchItems", () => {
-		test("returns feed items array", async () => {
+		test("returns at most one feed item", async () => {
 			const source = new TflSource({ client: api })
 			const items = await source.fetchItems(createContext())
-			expect(Array.isArray(items)).toBe(true)
+			expect(items).toHaveLength(1)
 		})
 
-		test("feed items have correct base structure", async () => {
+		test("returns empty array when no disruptions", async () => {
+			const emptyApi: ITflApi = {
+				async fetchLineStatuses(): Promise<TflLineStatus[]> {
+					return []
+				},
+				async fetchStations(): Promise<StationLocation[]> {
+					return []
+				},
+			}
+			const source = new TflSource({ client: emptyApi })
+			const items = await source.fetchItems(createContext())
+			expect(items).toHaveLength(0)
+		})
+
+		test("combined item has correct base structure", async () => {
+			const source = new TflSource({ client: api })
+			const items = await source.fetchItems(createContext())
+
+			const item = items[0]!
+			expect(item.id).toBe("tfl-status")
+			expect(item.type).toBe("tfl-status")
+			expect(item.sourceId).toBe("aelis.tfl")
+			expect(item.signals).toBeDefined()
+			expect(typeof item.signals!.urgency).toBe("number")
+			expect(item.timestamp).toBeInstanceOf(Date)
+			expect(Array.isArray(item.data.alerts)).toBe(true)
+			expect(item.data.alerts.length).toBeGreaterThan(0)
+		})
+
+		test("alerts have correct data structure", async () => {
 			const source = new TflSource({ client: api })
 			const location: Location = {
 				lat: 51.5074,
@@ -178,72 +209,140 @@ describe("TflSource", () => {
 				timestamp: new Date(),
 			}
 			const items = await source.fetchItems(createContext(location))
+			const alerts = items[0]!.data.alerts
 
-			for (const item of items) {
-				expect(typeof item.id).toBe("string")
-				expect(item.id).toMatch(/^tfl-alert-/)
-				expect(item.type).toBe("tfl-alert")
-				expect(item.signals).toBeDefined()
-				expect(typeof item.signals!.urgency).toBe("number")
-				expect(item.timestamp).toBeInstanceOf(Date)
-			}
-		})
-
-		test("feed items have correct data structure", async () => {
-			const source = new TflSource({ client: api })
-			const location: Location = {
-				lat: 51.5074,
-				lng: -0.1278,
-				accuracy: 10,
-				timestamp: new Date(),
-			}
-			const items = await source.fetchItems(createContext(location))
-
-			for (const item of items) {
-				expect(typeof item.data.line).toBe("string")
-				expect(typeof item.data.lineName).toBe("string")
-				expect(["minor-delays", "major-delays", "closure"]).toContain(item.data.severity)
-				expect(typeof item.data.description).toBe("string")
+			for (const alert of alerts) {
+				expect(typeof alert.line).toBe("string")
+				expect(typeof alert.lineName).toBe("string")
+				expect(["minor-delays", "major-delays", "closure"]).toContain(alert.severity)
+				expect(typeof alert.description).toBe("string")
 				expect(
-					item.data.closestStationDistance === null ||
-						typeof item.data.closestStationDistance === "number",
+					alert.closestStationDistance === null || typeof alert.closestStationDistance === "number",
 				).toBe(true)
 			}
 		})
 
-		test("feed item ids are unique", async () => {
-			const source = new TflSource({ client: api })
+		test("signals use highest severity urgency", async () => {
+			const mixedApi: ITflApi = {
+				async fetchLineStatuses(): Promise<TflLineStatus[]> {
+					return [
+						{
+							lineId: "northern",
+							lineName: "Northern",
+							severity: "minor-delays",
+							description: "Minor delays",
+						},
+						{
+							lineId: "central",
+							lineName: "Central",
+							severity: "closure",
+							description: "Closed",
+						},
+						{
+							lineId: "jubilee",
+							lineName: "Jubilee",
+							severity: "major-delays",
+							description: "Major delays",
+						},
+					]
+				},
+				async fetchStations(): Promise<StationLocation[]> {
+					return []
+				},
+			}
+			const source = new TflSource({ client: mixedApi })
 			const items = await source.fetchItems(createContext())
 
-			const ids = items.map((item) => item.id)
-			const uniqueIds = new Set(ids)
-			expect(uniqueIds.size).toBe(ids.length)
+			expect(items[0]!.signals!.urgency).toBe(1.0) // closure urgency
+			expect(items[0]!.signals!.timeRelevance).toBe("imminent") // closure time relevance
 		})
 
-		test("feed items are sorted by urgency descending", async () => {
-			const source = new TflSource({ client: api })
+		test("signals use single alert severity when only one disruption", async () => {
+			const singleApi: ITflApi = {
+				async fetchLineStatuses(): Promise<TflLineStatus[]> {
+					return [
+						{
+							lineId: "northern",
+							lineName: "Northern",
+							severity: "minor-delays",
+							description: "Minor delays",
+						},
+					]
+				},
+				async fetchStations(): Promise<StationLocation[]> {
+					return []
+				},
+			}
+			const source = new TflSource({ client: singleApi })
 			const items = await source.fetchItems(createContext())
 
-			for (let i = 1; i < items.length; i++) {
-				const prev = items[i - 1]!
-				const curr = items[i]!
-				expect(prev.signals!.urgency).toBeGreaterThanOrEqual(curr.signals!.urgency!)
-			}
+			expect(items[0]!.signals!.urgency).toBe(0.6) // minor-delays urgency
+			expect(items[0]!.signals!.timeRelevance).toBe("upcoming")
 		})
 
-		test("urgency values match severity levels", async () => {
-			const source = new TflSource({ client: api })
-			const items = await source.fetchItems(createContext())
+		test("alerts sorted by closestStationDistance ascending, nulls last", async () => {
+			const distanceApi: ITflApi = {
+				async fetchLineStatuses(): Promise<TflLineStatus[]> {
+					return [
+						{
+							lineId: "northern",
+							lineName: "Northern",
+							severity: "minor-delays",
+							description: "Delays",
+						},
+						{
+							lineId: "central",
+							lineName: "Central",
+							severity: "minor-delays",
+							description: "Delays",
+						},
+						{
+							lineId: "jubilee",
+							lineName: "Jubilee",
+							severity: "minor-delays",
+							description: "Delays",
+						},
+					]
+				},
+				async fetchStations(): Promise<StationLocation[]> {
+					return [
+						{ id: "s1", name: "Station A", lat: 51.51, lng: -0.13, lines: ["central"] },
+						{ id: "s2", name: "Station B", lat: 51.52, lng: -0.14, lines: ["northern"] },
+						// No stations for jubilee — its distance will be null
+					]
+				},
+			}
+			const source = new TflSource({ client: distanceApi })
+			const location: Location = {
+				lat: 51.5074,
+				lng: -0.1278,
+				accuracy: 10,
+				timestamp: new Date(),
+			}
+			const items = await source.fetchItems(createContext(location))
+			const alerts = items[0]!.data.alerts
 
-			const severityUrgency: Record<string, number> = {
-				closure: 1.0,
-				"major-delays": 0.8,
-				"minor-delays": 0.6,
+			// Alerts with distances should come before nulls
+			const withDistance = alerts.filter((a) => a.closestStationDistance !== null)
+			const withoutDistance = alerts.filter((a) => a.closestStationDistance === null)
+
+			// All distance alerts come first
+			const firstNullIndex = alerts.findIndex((a) => a.closestStationDistance === null)
+			if (firstNullIndex !== -1) {
+				for (let i = 0; i < firstNullIndex; i++) {
+					expect(alerts[i]!.closestStationDistance).not.toBeNull()
+				}
 			}
 
-			for (const item of items) {
-				expect(item.signals!.urgency).toBe(severityUrgency[item.data.severity]!)
+			// Distance alerts are in ascending order
+			for (let i = 1; i < withDistance.length; i++) {
+				expect(withDistance[i]!.closestStationDistance!).toBeGreaterThanOrEqual(
+					withDistance[i - 1]!.closestStationDistance!,
+				)
 			}
+
+			expect(withoutDistance.length).toBe(1)
+			expect(withoutDistance[0]!.line).toBe("jubilee")
 		})
 
 		test("closestStationDistance is number when location provided", async () => {
@@ -256,9 +355,9 @@ describe("TflSource", () => {
 			}
 			const items = await source.fetchItems(createContext(location))
 
-			for (const item of items) {
-				expect(typeof item.data.closestStationDistance).toBe("number")
-				expect(item.data.closestStationDistance!).toBeGreaterThan(0)
+			for (const alert of items[0]!.data.alerts) {
+				expect(typeof alert.closestStationDistance).toBe("number")
+				expect(alert.closestStationDistance!).toBeGreaterThan(0)
 			}
 		})
 
@@ -266,8 +365,8 @@ describe("TflSource", () => {
 			const source = new TflSource({ client: api })
 			const items = await source.fetchItems(createContext())
 
-			for (const item of items) {
-				expect(item.data.closestStationDistance).toBeNull()
+			for (const alert of items[0]!.data.alerts) {
+				expect(alert.closestStationDistance).toBeNull()
 			}
 		})
 	})
@@ -309,8 +408,9 @@ describe("TflSource", () => {
 			await source.executeAction("set-lines-of-interest", ["northern"])
 
 			const items = await source.fetchItems(createContext())
-			expect(items.length).toBe(1)
-			expect(items[0]!.data.line).toBe("northern")
+			expect(items).toHaveLength(1)
+			expect(items[0]!.data.alerts).toHaveLength(1)
+			expect(items[0]!.data.alerts[0]!.line).toBe("northern")
 		})
 
 		test("executeAction throws on invalid input", async () => {

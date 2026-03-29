@@ -2,102 +2,140 @@
 import { render } from "@nym.sh/jrx"
 import { describe, expect, test } from "bun:test"
 
-import type { TflAlertFeedItem } from "./types.ts"
+import type { TflAlertData, TflStatusFeedItem } from "./types.ts"
 
-import { renderTflAlert } from "./renderer.tsx"
+import { renderTflStatus } from "./renderer.tsx"
 
-function makeItem(overrides: Partial<TflAlertFeedItem["data"]> = {}): TflAlertFeedItem {
+function makeAlert(overrides: Partial<TflAlertData> = {}): TflAlertData {
 	return {
-		id: "tfl-alert-northern-minor-delays",
-		type: "tfl-alert",
-		timestamp: new Date("2026-01-15T12:00:00Z"),
-		data: {
-			line: "northern",
-			lineName: "Northern",
-			severity: "minor-delays",
-			description: "Minor delays due to signal failure",
-			closestStationDistance: null,
-			...overrides,
-		},
+		line: "northern",
+		lineName: "Northern",
+		severity: "minor-delays",
+		description: "Minor delays due to signal failure",
+		closestStationDistance: null,
+		...overrides,
 	}
 }
 
-describe("renderTflAlert", () => {
-	test("renders a FeedCard with title and description", () => {
-		const node = renderTflAlert(makeItem())
+function makeItem(alerts: TflAlertData[]): TflStatusFeedItem {
+	return {
+		id: "tfl-status",
+		sourceId: "aelis.tfl",
+		type: "tfl-status",
+		timestamp: new Date("2026-01-15T12:00:00Z"),
+		data: { alerts },
+	}
+}
+
+/** Collect all SansSerifText elements from a rendered spec, filtering out Fragments. */
+function collectTextElements(spec: ReturnType<typeof render>) {
+	return Object.values(spec.elements).filter((el) => el.type === "SansSerifText")
+}
+
+describe("renderTflStatus", () => {
+	test("renders a single FeedCard", () => {
+		const node = renderTflStatus(makeItem([makeAlert()]))
 		const spec = render(node)
 
 		const root = spec.elements[spec.root]!
 		expect(root.type).toBe("FeedCard")
-		expect(root.children!.length).toBeGreaterThanOrEqual(2)
+	})
 
-		const title = spec.elements[root.children![0]!]!
-		expect(title.type).toBe("SansSerifText")
-		expect(title.props.content).toBe("Northern · Minor delays")
+	test("renders one alert with title and description", () => {
+		const node = renderTflStatus(makeItem([makeAlert()]))
+		const spec = render(node)
 
-		const body = spec.elements[root.children![1]!]!
-		expect(body.type).toBe("SansSerifText")
-		expect(body.props.content).toBe("Minor delays due to signal failure")
+		const texts = collectTextElements(spec)
+		const titleText = texts.find((el) => el.props.content === "Northern · Minor delays")
+		const bodyText = texts.find((el) => el.props.content === "Minor delays due to signal failure")
+
+		expect(titleText).toBeDefined()
+		expect(bodyText).toBeDefined()
+	})
+
+	test("renders multiple alerts stacked in one card", () => {
+		const alerts = [
+			makeAlert({ line: "northern", lineName: "Northern", severity: "minor-delays" }),
+			makeAlert({
+				line: "central",
+				lineName: "Central",
+				severity: "closure",
+				description: "Closed due to strike",
+			}),
+		]
+		const node = renderTflStatus(makeItem(alerts))
+		const spec = render(node)
+
+		const root = spec.elements[spec.root]!
+		expect(root.type).toBe("FeedCard")
+
+		const texts = collectTextElements(spec)
+		const northernTitle = texts.find((el) => el.props.content === "Northern · Minor delays")
+		const centralTitle = texts.find((el) => el.props.content === "Central · Closed")
+		const centralBody = texts.find((el) => el.props.content === "Closed due to strike")
+
+		expect(northernTitle).toBeDefined()
+		expect(centralTitle).toBeDefined()
+		expect(centralBody).toBeDefined()
 	})
 
 	test("shows nearest station distance when available", () => {
-		const node = renderTflAlert(makeItem({ closestStationDistance: 0.35 }))
+		const node = renderTflStatus(makeItem([makeAlert({ closestStationDistance: 0.35 })]))
 		const spec = render(node)
 
-		const root = spec.elements[spec.root]!
-		expect(root.children).toHaveLength(3)
-
-		const caption = spec.elements[root.children![2]!]!
-		expect(caption.type).toBe("SansSerifText")
-		expect(caption.props.content).toBe("Nearest station: 350m away")
+		const texts = collectTextElements(spec)
+		const caption = texts.find((el) => el.props.content === "Nearest station: 350m away")
+		expect(caption).toBeDefined()
 	})
 
 	test("formats distance in km when >= 1km", () => {
-		const node = renderTflAlert(makeItem({ closestStationDistance: 2.456 }))
+		const node = renderTflStatus(makeItem([makeAlert({ closestStationDistance: 2.456 })]))
 		const spec = render(node)
 
-		const root = spec.elements[spec.root]!
-		const caption = spec.elements[root.children![2]!]!
-		expect(caption.props.content).toBe("Nearest station: 2.5km away")
+		const texts = collectTextElements(spec)
+		const caption = texts.find((el) => el.props.content === "Nearest station: 2.5km away")
+		expect(caption).toBeDefined()
 	})
 
 	test("formats near-1km boundary as km not meters", () => {
-		const node = renderTflAlert(makeItem({ closestStationDistance: 0.9999 }))
+		const node = renderTflStatus(makeItem([makeAlert({ closestStationDistance: 0.9999 })]))
 		const spec = render(node)
 
-		const root = spec.elements[spec.root]!
-		const caption = spec.elements[root.children![2]!]!
-		expect(caption.props.content).toBe("Nearest station: 1.0km away")
+		const texts = collectTextElements(spec)
+		const caption = texts.find((el) => el.props.content === "Nearest station: 1.0km away")
+		expect(caption).toBeDefined()
 	})
 
 	test("omits station distance when null", () => {
-		const node = renderTflAlert(makeItem({ closestStationDistance: null }))
+		const node = renderTflStatus(makeItem([makeAlert({ closestStationDistance: null })]))
 		const spec = render(node)
 
-		const root = spec.elements[spec.root]!
-		// Title + body only, no caption (empty fragment doesn't produce a child)
-		const children = root.children!.filter((key) => {
-			const el = spec.elements[key]
-			return el && el.type !== "Fragment"
-		})
-		expect(children).toHaveLength(2)
+		const texts = collectTextElements(spec)
+		const distanceTexts = texts.filter((el) =>
+			(el.props.content as string).startsWith("Nearest station:"),
+		)
+		expect(distanceTexts).toHaveLength(0)
 	})
 
 	test("renders closure severity label", () => {
-		const node = renderTflAlert(makeItem({ severity: "closure", lineName: "Central" }))
+		const node = renderTflStatus(
+			makeItem([makeAlert({ severity: "closure", lineName: "Central" })]),
+		)
 		const spec = render(node)
 
-		const root = spec.elements[spec.root]!
-		const title = spec.elements[root.children![0]!]!
-		expect(title.props.content).toBe("Central · Closed")
+		const texts = collectTextElements(spec)
+		const title = texts.find((el) => el.props.content === "Central · Closed")
+		expect(title).toBeDefined()
 	})
 
 	test("renders major delays severity label", () => {
-		const node = renderTflAlert(makeItem({ severity: "major-delays", lineName: "Jubilee" }))
+		const node = renderTflStatus(
+			makeItem([makeAlert({ severity: "major-delays", lineName: "Jubilee" })]),
+		)
 		const spec = render(node)
 
-		const root = spec.elements[spec.root]!
-		const title = spec.elements[root.children![0]!]!
-		expect(title.props.content).toBe("Jubilee · Major delays")
+		const texts = collectTextElements(spec)
+		const title = texts.find((el) => el.props.content === "Jubilee · Major delays")
+		expect(title).toBeDefined()
 	})
 })
