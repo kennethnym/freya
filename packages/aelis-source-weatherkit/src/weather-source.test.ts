@@ -131,8 +131,24 @@ describe("WeatherSource", () => {
 			const hourlyItems = items.filter((i) => i.type === WeatherFeedItemType.Hourly)
 			const dailyItems = items.filter((i) => i.type === WeatherFeedItemType.Daily)
 
-			expect(hourlyItems.length).toBe(3)
+			expect(hourlyItems.length).toBe(1)
+			expect((hourlyItems[0]!.data as { hours: unknown[] }).hours.length).toBe(3)
 			expect(dailyItems.length).toBe(2)
+		})
+
+		test("produces a single hourly item with hours array", async () => {
+			const source = new WeatherSource({ client: mockClient })
+			const context = createMockContext({ lat: 37.7749, lng: -122.4194 })
+
+			const items = await source.fetchItems(context)
+
+			const hourlyItems = items.filter((i) => i.type === WeatherFeedItemType.Hourly)
+			expect(hourlyItems.length).toBe(1)
+
+			const hourlyData = hourlyItems[0]!.data as { hours: unknown[] }
+			expect(Array.isArray(hourlyData.hours)).toBe(true)
+			expect(hourlyData.hours.length).toBeGreaterThan(0)
+			expect(hourlyData.hours.length).toBeLessThanOrEqual(12)
 		})
 
 		test("sets timestamp from context.time", async () => {

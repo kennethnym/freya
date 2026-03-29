@@ -32,7 +32,7 @@ export interface CurrentWeatherFeedItem extends FeedItem<
 	CurrentWeatherData
 > {}
 
-export type HourlyWeatherData = {
+export type HourlyWeatherEntry = {
 	forecastTime: Date
 	conditionCode: ConditionCode
 	daylight: boolean
@@ -46,6 +46,10 @@ export type HourlyWeatherData = {
 	windDirection: number
 	windGust: number
 	windSpeed: number
+}
+
+export type HourlyWeatherData = {
+	hours: HourlyWeatherEntry[]
 }
 
 export interface HourlyWeatherFeedItem extends FeedItem<
