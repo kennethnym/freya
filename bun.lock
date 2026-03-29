@@ -170,14 +170,6 @@
         "@nym.sh/jrx": "*",
       },
     },
-    "packages/aelis-data-source-weatherkit": {
-      "name": "@aelis/data-source-weatherkit",
-      "version": "0.0.0",
-      "dependencies": {
-        "@aelis/core": "workspace:*",
-        "arktype": "^2.1.0",
-      },
-    },
     "packages/aelis-feed-enhancers": {
       "name": "@aelis/feed-enhancers",
       "version": "0.0.0",
@@ -247,8 +239,6 @@
     "@aelis/components": ["@aelis/components@workspace:packages/aelis-components"],
 
     "@aelis/core": ["@aelis/core@workspace:packages/aelis-core"],
-
-    "@aelis/data-source-weatherkit": ["@aelis/data-source-weatherkit@workspace:packages/aelis-data-source-weatherkit"],
 
     "@aelis/feed-enhancers": ["@aelis/feed-enhancers@workspace:packages/aelis-feed-enhancers"],
 
