@@ -69,7 +69,7 @@ export class TflApi {
 	}
 
 	async fetchLineStatuses(lines?: TflLineId[]): Promise<TflLineStatus[]> {
-		const lineIds = lines ?? ALL_LINE_IDS
+		const lineIds = lines?.length ? lines : ALL_LINE_IDS
 		const data = await this.fetch<unknown>(`/Line/${lineIds.join(",")}/Status`)
 
 		const parsed = lineResponseArray(data)
@@ -101,8 +101,8 @@ export class TflApi {
 			return this.stationsCache
 		}
 
-		// Fetch stations for all lines in parallel
-		const responses = await Promise.all(
+		// Fetch stations for all lines in parallel, tolerating individual failures
+		const results = await Promise.allSettled(
 			ALL_LINE_IDS.map(async (id) => {
 				const data = await this.fetch<unknown>(`/Line/${id}/StopPoints`)
 				const parsed = lineStopPointsArray(data)
@@ -116,7 +116,12 @@ export class TflApi {
 		// Merge stations, combining lines for shared stations
 		const stationMap = new Map<string, StationLocation>()
 
-		for (const { lineId: currentLineId, stops } of responses) {
+		for (const result of results) {
+			if (result.status === "rejected") {
+				continue
+			}
+
+			const { lineId: currentLineId, stops } = result.value
 			for (const stop of stops) {
 				const existing = stationMap.get(stop.naptanId)
 				if (existing) {
@@ -135,8 +140,15 @@ export class TflApi {
 			}
 		}
 
-		this.stationsCache = Array.from(stationMap.values())
-		return this.stationsCache
+		// Only cache if all requests succeeded — partial results shouldn't persist
+		const allSucceeded = results.every((r) => r.status === "fulfilled")
+		const stations = Array.from(stationMap.values())
+
+		if (allSucceeded) {
+			this.stationsCache = stations
+		}
+
+		return stations
 	}
 }
 
