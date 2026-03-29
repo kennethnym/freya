@@ -4,10 +4,10 @@ import { Context } from "@aelis/core"
 import { LocationKey } from "@aelis/source-location"
 import { describe, expect, test } from "bun:test"
 
-import type { WeatherKitClient, WeatherKitResponse, HourlyForecast } from "./weatherkit"
+import type { WeatherKitClient, WeatherKitResponse, HourlyForecast, DailyForecast } from "./weatherkit"
 
 import fixture from "../fixtures/san-francisco.json"
-import { WeatherFeedItemType, type HourlyWeatherData } from "./feed-items"
+import { WeatherFeedItemType, type DailyWeatherData, type HourlyWeatherData } from "./feed-items"
 import { WeatherKey, type Weather } from "./weather-context"
 import { WeatherSource, Units } from "./weather-source"
 
@@ -133,7 +133,8 @@ describe("WeatherSource", () => {
 
 			expect(hourlyItems.length).toBe(1)
 			expect((hourlyItems[0]!.data as HourlyWeatherData).hours.length).toBe(3)
-			expect(dailyItems.length).toBe(2)
+			expect(dailyItems.length).toBe(1)
+			expect((dailyItems[0]!.data as DailyWeatherData).days.length).toBe(2)
 		})
 
 		test("produces a single hourly item with hours array", async () => {
@@ -190,6 +191,65 @@ describe("WeatherSource", () => {
 			expect(hourlyItem!.signals!.urgency).toBeCloseTo(0.45, 5)
 			// Worst-case: SevereThunderstorm → Imminent
 			expect(hourlyItem!.signals!.timeRelevance).toBe("imminent")
+		})
+
+		test("produces a single daily item with days array", async () => {
+			const source = new WeatherSource({ client: mockClient })
+			const context = createMockContext({ lat: 37.7749, lng: -122.4194 })
+
+			const items = await source.fetchItems(context)
+
+			const dailyItems = items.filter((i) => i.type === WeatherFeedItemType.Daily)
+			expect(dailyItems.length).toBe(1)
+
+			const dailyData = dailyItems[0]!.data as DailyWeatherData
+			expect(Array.isArray(dailyData.days)).toBe(true)
+			expect(dailyData.days.length).toBeGreaterThan(0)
+			expect(dailyData.days.length).toBeLessThanOrEqual(7)
+		})
+
+		test("averages urgency across days with mixed conditions", async () => {
+			const mildDay: DailyForecast = {
+				forecastStart: "2026-01-17T00:00:00Z",
+				forecastEnd: "2026-01-18T00:00:00Z",
+				conditionCode: "Clear",
+				maxUvIndex: 3,
+				moonPhase: "firstQuarter",
+				precipitationAmount: 0,
+				precipitationChance: 0,
+				precipitationType: "clear",
+				snowfallAmount: 0,
+				sunrise: "2026-01-17T07:00:00Z",
+				sunriseCivil: "2026-01-17T06:30:00Z",
+				sunriseNautical: "2026-01-17T06:00:00Z",
+				sunriseAstronomical: "2026-01-17T05:30:00Z",
+				sunset: "2026-01-17T17:00:00Z",
+				sunsetCivil: "2026-01-17T17:30:00Z",
+				sunsetNautical: "2026-01-17T18:00:00Z",
+				sunsetAstronomical: "2026-01-17T18:30:00Z",
+				temperatureMax: 15,
+				temperatureMin: 5,
+			}
+			const severeDay: DailyForecast = {
+				...mildDay,
+				forecastStart: "2026-01-18T00:00:00Z",
+				forecastEnd: "2026-01-19T00:00:00Z",
+				conditionCode: "SevereThunderstorm",
+			}
+			const mixedResponse: WeatherKitResponse = {
+				forecastDaily: { days: [mildDay, severeDay] },
+			}
+			const source = new WeatherSource({ client: createMockClient(mixedResponse) })
+			const context = createMockContext({ lat: 37.7749, lng: -122.4194 })
+
+			const items = await source.fetchItems(context)
+			const dailyItem = items.find((i) => i.type === WeatherFeedItemType.Daily)
+
+			expect(dailyItem).toBeDefined()
+			// Mild urgency = 0.2, severe urgency = 0.5, average = 0.35
+			expect(dailyItem!.signals!.urgency).toBeCloseTo(0.35, 5)
+			// Worst-case: SevereThunderstorm → Imminent
+			expect(dailyItem!.signals!.timeRelevance).toBe("imminent")
 		})
 
 		test("sets timestamp from context.time", async () => {
