@@ -11,6 +11,7 @@ export {
 	type HourlyWeatherEntry,
 	type DailyWeatherFeedItem,
 	type DailyWeatherData,
+	type DailyWeatherEntry,
 	type WeatherAlertFeedItem,
 	type WeatherAlertData,
 } from "./feed-items"

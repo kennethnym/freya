@@ -3,7 +3,7 @@ import type { ActionDefinition, ContextEntry, FeedItemSignals, FeedSource } from
 import { Context, TimeRelevance, UnknownActionError } from "@aelis/core"
 import { LocationKey } from "@aelis/source-location"
 
-import { WeatherFeedItemType, type HourlyWeatherEntry, type WeatherFeedItem } from "./feed-items"
+import { WeatherFeedItemType, type DailyWeatherEntry, type HourlyWeatherEntry, type WeatherFeedItem } from "./feed-items"
 import currentWeatherInsightPrompt from "./prompts/current-weather-insight.txt"
 import { WeatherKey, type Weather } from "./weather-context"
 import {
@@ -181,11 +181,8 @@ export class WeatherSource implements FeedSource<WeatherFeedItem> {
 
 		if (response.forecastDaily?.days) {
 			const days = response.forecastDaily.days.slice(0, this.dailyLimit)
-			for (let i = 0; i < days.length; i++) {
-				const day = days[i]
-				if (day) {
-					items.push(createDailyWeatherFeedItem(day, i, timestamp, this.units, this.id))
-				}
+			if (days.length > 0) {
+				items.push(createDailyForecastFeedItem(days, timestamp, this.units, this.id))
 			}
 		}
 
@@ -370,24 +367,18 @@ function createHourlyForecastFeedItem(
 	}
 }
 
-function createDailyWeatherFeedItem(
-	daily: DailyForecast,
-	index: number,
+function createDailyForecastFeedItem(
+	dailyForecasts: DailyForecast[],
 	timestamp: Date,
 	units: Units,
 	sourceId: string,
 ): WeatherFeedItem {
-	const signals: FeedItemSignals = {
-		urgency: adjustUrgencyForCondition(BASE_URGENCY.daily, daily.conditionCode),
-		timeRelevance: timeRelevanceForCondition(daily.conditionCode),
-	}
+	const days: DailyWeatherEntry[] = []
+	let totalUrgency = 0
+	let worstTimeRelevance: TimeRelevance = TimeRelevance.Ambient
 
-	return {
-		id: `weather-daily-${timestamp.getTime()}-${index}`,
-		sourceId,
-		type: WeatherFeedItemType.Daily,
-		timestamp,
-		data: {
+	for (const daily of dailyForecasts) {
+		days.push({
 			forecastDate: new Date(daily.forecastStart),
 			conditionCode: daily.conditionCode,
 			maxUvIndex: daily.maxUvIndex,
@@ -399,7 +390,27 @@ function createDailyWeatherFeedItem(
 			sunset: new Date(daily.sunset),
 			temperatureMax: convertTemperature(daily.temperatureMax, units),
 			temperatureMin: convertTemperature(daily.temperatureMin, units),
-		},
+		})
+		totalUrgency += adjustUrgencyForCondition(BASE_URGENCY.daily, daily.conditionCode)
+		const rel = timeRelevanceForCondition(daily.conditionCode)
+		if (rel === TimeRelevance.Imminent) {
+			worstTimeRelevance = TimeRelevance.Imminent
+		} else if (rel === TimeRelevance.Upcoming && worstTimeRelevance !== TimeRelevance.Imminent) {
+			worstTimeRelevance = TimeRelevance.Upcoming
+		}
+	}
+
+	const signals: FeedItemSignals = {
+		urgency: totalUrgency / days.length,
+		timeRelevance: worstTimeRelevance,
+	}
+
+	return {
+		id: `weather-daily-${timestamp.getTime()}`,
+		sourceId,
+		type: WeatherFeedItemType.Daily,
+		timestamp,
+		data: { days },
 		signals,
 	}
 }

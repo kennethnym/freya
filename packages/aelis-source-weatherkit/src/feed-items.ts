@@ -57,7 +57,7 @@ export interface HourlyWeatherFeedItem extends FeedItem<
 	HourlyWeatherData
 > {}
 
-export type DailyWeatherData = {
+export type DailyWeatherEntry = {
 	forecastDate: Date
 	conditionCode: ConditionCode
 	maxUvIndex: number
@@ -69,6 +69,10 @@ export type DailyWeatherData = {
 	sunset: Date
 	temperatureMax: number
 	temperatureMin: number
+}
+
+export type DailyWeatherData = {
+	days: DailyWeatherEntry[]
 }
 
 export interface DailyWeatherFeedItem extends FeedItem<
