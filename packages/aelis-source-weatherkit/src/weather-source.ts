@@ -3,7 +3,7 @@ import type { ActionDefinition, ContextEntry, FeedItemSignals, FeedSource } from
 import { Context, TimeRelevance, UnknownActionError } from "@aelis/core"
 import { LocationKey } from "@aelis/source-location"
 
-import { WeatherFeedItemType, type WeatherFeedItem } from "./feed-items"
+import { WeatherFeedItemType, type HourlyWeatherEntry, type WeatherFeedItem } from "./feed-items"
 import currentWeatherInsightPrompt from "./prompts/current-weather-insight.txt"
 import { WeatherKey, type Weather } from "./weather-context"
 import {
@@ -174,11 +174,8 @@ export class WeatherSource implements FeedSource<WeatherFeedItem> {
 
 		if (response.forecastHourly?.hours) {
 			const hours = response.forecastHourly.hours.slice(0, this.hourlyLimit)
-			for (let i = 0; i < hours.length; i++) {
-				const hour = hours[i]
-				if (hour) {
-					items.push(createHourlyWeatherFeedItem(hour, i, timestamp, this.units, this.id))
-				}
+			if (hours.length > 0) {
+				items.push(createHourlyForecastFeedItem(hours, timestamp, this.units, this.id))
 			}
 		}
 
@@ -323,24 +320,18 @@ function createCurrentWeatherFeedItem(
 	}
 }
 
-function createHourlyWeatherFeedItem(
-	hourly: HourlyForecast,
-	index: number,
+function createHourlyForecastFeedItem(
+	hourlyForecasts: HourlyForecast[],
 	timestamp: Date,
 	units: Units,
 	sourceId: string,
 ): WeatherFeedItem {
-	const signals: FeedItemSignals = {
-		urgency: adjustUrgencyForCondition(BASE_URGENCY.hourly, hourly.conditionCode),
-		timeRelevance: timeRelevanceForCondition(hourly.conditionCode),
-	}
+	const hours: HourlyWeatherEntry[] = []
+	let totalUrgency = 0
+	let worstTimeRelevance: TimeRelevance = TimeRelevance.Ambient
 
-	return {
-		id: `weather-hourly-${timestamp.getTime()}-${index}`,
-		sourceId,
-		type: WeatherFeedItemType.Hourly,
-		timestamp,
-		data: {
+	for (const hourly of hourlyForecasts) {
+		hours.push({
 			forecastTime: new Date(hourly.forecastStart),
 			conditionCode: hourly.conditionCode,
 			daylight: hourly.daylight,
@@ -354,7 +345,27 @@ function createHourlyWeatherFeedItem(
 			windDirection: hourly.windDirection,
 			windGust: convertSpeed(hourly.windGust, units),
 			windSpeed: convertSpeed(hourly.windSpeed, units),
-		},
+		})
+		totalUrgency += adjustUrgencyForCondition(BASE_URGENCY.hourly, hourly.conditionCode)
+		const rel = timeRelevanceForCondition(hourly.conditionCode)
+		if (rel === TimeRelevance.Imminent) {
+			worstTimeRelevance = TimeRelevance.Imminent
+		} else if (rel === TimeRelevance.Upcoming && worstTimeRelevance !== TimeRelevance.Imminent) {
+			worstTimeRelevance = TimeRelevance.Upcoming
+		}
+	}
+
+	const signals: FeedItemSignals = {
+		urgency: totalUrgency / hours.length,
+		timeRelevance: worstTimeRelevance,
+	}
+
+	return {
+		id: `weather-hourly-${timestamp.getTime()}`,
+		sourceId,
+		type: WeatherFeedItemType.Hourly,
+		timestamp,
+		data: { hours },
 		signals,
 	}
 }

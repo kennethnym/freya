@@ -8,6 +8,7 @@ export {
 	type CurrentWeatherData,
 	type HourlyWeatherFeedItem,
 	type HourlyWeatherData,
+	type HourlyWeatherEntry,
 	type DailyWeatherFeedItem,
 	type DailyWeatherData,
 	type WeatherAlertFeedItem,
