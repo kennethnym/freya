@@ -14,6 +14,7 @@ import { registerLocationHttpHandlers } from "./location/http.ts"
 import { LocationSourceProvider } from "./location/provider.ts"
 import { UserSessionManager } from "./session/index.ts"
 import { registerSourcesHttpHandlers } from "./sources/http.ts"
+import { TflSourceProvider } from "./tfl/provider.ts"
 import { WeatherSourceProvider } from "./weather/provider.ts"
 
 function main() {
@@ -45,6 +46,7 @@ function main() {
 					serviceId: process.env.WEATHERKIT_SERVICE_ID!,
 				},
 			}),
+			new TflSourceProvider({ apiKey: process.env.TFL_API_KEY! }),
 		],
 		feedEnhancer,
 	})
