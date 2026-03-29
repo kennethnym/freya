@@ -4,10 +4,10 @@ import { Context } from "@aelis/core"
 import { LocationKey } from "@aelis/source-location"
 import { describe, expect, test } from "bun:test"
 
-import type { WeatherKitClient, WeatherKitResponse } from "./weatherkit"
+import type { WeatherKitClient, WeatherKitResponse, HourlyForecast } from "./weatherkit"
 
 import fixture from "../fixtures/san-francisco.json"
-import { WeatherFeedItemType } from "./feed-items"
+import { WeatherFeedItemType, type HourlyWeatherData } from "./feed-items"
 import { WeatherKey, type Weather } from "./weather-context"
 import { WeatherSource, Units } from "./weather-source"
 
@@ -132,7 +132,7 @@ describe("WeatherSource", () => {
 			const dailyItems = items.filter((i) => i.type === WeatherFeedItemType.Daily)
 
 			expect(hourlyItems.length).toBe(1)
-			expect((hourlyItems[0]!.data as { hours: unknown[] }).hours.length).toBe(3)
+			expect((hourlyItems[0]!.data as HourlyWeatherData).hours.length).toBe(3)
 			expect(dailyItems.length).toBe(2)
 		})
 
@@ -145,10 +145,51 @@ describe("WeatherSource", () => {
 			const hourlyItems = items.filter((i) => i.type === WeatherFeedItemType.Hourly)
 			expect(hourlyItems.length).toBe(1)
 
-			const hourlyData = hourlyItems[0]!.data as { hours: unknown[] }
+			const hourlyData = hourlyItems[0]!.data as HourlyWeatherData
 			expect(Array.isArray(hourlyData.hours)).toBe(true)
 			expect(hourlyData.hours.length).toBeGreaterThan(0)
 			expect(hourlyData.hours.length).toBeLessThanOrEqual(12)
+		})
+
+		test("averages urgency across hours with mixed conditions", async () => {
+			const mildHour: HourlyForecast = {
+				forecastStart: "2026-01-17T01:00:00Z",
+				conditionCode: "Clear",
+				daylight: true,
+				humidity: 0.5,
+				precipitationAmount: 0,
+				precipitationChance: 0,
+				precipitationType: "clear",
+				pressure: 1013,
+				snowfallIntensity: 0,
+				temperature: 20,
+				temperatureApparent: 20,
+				temperatureDewPoint: 10,
+				uvIndex: 3,
+				visibility: 20000,
+				windDirection: 180,
+				windGust: 10,
+				windSpeed: 5,
+			}
+			const severeHour: HourlyForecast = {
+				...mildHour,
+				forecastStart: "2026-01-17T02:00:00Z",
+				conditionCode: "SevereThunderstorm",
+			}
+			const mixedResponse: WeatherKitResponse = {
+				forecastHourly: { hours: [mildHour, severeHour] },
+			}
+			const source = new WeatherSource({ client: createMockClient(mixedResponse) })
+			const context = createMockContext({ lat: 37.7749, lng: -122.4194 })
+
+			const items = await source.fetchItems(context)
+			const hourlyItem = items.find((i) => i.type === WeatherFeedItemType.Hourly)
+
+			expect(hourlyItem).toBeDefined()
+			// Mild urgency = 0.3, severe urgency = 0.6, average = 0.45
+			expect(hourlyItem!.signals!.urgency).toBeCloseTo(0.45, 5)
+			// Worst-case: SevereThunderstorm → Imminent
+			expect(hourlyItem!.signals!.timeRelevance).toBe("imminent")
 		})
 
 		test("sets timestamp from context.time", async () => {

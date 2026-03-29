@@ -328,6 +328,7 @@ function createHourlyForecastFeedItem(
 ): WeatherFeedItem {
 	const hours: HourlyWeatherEntry[] = []
 	let totalUrgency = 0
+	let worstTimeRelevance: TimeRelevance = TimeRelevance.Ambient
 
 	for (const hourly of hourlyForecasts) {
 		hours.push({
@@ -346,11 +347,17 @@ function createHourlyForecastFeedItem(
 			windSpeed: convertSpeed(hourly.windSpeed, units),
 		})
 		totalUrgency += adjustUrgencyForCondition(BASE_URGENCY.hourly, hourly.conditionCode)
+		const rel = timeRelevanceForCondition(hourly.conditionCode)
+		if (rel === TimeRelevance.Imminent) {
+			worstTimeRelevance = TimeRelevance.Imminent
+		} else if (rel === TimeRelevance.Upcoming && worstTimeRelevance !== TimeRelevance.Imminent) {
+			worstTimeRelevance = TimeRelevance.Upcoming
+		}
 	}
 
 	const signals: FeedItemSignals = {
 		urgency: totalUrgency / hours.length,
-		timeRelevance: TimeRelevance.Ambient,
+		timeRelevance: worstTimeRelevance,
 	}
 
 	return {
