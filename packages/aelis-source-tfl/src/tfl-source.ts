@@ -8,10 +8,10 @@ import type {
 	ITflApi,
 	StationLocation,
 	TflAlertData,
-	TflAlertFeedItem,
 	TflAlertSeverity,
 	TflLineId,
 	TflSourceOptions,
+	TflStatusFeedItem,
 } from "./types.ts"
 
 import { TflApi, lineId } from "./tfl-api.ts"
@@ -51,7 +51,7 @@ const SEVERITY_TIME_RELEVANCE: Record<TflAlertSeverity, TimeRelevance> = {
  * const { items } = await engine.refresh()
  * ```
  */
-export class TflSource implements FeedSource<TflAlertFeedItem> {
+export class TflSource implements FeedSource<TflStatusFeedItem> {
 	static readonly DEFAULT_LINES_OF_INTEREST: readonly TflLineId[] = [
 		"bakerloo",
 		"central",
@@ -123,56 +123,58 @@ export class TflSource implements FeedSource<TflAlertFeedItem> {
 		this.lines = lines
 	}
 
-	async fetchItems(context: Context): Promise<TflAlertFeedItem[]> {
+	async fetchItems(context: Context): Promise<TflStatusFeedItem[]> {
 		const [statuses, stations] = await Promise.all([
 			this.client.fetchLineStatuses(this.lines),
 			this.client.fetchStations(),
 		])
 
+		if (statuses.length === 0) {
+			return []
+		}
+
 		const location = context.get(LocationKey)
 
-		const items: TflAlertFeedItem[] = statuses.map((status) => {
-			const closestStationDistance = location
+		const alerts: TflAlertData[] = statuses.map((status) => ({
+			line: status.lineId,
+			lineName: status.lineName,
+			severity: status.severity,
+			description: status.description,
+			closestStationDistance: location
 				? findClosestStationDistance(status.lineId, stations, location.lat, location.lng)
-				: null
+				: null,
+		}))
 
-			const data: TflAlertData = {
-				line: status.lineId,
-				lineName: status.lineName,
-				severity: status.severity,
-				description: status.description,
-				closestStationDistance,
-			}
+		// Sort by closest station distance ascending, nulls last
+		alerts.sort((a, b) => {
+			if (a.closestStationDistance === null && b.closestStationDistance === null) return 0
+			if (a.closestStationDistance === null) return 1
+			if (b.closestStationDistance === null) return -1
+			return a.closestStationDistance - b.closestStationDistance
+		})
 
-			const signals: FeedItemSignals = {
-				urgency: SEVERITY_URGENCY[status.severity],
-				timeRelevance: SEVERITY_TIME_RELEVANCE[status.severity],
-			}
+		// Signals from the highest-severity alert
+		const highestSeverity = alerts.reduce<TflAlertSeverity>(
+			(worst, alert) =>
+				SEVERITY_URGENCY[alert.severity] > SEVERITY_URGENCY[worst] ? alert.severity : worst,
+			alerts[0]!.severity,
+		)
 
-			return {
-				id: `tfl-alert-${status.lineId}-${status.severity}`,
+		const signals: FeedItemSignals = {
+			urgency: SEVERITY_URGENCY[highestSeverity],
+			timeRelevance: SEVERITY_TIME_RELEVANCE[highestSeverity],
+		}
+
+		return [
+			{
+				id: "tfl-status",
 				sourceId: this.id,
-				type: TflFeedItemType.Alert,
+				type: TflFeedItemType.Status,
 				timestamp: context.time,
-				data,
+				data: { alerts },
 				signals,
-			}
-		})
-
-		// Sort by urgency (desc), then by proximity (asc) if location available
-		items.sort((a, b) => {
-			const aUrgency = a.signals?.urgency ?? 0
-			const bUrgency = b.signals?.urgency ?? 0
-			if (bUrgency !== aUrgency) {
-				return bUrgency - aUrgency
-			}
-			if (a.data.closestStationDistance !== null && b.data.closestStationDistance !== null) {
-				return a.data.closestStationDistance - b.data.closestStationDistance
-			}
-			return 0
-		})
-
-		return items
+			},
+		]
 	}
 }
 

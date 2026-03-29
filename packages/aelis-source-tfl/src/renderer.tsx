@@ -3,7 +3,7 @@ import type { FeedItemRenderer } from "@aelis/core"
 
 import { FeedCard, SansSerifText } from "@aelis/components"
 
-import type { TflAlertData } from "./types.ts"
+import type { TflAlertData, TflStatusData } from "./types.ts"
 
 import { TflAlertSeverity } from "./types.ts"
 
@@ -21,20 +21,26 @@ function formatDistance(km: number): string {
 	return `${(meters / 1000).toFixed(1)}km away`
 }
 
-export const renderTflAlert: FeedItemRenderer<"tfl-alert", TflAlertData> = (item) => {
-	const { lineName, severity, description, closestStationDistance } = item.data
-	const severityLabel = SEVERITY_LABEL[severity]
+function renderAlertRow(alert: TflAlertData) {
+	const severityLabel = SEVERITY_LABEL[alert.severity]
 
 	return (
-		<FeedCard>
-			<SansSerifText content={`${lineName} · ${severityLabel}`} style="text-base font-semibold" />
-			<SansSerifText content={description} style="text-sm" />
-			{closestStationDistance !== null ? (
+		<>
+			<SansSerifText
+				content={`${alert.lineName} · ${severityLabel}`}
+				style="text-base font-semibold"
+			/>
+			<SansSerifText content={alert.description} style="text-sm" />
+			{alert.closestStationDistance !== null ? (
 				<SansSerifText
-					content={`Nearest station: ${formatDistance(closestStationDistance)}`}
+					content={`Nearest station: ${formatDistance(alert.closestStationDistance)}`}
 					style="text-xs text-stone-500"
 				/>
 			) : null}
-		</FeedCard>
+		</>
 	)
+}
+
+export const renderTflStatus: FeedItemRenderer<"tfl-status", TflStatusData> = (item) => {
+	return <FeedCard>{item.data.alerts.map((alert) => renderAlertRow(alert))}</FeedCard>
 }

@@ -10,5 +10,7 @@ export {
 	type TflAlertSeverity,
 	type TflLineStatus,
 	type TflSourceOptions,
+	type TflStatusData,
+	type TflStatusFeedItem,
 } from "./types.ts"
-export { renderTflAlert } from "./renderer.tsx"
+export { renderTflStatus } from "./renderer.tsx"
