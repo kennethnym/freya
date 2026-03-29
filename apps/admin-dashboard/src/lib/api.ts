@@ -9,12 +9,12 @@ function serverBase() {
 }
 
 export interface ConfigFieldDef {
-  type: "string" | "number" | "select"
+  type: "string" | "number" | "select" | "multiselect"
   label: string
   required?: boolean
   description?: string
   secret?: boolean
-  defaultValue?: string | number
+  defaultValue?: string | number | string[]
   options?: { label: string; value: string }[]
 }
 
@@ -52,6 +52,39 @@ const sourceDefinitions: SourceDefinition[] = [
       units: { type: "select", label: "Units", options: [{ label: "Metric", value: "metric" }, { label: "Imperial", value: "imperial" }], defaultValue: "metric" },
       hourlyLimit: { type: "number", label: "Hourly Forecast Limit", defaultValue: 12, description: "Number of hourly forecasts to include" },
       dailyLimit: { type: "number", label: "Daily Forecast Limit", defaultValue: 7, description: "Number of daily forecasts to include" },
+    },
+  },
+  {
+    id: "aelis.tfl",
+    name: "TfL",
+    description: "Transport for London tube line status alerts.",
+    fields: {
+      lines: {
+        type: "multiselect",
+        label: "Lines",
+        description: "Lines to monitor. Leave empty for all lines.",
+        defaultValue: [],
+        options: [
+          { label: "Bakerloo", value: "bakerloo" },
+          { label: "Central", value: "central" },
+          { label: "Circle", value: "circle" },
+          { label: "District", value: "district" },
+          { label: "Hammersmith & City", value: "hammersmith-city" },
+          { label: "Jubilee", value: "jubilee" },
+          { label: "Metropolitan", value: "metropolitan" },
+          { label: "Northern", value: "northern" },
+          { label: "Piccadilly", value: "piccadilly" },
+          { label: "Victoria", value: "victoria" },
+          { label: "Waterloo & City", value: "waterloo-city" },
+          { label: "Lioness", value: "lioness" },
+          { label: "Mildmay", value: "mildmay" },
+          { label: "Windrush", value: "windrush" },
+          { label: "Weaver", value: "weaver" },
+          { label: "Suffragette", value: "suffragette" },
+          { label: "Liberty", value: "liberty" },
+          { label: "Elizabeth", value: "elizabeth" },
+        ],
+      },
     },
   },
 ]
