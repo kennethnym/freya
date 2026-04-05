@@ -5,9 +5,14 @@ import merge from "lodash.merge"
 
 import type { Database } from "../db/index.ts"
 import type { FeedEnhancer } from "../enhancement/enhance-feed.ts"
+import type { CredentialEncryptor } from "../lib/crypto.ts"
 import type { FeedSourceProvider } from "./feed-source-provider.ts"
 
-import { InvalidSourceConfigError, SourceNotFoundError } from "../sources/errors.ts"
+import {
+	CredentialStorageUnavailableError,
+	InvalidSourceConfigError,
+	SourceNotFoundError,
+} from "../sources/errors.ts"
 import { sources } from "../sources/user-sources.ts"
 import { UserSession } from "./user-session.ts"
 
@@ -15,6 +20,7 @@ export interface UserSessionManagerConfig {
 	db: Database
 	providers: FeedSourceProvider[]
 	feedEnhancer?: FeedEnhancer | null
+	credentialEncryptor?: CredentialEncryptor | null
 }
 
 export class UserSessionManager {
@@ -23,7 +29,7 @@ export class UserSessionManager {
 	private readonly db: Database
 	private readonly providers = new Map<string, FeedSourceProvider>()
 	private readonly feedEnhancer: FeedEnhancer | null
-	private readonly db: Database
+	private readonly encryptor: CredentialEncryptor | null
 
 	constructor(config: UserSessionManagerConfig) {
 		this.db = config.db
@@ -31,7 +37,7 @@ export class UserSessionManager {
 			this.providers.set(provider.sourceId, provider)
 		}
 		this.feedEnhancer = config.feedEnhancer ?? null
-		this.db = config.db
+		this.encryptor = config.credentialEncryptor ?? null
 	}
 
 	getProvider(sourceId: string): FeedSourceProvider | undefined {
@@ -120,14 +126,15 @@ export class UserSessionManager {
 			return
 		}
 
-		// When config is provided, fetch existing to deep-merge before validating.
+		// Fetch the existing row for config merging and credential access.
 		// NOTE: find + updateConfig is not atomic. A concurrent update could
 		// read stale config. Use SELECT FOR UPDATE or atomic jsonb merge if
 		// this becomes a problem.
+		const existingRow = await sources(this.db, userId).find(sourceId)
+
 		let mergedConfig: Record<string, unknown> | undefined
 		if (update.config !== undefined && provider.configSchema) {
-			const existing = await sources(this.db, userId).find(sourceId)
-			const existingConfig = (existing?.config ?? {}) as Record<string, unknown>
+			const existingConfig = (existingRow?.config ?? {}) as Record<string, unknown>
 			mergedConfig = merge({}, existingConfig, update.config)
 
 			const validated = provider.configSchema(mergedConfig)
@@ -149,7 +156,10 @@ export class UserSessionManager {
 			if (update.enabled === false) {
 				session.removeSource(sourceId)
 			} else {
-				const source = await provider.feedSourceForUser(userId, mergedConfig ?? {})
+				const credentials = existingRow?.credentials
+					? this.decryptCredentials(existingRow.credentials)
+					: null
+				const source = await provider.feedSourceForUser(userId, mergedConfig ?? {}, credentials)
 				session.replaceSource(sourceId, source)
 			}
 		}
@@ -182,6 +192,11 @@ export class UserSessionManager {
 		}
 
 		const config = data.config ?? {}
+
+		// Fetch existing row before upsert to capture credentials for session refresh.
+		// For new rows this will be undefined — credentials will be null.
+		const existingRow = await sources(this.db, userId).find(sourceId)
+
 		await sources(this.db, userId).upsertConfig(sourceId, {
 			enabled: data.enabled,
 			config,
@@ -192,12 +207,53 @@ export class UserSessionManager {
 			if (!data.enabled) {
 				session.removeSource(sourceId)
 			} else {
-				const source = await provider.feedSourceForUser(userId, config)
+				const credentials = existingRow?.credentials
+					? this.decryptCredentials(existingRow.credentials)
+					: null
+				const source = await provider.feedSourceForUser(userId, config, credentials)
 				if (session.hasSource(sourceId)) {
 					session.replaceSource(sourceId, source)
 				} else {
 					session.addSource(source)
 				}
+			}
+		}
+	}
+
+	/**
+	 * Validates, encrypts, and persists per-user credentials for a source,
+	 * then refreshes the active session.
+	 *
+	 * @throws {SourceNotFoundError} if the source row doesn't exist or has no registered provider
+	 * @throws {CredentialStorageUnavailableError} if no CredentialEncryptor is configured
+	 */
+	async updateSourceCredentials(
+		userId: string,
+		sourceId: string,
+		credentials: unknown,
+	): Promise<void> {
+		const provider = this.providers.get(sourceId)
+		if (!provider) {
+			throw new SourceNotFoundError(sourceId, userId)
+		}
+
+		if (!this.encryptor) {
+			throw new CredentialStorageUnavailableError()
+		}
+
+		const encrypted = this.encryptor.encrypt(JSON.stringify(credentials))
+		await sources(this.db, userId).updateCredentials(sourceId, encrypted)
+
+		// Refresh the source in the active session.
+		// If feedSourceForUser throws (e.g. provider rejects the credentials),
+		// the DB already has the new credentials but the session keeps the old
+		// source. The next session creation will pick up the persisted credentials.
+		const session = this.sessions.get(userId)
+		if (session && session.hasSource(sourceId)) {
+			const row = await sources(this.db, userId).find(sourceId)
+			if (row?.enabled) {
+				const source = await provider.feedSourceForUser(userId, row.config ?? {}, credentials)
+				session.replaceSource(sourceId, source)
 			}
 		}
 	}
@@ -254,7 +310,12 @@ export class UserSessionManager {
 			const row = await sources(this.db, session.userId).find(provider.sourceId)
 			if (!row?.enabled) return
 
-			const newSource = await provider.feedSourceForUser(session.userId, row.config ?? {})
+			const credentials = row.credentials ? this.decryptCredentials(row.credentials) : null
+			const newSource = await provider.feedSourceForUser(
+				session.userId,
+				row.config ?? {},
+				credentials,
+			)
 			session.replaceSource(provider.sourceId, newSource)
 		} catch (err) {
 			console.error(
@@ -271,7 +332,8 @@ export class UserSessionManager {
 		for (const row of enabledRows) {
 			const provider = this.providers.get(row.sourceId)
 			if (provider) {
-				promises.push(provider.feedSourceForUser(userId, row.config ?? {}))
+				const credentials = row.credentials ? this.decryptCredentials(row.credentials) : null
+				promises.push(provider.feedSourceForUser(userId, row.config ?? {}, credentials))
 			}
 		}
 
@@ -301,5 +363,20 @@ export class UserSessionManager {
 		}
 
 		return new UserSession(userId, feedSources, this.feedEnhancer)
+	}
+
+	/**
+	 * Decrypts a credentials buffer from the DB, returning parsed JSON or null.
+	 * Returns null (with a warning) if decryption or parsing fails — e.g. due to
+	 * key rotation, data corruption, or malformed JSON.
+	 */
+	private decryptCredentials(credentials: Buffer): unknown {
+		if (!this.encryptor) return null
+		try {
+			return JSON.parse(this.encryptor.decrypt(credentials))
+		} catch (err) {
+			console.warn("[UserSessionManager] Failed to decrypt credentials:", err)
+			return null
+		}
 	}
 }

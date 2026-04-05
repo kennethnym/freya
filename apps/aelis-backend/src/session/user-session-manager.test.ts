@@ -7,6 +7,12 @@ import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import type { Database } from "../db/index.ts"
 import type { FeedSourceProvider } from "./feed-source-provider.ts"
 
+import { CredentialEncryptor } from "../lib/crypto.ts"
+import {
+	CredentialStorageUnavailableError,
+	InvalidSourceCredentialsError,
+} from "../sources/errors.ts"
+import { SourceNotFoundError } from "../sources/errors.ts"
 import { UserSessionManager } from "./user-session-manager.ts"
 
 /**
@@ -38,6 +44,13 @@ function getEnabledSourceIds(userId: string): string[] {
  */
 let mockFindResult: unknown | undefined
 
+/**
+ * Spy for `updateCredentials` calls. Tests can inspect calls via
+ * `mockUpdateCredentialsCalls` or override behavior.
+ */
+const mockUpdateCredentialsCalls: Array<{ sourceId: string; credentials: Buffer }> = []
+let mockUpdateCredentialsError: Error | null = null
+
 // Mock the sources module so UserSessionManager's DB query returns controlled data.
 mock.module("../sources/user-sources.ts", () => ({
 	sources: (_db: Database, userId: string) => ({
@@ -68,6 +81,12 @@ mock.module("../sources/user-sources.ts", () => ({
 				updatedAt: now,
 			}
 		},
+		async updateCredentials(sourceId: string, credentials: Buffer) {
+			if (mockUpdateCredentialsError) {
+				throw mockUpdateCredentialsError
+			}
+			mockUpdateCredentialsCalls.push({ sourceId, credentials })
+		},
 	}),
 }))
 
@@ -93,8 +112,11 @@ function createStubSource(id: string, items: FeedItem[] = []): FeedSource {
 
 function createStubProvider(
 	sourceId: string,
-	factory: (userId: string, config: Record<string, unknown>) => Promise<FeedSource> = async () =>
-		createStubSource(sourceId),
+	factory: (
+		userId: string,
+		config: Record<string, unknown>,
+		credentials: unknown,
+	) => Promise<FeedSource> = async () => createStubSource(sourceId),
 ): FeedSourceProvider {
 	return { sourceId, feedSourceForUser: factory }
 }
@@ -116,6 +138,8 @@ const weatherProvider: FeedSourceProvider = {
 beforeEach(() => {
 	enabledByUser.clear()
 	mockFindResult = undefined
+	mockUpdateCredentialsCalls.length = 0
+	mockUpdateCredentialsError = null
 })
 
 describe("UserSessionManager", () => {
@@ -679,5 +703,124 @@ describe("UserSessionManager.replaceProvider", () => {
 		// Session should still have v1 — the replace was skipped
 		const feedAfter = await session.feed()
 		expect(feedAfter.items[0]!.data.version).toBe(1)
+	})
+})
+
+const TEST_ENCRYPTION_KEY = "/bv1nbzC4ozZkT/pcv5oQfl+JAMuMZDUSVDesG2dur8="
+const testEncryptor = new CredentialEncryptor(TEST_ENCRYPTION_KEY)
+
+describe("UserSessionManager.updateSourceCredentials", () => {
+	test("encrypts and persists credentials", async () => {
+		setEnabledSources(["test"])
+		const provider = createStubProvider("test")
+		const manager = new UserSessionManager({
+			db: fakeDb,
+			providers: [provider],
+			credentialEncryptor: testEncryptor,
+		})
+
+		await manager.updateSourceCredentials("user-1", "test", { token: "secret-123" })
+
+		expect(mockUpdateCredentialsCalls).toHaveLength(1)
+		expect(mockUpdateCredentialsCalls[0]!.sourceId).toBe("test")
+
+		// Verify the persisted buffer decrypts to the original credentials
+		const decrypted = JSON.parse(testEncryptor.decrypt(mockUpdateCredentialsCalls[0]!.credentials))
+		expect(decrypted).toEqual({ token: "secret-123" })
+	})
+
+	test("throws CredentialStorageUnavailableError when encryptor is not configured", async () => {
+		setEnabledSources(["test"])
+		const provider = createStubProvider("test")
+		const manager = new UserSessionManager({
+			db: fakeDb,
+			providers: [provider],
+			// no credentialEncryptor
+		})
+
+		await expect(
+			manager.updateSourceCredentials("user-1", "test", { token: "x" }),
+		).rejects.toBeInstanceOf(CredentialStorageUnavailableError)
+	})
+
+	test("throws SourceNotFoundError for unknown source", async () => {
+		setEnabledSources([])
+		const manager = new UserSessionManager({
+			db: fakeDb,
+			providers: [],
+			credentialEncryptor: testEncryptor,
+		})
+
+		await expect(
+			manager.updateSourceCredentials("user-1", "unknown", { token: "x" }),
+		).rejects.toBeInstanceOf(SourceNotFoundError)
+	})
+
+	test("propagates InvalidSourceCredentialsError from provider", async () => {
+		setEnabledSources(["test"])
+		let callCount = 0
+		const provider: FeedSourceProvider = {
+			sourceId: "test",
+			async feedSourceForUser(_userId: string, _config: unknown, _credentials: unknown) {
+				callCount++
+				// Succeed on first call (session creation), throw on refresh
+				if (callCount > 1) {
+					throw new InvalidSourceCredentialsError("test", "bad credentials")
+				}
+				return createStubSource("test")
+			},
+		}
+		const manager = new UserSessionManager({
+			db: fakeDb,
+			providers: [provider],
+			credentialEncryptor: testEncryptor,
+		})
+
+		// Create a session first so the refresh path is exercised
+		await manager.getOrCreate("user-1")
+
+		await expect(
+			manager.updateSourceCredentials("user-1", "test", { token: "bad" }),
+		).rejects.toBeInstanceOf(InvalidSourceCredentialsError)
+
+		// Credentials should still have been persisted before the provider threw
+		expect(mockUpdateCredentialsCalls).toHaveLength(1)
+	})
+
+	test("refreshes source in active session after credential update", async () => {
+		setEnabledSources(["test"])
+		let receivedCredentials: unknown = null
+		const provider = createStubProvider("test", async (_userId, _config, credentials) => {
+			receivedCredentials = credentials
+			return createStubSource("test")
+		})
+		const manager = new UserSessionManager({
+			db: fakeDb,
+			providers: [provider],
+			credentialEncryptor: testEncryptor,
+		})
+
+		await manager.getOrCreate("user-1")
+		await manager.updateSourceCredentials("user-1", "test", { token: "refreshed" })
+
+		expect(receivedCredentials).toEqual({ token: "refreshed" })
+	})
+
+	test("persists credentials without session refresh when no active session", async () => {
+		setEnabledSources(["test"])
+		const factory = mock(async () => createStubSource("test"))
+		const provider: FeedSourceProvider = { sourceId: "test", feedSourceForUser: factory }
+		const manager = new UserSessionManager({
+			db: fakeDb,
+			providers: [provider],
+			credentialEncryptor: testEncryptor,
+		})
+
+		// No session created — just update credentials
+		await manager.updateSourceCredentials("user-1", "test", { token: "stored" })
+
+		expect(mockUpdateCredentialsCalls).toHaveLength(1)
+		// feedSourceForUser should not have been called (no session to refresh)
+		expect(factory).not.toHaveBeenCalled()
 	})
 })

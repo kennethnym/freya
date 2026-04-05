@@ -10,6 +10,7 @@ import { createDatabase } from "./db/index.ts"
 import { registerFeedHttpHandlers } from "./engine/http.ts"
 import { createFeedEnhancer } from "./enhancement/enhance-feed.ts"
 import { createLlmClient } from "./enhancement/llm-client.ts"
+import { CredentialEncryptor } from "./lib/crypto.ts"
 import { registerLocationHttpHandlers } from "./location/http.ts"
 import { LocationSourceProvider } from "./location/provider.ts"
 import { UserSessionManager } from "./session/index.ts"
@@ -34,6 +35,16 @@ function main() {
 		console.warn("[enhancement] OPENROUTER_API_KEY not set — feed enhancement disabled")
 	}
 
+	const credentialEncryptionKey = process.env.CREDENTIAL_ENCRYPTION_KEY
+	const credentialEncryptor = credentialEncryptionKey
+		? new CredentialEncryptor(credentialEncryptionKey)
+		: null
+	if (!credentialEncryptor) {
+		console.warn(
+			"[credentials] CREDENTIAL_ENCRYPTION_KEY not set — per-user credential storage disabled",
+		)
+	}
+
 	const sessionManager = new UserSessionManager({
 		db,
 		providers: [
@@ -49,6 +60,7 @@ function main() {
 			new TflSourceProvider({ apiKey: process.env.TFL_API_KEY! }),
 		],
 		feedEnhancer,
+		credentialEncryptor,
 	})
 
 	const app = new Hono()

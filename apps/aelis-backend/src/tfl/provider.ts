@@ -23,7 +23,11 @@ export class TflSourceProvider implements FeedSourceProvider {
 		this.client = "client" in options ? options.client : undefined
 	}
 
-	async feedSourceForUser(_userId: string, config: unknown): Promise<TflSource> {
+	async feedSourceForUser(
+		_userId: string,
+		config: unknown,
+		_credentials: unknown,
+	): Promise<TflSource> {
 		const parsed = tflConfig(config)
 		if (parsed instanceof type.errors) {
 			throw new Error(`Invalid TFL config: ${parsed.summary}`)
