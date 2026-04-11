@@ -6,6 +6,7 @@ import { createRequireAdmin } from "./auth/admin-middleware.ts"
 import { registerAuthHandlers } from "./auth/http.ts"
 import { createAuth } from "./auth/index.ts"
 import { createRequireSession } from "./auth/session-middleware.ts"
+import { CalDavSourceProvider } from "./caldav/provider.ts"
 import { createDatabase } from "./db/index.ts"
 import { registerFeedHttpHandlers } from "./engine/http.ts"
 import { createFeedEnhancer } from "./enhancement/enhance-feed.ts"
@@ -48,6 +49,7 @@ function main() {
 	const sessionManager = new UserSessionManager({
 		db,
 		providers: [
+			new CalDavSourceProvider(),
 			new LocationSourceProvider(),
 			new WeatherSourceProvider({
 				credentials: {
