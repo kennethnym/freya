@@ -26,7 +26,11 @@ export class WeatherSourceProvider implements FeedSourceProvider {
 		this.client = options.client
 	}
 
-	async feedSourceForUser(_userId: string, config: unknown): Promise<WeatherSource> {
+	async feedSourceForUser(
+		_userId: string,
+		config: unknown,
+		_credentials: unknown,
+	): Promise<WeatherSource> {
 		const parsed = weatherConfig(config)
 		if (parsed instanceof type.errors) {
 			throw new Error(`Invalid weather config: ${parsed.summary}`)

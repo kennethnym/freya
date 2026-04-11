@@ -7,10 +7,11 @@ import type { Database } from "../db/index.ts"
 import type { ConfigSchema, FeedSourceProvider } from "../session/feed-source-provider.ts"
 
 import { mockAuthSessionMiddleware } from "../auth/session-middleware.ts"
+import { CredentialEncryptor } from "../lib/crypto.ts"
 import { UserSessionManager } from "../session/user-session-manager.ts"
 import { tflConfig } from "../tfl/provider.ts"
 import { weatherConfig } from "../weather/provider.ts"
-import { SourceNotFoundError } from "./errors.ts"
+import { InvalidSourceCredentialsError, SourceNotFoundError } from "./errors.ts"
 import { registerSourcesHttpHandlers } from "./http.ts"
 
 // ---------------------------------------------------------------------------
@@ -39,7 +40,7 @@ function createStubProvider(sourceId: string, configSchema?: ConfigSchema): Feed
 	return {
 		sourceId,
 		configSchema,
-		async feedSourceForUser() {
+		async feedSourceForUser(_userId: string, _config: unknown, _credentials: unknown) {
 			return createStubSource(sourceId)
 		},
 	}
@@ -105,6 +106,12 @@ function createInMemoryStore() {
 						})
 					}
 				},
+				async updateCredentials(sourceId: string, _credentials: Buffer) {
+					const existing = rows.get(key(userId, sourceId))
+					if (!existing) {
+						throw new SourceNotFoundError(sourceId, userId)
+					}
+				},
 			}
 		},
 	}
@@ -140,6 +147,30 @@ function patch(app: Hono, sourceId: string, body: unknown) {
 
 function get(app: Hono, sourceId: string) {
 	return app.request(`/api/sources/${sourceId}`, { method: "GET" })
+}
+
+const TEST_ENCRYPTION_KEY = "/bv1nbzC4ozZkT/pcv5oQfl+JAMuMZDUSVDesG2dur8="
+
+function createAppWithEncryptor(providers: FeedSourceProvider[], userId?: string) {
+	const sessionManager = new UserSessionManager({
+		providers,
+		db: fakeDb,
+		credentialEncryptor: new CredentialEncryptor(TEST_ENCRYPTION_KEY),
+	})
+	const app = new Hono()
+	registerSourcesHttpHandlers(app, {
+		sessionManager,
+		authSessionMiddleware: mockAuthSessionMiddleware(userId),
+	})
+	return { app, sessionManager }
+}
+
+function putCredentials(app: Hono, sourceId: string, body: unknown) {
+	return app.request(`/api/sources/${sourceId}/credentials`, {
+		method: "PUT",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(body),
+	})
 }
 
 function put(app: Hono, sourceId: string, body: unknown) {
@@ -706,5 +737,88 @@ describe("PUT /api/sources/:sourceId", () => {
 		})
 
 		expect(res.status).toBe(204)
+	})
+})
+
+describe("PUT /api/sources/:sourceId/credentials", () => {
+	test("returns 401 without auth", async () => {
+		activeStore = createInMemoryStore()
+		const { app } = createAppWithEncryptor([createStubProvider("aelis.location")])
+
+		const res = await putCredentials(app, "aelis.location", { token: "x" })
+
+		expect(res.status).toBe(401)
+	})
+
+	test("returns 404 for unknown source", async () => {
+		activeStore = createInMemoryStore()
+		const { app } = createAppWithEncryptor([createStubProvider("aelis.location")], MOCK_USER_ID)
+
+		const res = await putCredentials(app, "unknown.source", { token: "x" })
+
+		expect(res.status).toBe(404)
+	})
+
+	test("returns 400 for invalid JSON", async () => {
+		activeStore = createInMemoryStore()
+		activeStore.seed(MOCK_USER_ID, "aelis.location")
+		const { app } = createAppWithEncryptor([createStubProvider("aelis.location")], MOCK_USER_ID)
+
+		const res = await app.request("/api/sources/aelis.location/credentials", {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: "not-json",
+		})
+
+		expect(res.status).toBe(400)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toBe("Invalid JSON")
+	})
+
+	test("returns 204 and persists credentials", async () => {
+		activeStore = createInMemoryStore()
+		activeStore.seed(MOCK_USER_ID, "aelis.location")
+		const { app } = createAppWithEncryptor([createStubProvider("aelis.location")], MOCK_USER_ID)
+
+		const res = await putCredentials(app, "aelis.location", { token: "secret" })
+
+		expect(res.status).toBe(204)
+	})
+
+	test("returns 400 when provider throws InvalidSourceCredentialsError", async () => {
+		activeStore = createInMemoryStore()
+		activeStore.seed(MOCK_USER_ID, "test.creds")
+		let callCount = 0
+		const provider: FeedSourceProvider = {
+			sourceId: "test.creds",
+			async feedSourceForUser(_userId: string, _config: unknown, _credentials: unknown) {
+				callCount++
+				if (callCount > 1) {
+					throw new InvalidSourceCredentialsError("test.creds", "invalid token format")
+				}
+				return createStubSource("test.creds")
+			},
+		}
+		const { app, sessionManager } = createAppWithEncryptor([provider], MOCK_USER_ID)
+
+		await sessionManager.getOrCreate(MOCK_USER_ID)
+
+		const res = await putCredentials(app, "test.creds", { token: "bad" })
+
+		expect(res.status).toBe(400)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toContain("invalid token format")
+	})
+
+	test("returns 503 when credential encryption is not configured", async () => {
+		activeStore = createInMemoryStore()
+		activeStore.seed(MOCK_USER_ID, "aelis.location")
+		const { app } = createApp([createStubProvider("aelis.location")], MOCK_USER_ID)
+
+		const res = await putCredentials(app, "aelis.location", { token: "x" })
+
+		expect(res.status).toBe(503)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toContain("not configured")
 	})
 })

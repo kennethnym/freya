@@ -8,5 +8,5 @@ export interface FeedSourceProvider {
 	readonly sourceId: string
 	/** Arktype schema for validating user-provided config. Omit if the source has no config. */
 	readonly configSchema?: ConfigSchema
-	feedSourceForUser(userId: string, config: unknown): Promise<FeedSource>
+	feedSourceForUser(userId: string, config: unknown, credentials: unknown): Promise<FeedSource>
 }

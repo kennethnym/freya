@@ -24,3 +24,26 @@ export class InvalidSourceConfigError extends Error {
 		this.sourceId = sourceId
 	}
 }
+
+/**
+ * Thrown by providers when credentials fail validation.
+ */
+export class InvalidSourceCredentialsError extends Error {
+	readonly sourceId: string
+
+	constructor(sourceId: string, summary: string) {
+		super(summary)
+		this.name = "InvalidSourceCredentialsError"
+		this.sourceId = sourceId
+	}
+}
+
+/**
+ * Thrown when credential storage is not configured (missing encryption key).
+ */
+export class CredentialStorageUnavailableError extends Error {
+	constructor() {
+		super("Credential storage is not configured")
+		this.name = "CredentialStorageUnavailableError"
+	}
+}

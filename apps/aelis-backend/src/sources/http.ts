@@ -6,7 +6,12 @@ import { createMiddleware } from "hono/factory"
 import type { AuthSessionMiddleware } from "../auth/session-middleware.ts"
 import type { UserSessionManager } from "../session/index.ts"
 
-import { InvalidSourceConfigError, SourceNotFoundError } from "./errors.ts"
+import {
+	CredentialStorageUnavailableError,
+	InvalidSourceConfigError,
+	InvalidSourceCredentialsError,
+	SourceNotFoundError,
+} from "./errors.ts"
 
 type Env = {
 	Variables: {
@@ -48,6 +53,12 @@ export function registerSourcesHttpHandlers(
 	app.get("/api/sources/:sourceId", inject, authSessionMiddleware, handleGetSource)
 	app.patch("/api/sources/:sourceId", inject, authSessionMiddleware, handleUpdateSource)
 	app.put("/api/sources/:sourceId", inject, authSessionMiddleware, handleReplaceSource)
+	app.put(
+		"/api/sources/:sourceId/credentials",
+		inject,
+		authSessionMiddleware,
+		handleUpdateCredentials,
+	)
 }
 
 async function handleGetSource(c: Context<Env>) {
@@ -165,6 +176,46 @@ async function handleReplaceSource(c: Context<Env>) {
 		}
 		if (err instanceof InvalidSourceConfigError) {
 			return c.json({ error: err.message }, 400)
+		}
+		throw err
+	}
+
+	return c.body(null, 204)
+}
+
+async function handleUpdateCredentials(c: Context<Env>) {
+	const sourceId = c.req.param("sourceId")
+	if (!sourceId) {
+		return c.body(null, 404)
+	}
+
+	const sessionManager = c.get("sessionManager")
+
+	const provider = sessionManager.getProvider(sourceId)
+	if (!provider) {
+		return c.json({ error: `Source "${sourceId}" not found` }, 404)
+	}
+
+	let body: unknown
+	try {
+		body = await c.req.json()
+	} catch {
+		return c.json({ error: "Invalid JSON" }, 400)
+	}
+
+	const user = c.get("user")!
+
+	try {
+		await sessionManager.updateSourceCredentials(user.id, sourceId, body)
+	} catch (err) {
+		if (err instanceof SourceNotFoundError) {
+			return c.json({ error: err.message }, 404)
+		}
+		if (err instanceof InvalidSourceCredentialsError) {
+			return c.json({ error: err.message }, 400)
+		}
+		if (err instanceof CredentialStorageUnavailableError) {
+			return c.json({ error: err.message }, 503)
 		}
 		throw err
 	}
