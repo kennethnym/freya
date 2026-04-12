@@ -21,7 +21,6 @@
 		"@aelis/source-location": "workspace:*",
 		"@aelis/source-tfl": "workspace:*",
 		"@aelis/source-weatherkit": "workspace:*",
-		"@openrouter/sdk": "^0.9.11",
 		"arktype": "^2.1.29",
 		"better-auth": "^1",
 		"drizzle-orm": "^0.45.1",

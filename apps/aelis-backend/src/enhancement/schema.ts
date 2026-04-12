@@ -15,8 +15,7 @@ export type SyntheticItem = typeof SyntheticItem.infer
 export type EnhancementResult = typeof EnhancementResult.infer
 
 /**
- * JSON Schema passed to OpenRouter's structured output.
- * OpenRouter doesn't support arktype, so this is maintained separately.
+ * JSON Schema passed to Cloudflare Workers AI for structured output.
  *
  * ⚠️  Must stay in sync with EnhancementResult above.
  * If you add/remove fields, update both schemas.
