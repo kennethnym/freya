@@ -11,7 +11,6 @@ import type { FeedSourceProvider } from "./feed-source-provider.ts"
 import {
 	CredentialStorageUnavailableError,
 	InvalidSourceConfigError,
-	InvalidSourceCredentialsError,
 	SourceNotFoundError,
 } from "../sources/errors.ts"
 import { sources } from "../sources/user-sources.ts"
@@ -180,7 +179,7 @@ export class UserSessionManager {
 	 * @throws {InvalidSourceConfigError} if config fails schema validation
 	 * @throws {CredentialStorageUnavailableError} if credentials are provided but no encryptor is configured
 	 */
-	async upsertSourceConfig(
+	async saveSourceConfig(
 		userId: string,
 		sourceId: string,
 		data: { enabled: boolean; config?: unknown; credentials?: unknown },
@@ -224,12 +223,12 @@ export class UserSessionManager {
 				session.removeSource(sourceId)
 			} else {
 				// Prefer the just-provided credentials over what was in the DB.
-				const credentials =
-					data.credentials !== undefined
-						? data.credentials
-						: existingRow?.credentials
-							? this.decryptCredentials(existingRow.credentials)
-							: null
+				let credentials: unknown = null
+				if (data.credentials !== undefined) {
+					credentials = data.credentials
+				} else if (existingRow?.credentials) {
+					credentials = this.decryptCredentials(existingRow.credentials)
+				}
 				const source = await provider.feedSourceForUser(userId, config, credentials)
 				if (session.hasSource(sourceId)) {
 					session.replaceSource(sourceId, source)

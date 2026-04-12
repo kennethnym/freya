@@ -828,7 +828,7 @@ describe("UserSessionManager.updateSourceCredentials", () => {
 	})
 })
 
-describe("UserSessionManager.upsertSourceConfig", () => {
+describe("UserSessionManager.saveSourceConfig", () => {
 	test("upserts config without credentials (existing behavior)", async () => {
 		setEnabledSources(["test"])
 		const factory = mock(async () => createStubSource("test"))
@@ -842,7 +842,7 @@ describe("UserSessionManager.upsertSourceConfig", () => {
 		// Create a session first so we can verify the source is refreshed
 		await manager.getOrCreate("user-1")
 
-		await manager.upsertSourceConfig("user-1", "test", {
+		await manager.saveSourceConfig("user-1", "test", {
 			enabled: true,
 			config: { key: "value" },
 		})
@@ -871,7 +871,7 @@ describe("UserSessionManager.upsertSourceConfig", () => {
 		await manager.getOrCreate("user-1")
 
 		const creds = { username: "alice", password: "s3cret" }
-		await manager.upsertSourceConfig("user-1", "test", {
+		await manager.saveSourceConfig("user-1", "test", {
 			enabled: true,
 			config: { serverUrl: "https://example.com" },
 			credentials: creds,
@@ -901,7 +901,7 @@ describe("UserSessionManager.upsertSourceConfig", () => {
 		expect(session.hasSource("test")).toBe(false)
 
 		// Set mockFindResult to undefined so find() returns a row (simulating the row was just created by upsertConfig)
-		await manager.upsertSourceConfig("user-1", "test", {
+		await manager.saveSourceConfig("user-1", "test", {
 			enabled: true,
 			config: {},
 			credentials: { token: "abc" },
@@ -922,7 +922,7 @@ describe("UserSessionManager.upsertSourceConfig", () => {
 		})
 
 		await expect(
-			manager.upsertSourceConfig("user-1", "test", {
+			manager.saveSourceConfig("user-1", "test", {
 				enabled: true,
 				config: {},
 				credentials: { token: "abc" },
@@ -938,7 +938,7 @@ describe("UserSessionManager.upsertSourceConfig", () => {
 		})
 
 		await expect(
-			manager.upsertSourceConfig("user-1", "unknown", {
+			manager.saveSourceConfig("user-1", "unknown", {
 				enabled: true,
 				config: {},
 			}),

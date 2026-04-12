@@ -79,11 +79,14 @@ export function SourceConfigPanel({ source, onUpdate }: SourceConfigPanelProps) 
 				(v) => typeof v === "string" && v.length > 0,
 			)
 
-			await replaceSource(source.id, {
+			const body: Parameters<typeof replaceSource>[1] = {
 				enabled,
 				config: getUserConfig(),
-				...(hasCredentials && source.perUserCredentials ? { credentials: credentialFields } : {}),
-			})
+			}
+			if (hasCredentials && source.perUserCredentials) {
+				body.credentials = credentialFields
+			}
+			await replaceSource(source.id, body)
 
 			// For non-per-user credentials (provider-level), still use the admin endpoint.
 			if (hasCredentials && !source.perUserCredentials) {

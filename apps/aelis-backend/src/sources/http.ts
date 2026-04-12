@@ -168,7 +168,7 @@ async function handleReplaceSource(c: Context<Env>) {
 	const user = c.get("user")!
 
 	try {
-		await sessionManager.upsertSourceConfig(user.id, sourceId, {
+		await sessionManager.saveSourceConfig(user.id, sourceId, {
 			enabled,
 			config,
 			credentials,
