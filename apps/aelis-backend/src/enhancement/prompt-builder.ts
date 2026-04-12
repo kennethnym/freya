@@ -36,8 +36,7 @@ export function buildPrompt(
 
 	for (const item of items) {
 		const hasUnfilledSlots =
-			item.slots &&
-			Object.values(item.slots).some((slot) => slot.content === null)
+			item.slots && Object.values(item.slots).some((slot) => slot.content === null)
 
 		if (hasUnfilledSlots) {
 			enhanceItems.push({
@@ -79,9 +78,7 @@ export function buildPrompt(
  */
 export function hasUnfilledSlots(items: FeedItem[]): boolean {
 	return items.some(
-		(item) =>
-			item.slots &&
-			Object.values(item.slots).some((slot) => slot.content === null),
+		(item) => item.slots && Object.values(item.slots).some((slot) => slot.content === null),
 	)
 }
 
@@ -129,7 +126,20 @@ function extractCalendarEntry(item: FeedItem): CalendarEntry | null {
 }
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const
+const MONTHS = [
+	"Jan",
+	"Feb",
+	"Mar",
+	"Apr",
+	"May",
+	"Jun",
+	"Jul",
+	"Aug",
+	"Sep",
+	"Oct",
+	"Nov",
+	"Dec",
+] as const
 
 function pad2(n: number): string {
 	return n.toString().padStart(2, "0")
@@ -144,7 +154,11 @@ function formatDayShort(date: Date): string {
 }
 
 function formatDayLabel(date: Date, currentTime: Date): string {
-	const currentDay = Date.UTC(currentTime.getUTCFullYear(), currentTime.getUTCMonth(), currentTime.getUTCDate())
+	const currentDay = Date.UTC(
+		currentTime.getUTCFullYear(),
+		currentTime.getUTCMonth(),
+		currentTime.getUTCDate(),
+	)
 	const targetDay = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
 	const diffDays = Math.round((targetDay - currentDay) / (1000 * 60 * 60 * 24))
 

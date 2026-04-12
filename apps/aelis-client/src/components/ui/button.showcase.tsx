@@ -1,8 +1,8 @@
 import { View } from "react-native"
 import tw from "twrnc"
 
-import { Button } from "./button"
 import { type Showcase, Section } from "../showcase"
+import { Button } from "./button"
 
 function ButtonShowcase() {
 	return (
@@ -11,11 +11,7 @@ function ButtonShowcase() {
 				<Button style={tw`self-start`} label="Press me" />
 			</Section>
 			<Section title="Leading icon">
-				<Button
-					style={tw`self-start`}
-					label="Add item"
-					leadingIcon={<Button.Icon name="plus" />}
-				/>
+				<Button style={tw`self-start`} label="Add item" leadingIcon={<Button.Icon name="plus" />} />
 			</Section>
 			<Section title="Trailing icon">
 				<Button

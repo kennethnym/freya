@@ -24,16 +24,16 @@ The backend uses a raw `pg` Pool for Better Auth and has no ORM. We need a persi
 
 A `user_sources` table stores per-user source state:
 
-| Column       | Type                     | Description                                                  |
-| ------------ | ------------------------ | ------------------------------------------------------------ |
-| `id`         | `uuid` PK               | Row ID                                                       |
-| `user_id`    | `text` FK → `user.id`   | Owner                                                        |
-| `source_id`  | `text`                   | Source identifier (e.g., `aelis.tfl`, `aelis.weather`)       |
-| `enabled`    | `boolean`                | Whether this source is active in the user's feed             |
-| `config`     | `jsonb`                  | Source-specific configuration (validated by source at runtime)|
-| `credentials`| `bytea`                  | Encrypted OAuth tokens / secrets (AES-256-GCM)               |
-| `created_at` | `timestamp with tz`      | Row creation time                                            |
-| `updated_at` | `timestamp with tz`      | Last modification time                                       |
+| Column        | Type                  | Description                                                    |
+| ------------- | --------------------- | -------------------------------------------------------------- |
+| `id`          | `uuid` PK             | Row ID                                                         |
+| `user_id`     | `text` FK → `user.id` | Owner                                                          |
+| `source_id`   | `text`                | Source identifier (e.g., `aelis.tfl`, `aelis.weather`)         |
+| `enabled`     | `boolean`             | Whether this source is active in the user's feed               |
+| `config`      | `jsonb`               | Source-specific configuration (validated by source at runtime) |
+| `credentials` | `bytea`               | Encrypted OAuth tokens / secrets (AES-256-GCM)                 |
+| `created_at`  | `timestamp with tz`   | Row creation time                                              |
+| `updated_at`  | `timestamp with tz`   | Last modification time                                         |
 
 - Unique constraint on `(user_id, source_id)` — one config row per source per user.
 - `config` is a generic `jsonb` column. Each source package exports an arktype schema; the backend provider validates the JSON at source construction time.
@@ -50,11 +50,11 @@ A `user_sources` table stores per-user source state:
 
 When a new user is created, seed `user_sources` rows for default sources:
 
-| Source             | Default config                                                  |
-| ------------------ | --------------------------------------------------------------- |
-| `aelis.location`   | `{}`                                                            |
-| `aelis.weather`    | `{ "units": "metric", "hourlyLimit": 12, "dailyLimit": 7 }`    |
-| `aelis.tfl`        | `{ "lines": <all default lines> }`                              |
+| Source           | Default config                                              |
+| ---------------- | ----------------------------------------------------------- |
+| `aelis.location` | `{}`                                                        |
+| `aelis.weather`  | `{ "units": "metric", "hourlyLimit": 12, "dailyLimit": 7 }` |
+| `aelis.tfl`      | `{ "lines": <all default lines> }`                          |
 
 - Seeding happens via a Better Auth `after` hook on user creation, or via application-level logic after signup.
 - Sources requiring credentials (Google Calendar, CalDAV) are **not** enabled by default — they require the user to connect an account first.
@@ -67,29 +67,35 @@ Each provider receives the Drizzle DB instance and queries `user_sources` intern
 
 ```typescript
 class TflSourceProvider implements FeedSourceProvider {
-  constructor(private db: DrizzleDb, private apiKey: string) {}
+	constructor(
+		private db: DrizzleDb,
+		private apiKey: string,
+	) {}
 
-  async feedSourceForUser(userId: string): Promise<TflSource> {
-    const row = await this.db.select()
-      .from(userSources)
-      .where(and(
-        eq(userSources.userId, userId),
-        eq(userSources.sourceId, "aelis.tfl"),
-        eq(userSources.enabled, true),
-      ))
-      .limit(1)
+	async feedSourceForUser(userId: string): Promise<TflSource> {
+		const row = await this.db
+			.select()
+			.from(userSources)
+			.where(
+				and(
+					eq(userSources.userId, userId),
+					eq(userSources.sourceId, "aelis.tfl"),
+					eq(userSources.enabled, true),
+				),
+			)
+			.limit(1)
 
-    if (!row[0]) {
-      throw new SourceDisabledError("aelis.tfl", userId)
-    }
+		if (!row[0]) {
+			throw new SourceDisabledError("aelis.tfl", userId)
+		}
 
-    const config = tflSourceConfig(row[0].config ?? {})
-    if (config instanceof type.errors) {
-      throw new Error(`Invalid TFL config for user ${userId}: ${config.summary}`)
-    }
+		const config = tflSourceConfig(row[0].config ?? {})
+		if (config instanceof type.errors) {
+			throw new Error(`Invalid TFL config for user ${userId}: ${config.summary}`)
+		}
 
-    return new TflSource({ ...config, apiKey: this.apiKey })
-  }
+		return new TflSource({ ...config, apiKey: this.apiKey })
+	}
 }
 ```
 
@@ -210,16 +216,19 @@ _`feed-source-provider.ts`, `user-session-manager.ts`, `engine/http.ts`, and `lo
 ## Dependencies
 
 **Add:**
+
 - `drizzle-orm`
 - `drizzle-kit` (dev)
 
 **Remove:**
+
 - `pg`
 - `@types/pg` (dev)
 
 ## Environment Variables
 
 **Add to `.env.example`:**
+
 - `CREDENTIALS_ENCRYPTION_KEY` — 32-byte hex or base64 key for AES-256-GCM
 
 ## Open Questions (Deferred)

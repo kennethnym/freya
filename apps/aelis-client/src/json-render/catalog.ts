@@ -30,7 +30,8 @@ export const catalog = defineCatalog(schema, {
 				style: z.string().nullable(),
 			}),
 			slots: ["default"],
-			description: "Bordered card container for feed content. The style prop accepts a twrnc class string.",
+			description:
+				"Bordered card container for feed content. The style prop accepts a twrnc class string.",
 			example: { style: "p-4 gap-2" },
 		},
 		SansSerifText: {

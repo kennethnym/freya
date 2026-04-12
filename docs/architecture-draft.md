@@ -131,19 +131,19 @@ Feed items carry an optional `ui` field containing a json-render tree, and an op
 
 ```typescript
 interface FeedItem<TType, TData> {
-  id: string
-  type: TType
-  timestamp: Date
-  data: TData
-  ui?: JsonRenderNode
-  slots?: Record<string, Slot>
+	id: string
+	type: TType
+	timestamp: Date
+	data: TData
+	ui?: JsonRenderNode
+	slots?: Record<string, Slot>
 }
 
 interface Slot {
-  /** Tells the LLM what this slot wants — the source writes this */
-  description: string
-  /** LLM-filled text content, null until enhanced */
-  content: string | null
+	/** Tells the LLM what this slot wants — the source writes this */
+	description: string
+	/** LLM-filled text content, null until enhanced */
+	content: string | null
 }
 ```
 
@@ -238,28 +238,23 @@ The user never waits for the LLM. They see the feed instantly with the previous 
 The harness serializes items with their unfilled slots into a single prompt. Items without slots are excluded. The LLM sees everything at once and fills whatever slots are relevant.
 
 ```typescript
-function buildHarnessInput(
-  items: FeedItem[],
-  context: AgentContext,
-): HarnessInput {
-  const itemsWithSlots = items
-    .filter(item => item.slots && Object.keys(item.slots).length > 0)
-    .map(item => ({
-      id: item.id,
-      type: item.type,
-      data: item.data,
-      slots: Object.fromEntries(
-        Object.entries(item.slots!).map(
-          ([name, slot]) => [name, slot.description]
-        )
-      ),
-    }))
+function buildHarnessInput(items: FeedItem[], context: AgentContext): HarnessInput {
+	const itemsWithSlots = items
+		.filter((item) => item.slots && Object.keys(item.slots).length > 0)
+		.map((item) => ({
+			id: item.id,
+			type: item.type,
+			data: item.data,
+			slots: Object.fromEntries(
+				Object.entries(item.slots!).map(([name, slot]) => [name, slot.description]),
+			),
+		}))
 
-  return {
-    items: itemsWithSlots,
-    userMemory: context.preferences,
-    currentTime: new Date().toISOString(),
-  }
+	return {
+		items: itemsWithSlots,
+		userMemory: context.preferences,
+		currentTime: new Date().toISOString(),
+	}
 }
 ```
 
@@ -267,29 +262,33 @@ The LLM sees:
 
 ```json
 {
-  "items": [
-    {
-      "id": "weather-current-123",
-      "type": "weather-current",
-      "data": { "temperature": 18, "condition": "cloudy" },
-      "slots": {
-        "insight": "A short contextual insight about the current weather and how it affects the user's day",
-        "cross-source": "Connection between weather and the user's calendar events or plans"
-      }
-    },
-    {
-      "id": "calendar-event-456",
-      "type": "calendar-event",
-      "data": { "title": "Dinner at The Ivy", "startTime": "19:00", "location": "The Ivy, West St" },
-      "slots": {
-        "context": "Background on this event, attendees, or previous meetings with these people",
-        "logistics": "Travel time, parking, directions to the venue",
-        "weather": "Weather conditions relevant to this event's time and location"
-      }
-    }
-  ],
-  "userMemory": { "commute": "victoria-line", "preference.walking_distance": "1 mile" },
-  "currentTime": "2025-02-26T14:30:00Z"
+	"items": [
+		{
+			"id": "weather-current-123",
+			"type": "weather-current",
+			"data": { "temperature": 18, "condition": "cloudy" },
+			"slots": {
+				"insight": "A short contextual insight about the current weather and how it affects the user's day",
+				"cross-source": "Connection between weather and the user's calendar events or plans"
+			}
+		},
+		{
+			"id": "calendar-event-456",
+			"type": "calendar-event",
+			"data": {
+				"title": "Dinner at The Ivy",
+				"startTime": "19:00",
+				"location": "The Ivy, West St"
+			},
+			"slots": {
+				"context": "Background on this event, attendees, or previous meetings with these people",
+				"logistics": "Travel time, parking, directions to the venue",
+				"weather": "Weather conditions relevant to this event's time and location"
+			}
+		}
+	],
+	"userMemory": { "commute": "victoria-line", "preference.walking_distance": "1 mile" },
+	"currentTime": "2025-02-26T14:30:00Z"
 }
 ```
 
@@ -299,27 +298,30 @@ A flat map of item ID → slot name → text content. Slots left null are unfill
 
 ```json
 {
-  "slotFills": {
-    "weather-current-123": {
-      "insight": "Rain after 3pm — grab a jacket before your walk",
-      "cross-source": "Should be dry by 7pm for your dinner at The Ivy"
-    },
-    "calendar-event-456": {
-      "context": null,
-      "logistics": "20-minute walk from home — leave by 18:40",
-      "weather": "Rain clears by evening, you'll be fine"
-    }
-  },
-  "syntheticItems": [
-    {
-      "id": "briefing-morning",
-      "type": "briefing",
-      "data": {},
-      "ui": { "component": "Text", "props": { "text": "Light afternoon — just your dinner at 7. Rain clears by then." } }
-    }
-  ],
-  "suppress": [],
-  "rankingHints": {}
+	"slotFills": {
+		"weather-current-123": {
+			"insight": "Rain after 3pm — grab a jacket before your walk",
+			"cross-source": "Should be dry by 7pm for your dinner at The Ivy"
+		},
+		"calendar-event-456": {
+			"context": null,
+			"logistics": "20-minute walk from home — leave by 18:40",
+			"weather": "Rain clears by evening, you'll be fine"
+		}
+	},
+	"syntheticItems": [
+		{
+			"id": "briefing-morning",
+			"type": "briefing",
+			"data": {},
+			"ui": {
+				"component": "Text",
+				"props": { "text": "Light afternoon — just your dinner at 7. Rain clears by then." }
+			}
+		}
+	],
+	"suppress": [],
+	"rankingHints": {}
 }
 ```
 
@@ -329,42 +331,41 @@ One per user, living in the `FeedEngineManager` on the backend:
 
 ```typescript
 class EnhancementManager {
-  private cache: EnhancementResult | null = null
-  private lastInputHash: string | null = null
-  private running = false
+	private cache: EnhancementResult | null = null
+	private lastInputHash: string | null = null
+	private running = false
 
-  async enhance(
-    items: FeedItem[],
-    context: AgentContext,
-  ): Promise<EnhancementResult> {
-    const hash = computeHash(items, context)
+	async enhance(items: FeedItem[], context: AgentContext): Promise<EnhancementResult> {
+		const hash = computeHash(items, context)
 
-    if (hash === this.lastInputHash && this.cache) {
-      return this.cache
-    }
+		if (hash === this.lastInputHash && this.cache) {
+			return this.cache
+		}
 
-    if (this.running) {
-      return this.cache ?? emptyResult()
-    }
+		if (this.running) {
+			return this.cache ?? emptyResult()
+		}
 
-    this.running = true
-    this.runHarness(items, context)
-      .then(result => {
-        this.cache = result
-        this.lastInputHash = hash
-        this.notifySubscribers(result)
-      })
-      .finally(() => { this.running = false })
+		this.running = true
+		this.runHarness(items, context)
+			.then((result) => {
+				this.cache = result
+				this.lastInputHash = hash
+				this.notifySubscribers(result)
+			})
+			.finally(() => {
+				this.running = false
+			})
 
-    return this.cache ?? emptyResult()
-  }
+		return this.cache ?? emptyResult()
+	}
 }
 
 interface EnhancementResult {
-  slotFills: Record<string, Record<string, string | null>>
-  syntheticItems: FeedItem[]
-  suppress: string[]
-  rankingHints: Record<string, number>
+	slotFills: Record<string, Record<string, string | null>>
+	syntheticItems: FeedItem[]
+	suppress: string[]
+	rankingHints: Record<string, number>
 }
 ```
 
@@ -373,23 +374,20 @@ interface EnhancementResult {
 After the harness runs, the engine merges slot fills into items:
 
 ```typescript
-function mergeEnhancement(
-  items: FeedItem[],
-  result: EnhancementResult,
-): FeedItem[] {
-  return items.map(item => {
-    const fills = result.slotFills[item.id]
-    if (!fills || !item.slots) return item
+function mergeEnhancement(items: FeedItem[], result: EnhancementResult): FeedItem[] {
+	return items.map((item) => {
+		const fills = result.slotFills[item.id]
+		if (!fills || !item.slots) return item
 
-    const mergedSlots = { ...item.slots }
-    for (const [name, content] of Object.entries(fills)) {
-      if (name in mergedSlots && content !== null) {
-        mergedSlots[name] = { ...mergedSlots[name], content }
-      }
-    }
+		const mergedSlots = { ...item.slots }
+		for (const [name, content] of Object.entries(fills)) {
+			if (name in mergedSlots && content !== null) {
+				mergedSlots[name] = { ...mergedSlots[name], content }
+			}
+		}
 
-    return { ...item, slots: mergedSlots }
-  })
+		return { ...item, slots: mergedSlots }
+	})
 }
 ```
 

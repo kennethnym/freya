@@ -1,8 +1,8 @@
 import { View } from "react-native"
 import tw from "twrnc"
 
-import { MonospaceText } from "./monospace-text"
 import { type Showcase, Section } from "../showcase"
+import { MonospaceText } from "./monospace-text"
 
 function MonospaceTextShowcase() {
 	return (

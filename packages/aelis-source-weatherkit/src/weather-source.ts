@@ -3,7 +3,12 @@ import type { ActionDefinition, ContextEntry, FeedItemSignals, FeedSource } from
 import { Context, TimeRelevance, UnknownActionError } from "@aelis/core"
 import { LocationKey } from "@aelis/source-location"
 
-import { WeatherFeedItemType, type DailyWeatherEntry, type HourlyWeatherEntry, type WeatherFeedItem } from "./feed-items"
+import {
+	WeatherFeedItemType,
+	type DailyWeatherEntry,
+	type HourlyWeatherEntry,
+	type WeatherFeedItem,
+} from "./feed-items"
 import currentWeatherInsightPrompt from "./prompts/current-weather-insight.txt"
 import { WeatherKey, type Weather } from "./weather-context"
 import {

@@ -39,14 +39,14 @@ Source IDs use reverse domain notation. Built-in sources use `aelis.<name>`. Thi
 
 Action IDs are descriptive verb-noun pairs in kebab-case, scoped to their source. The globally unique form is `<sourceId>/<actionId>`.
 
-| Source ID       | Action IDs                                                     |
-| --------------- | -------------------------------------------------------------- |
+| Source ID        | Action IDs                                                     |
+| ---------------- | -------------------------------------------------------------- |
 | `aelis.location` | `update-location` (migrated from `pushLocation()`)             |
 | `aelis.tfl`      | `set-lines-of-interest` (migrated from `setLinesOfInterest()`) |
 | `aelis.weather`  | _(none)_                                                       |
-| `com.spotify`   | `play-track`, `pause-playback`, `skip-track`, `like-track`     |
+| `com.spotify`    | `play-track`, `pause-playback`, `skip-track`, `like-track`     |
 | `aelis.calendar` | `rsvp`, `create-event`                                         |
-| `com.todoist`   | `complete-task`, `snooze-task`                                 |
+| `com.todoist`    | `complete-task`, `snooze-task`                                 |
 
 This means existing source packages need their `id` updated (e.g., `"location"` → `"aelis.location"`).
 
@@ -241,8 +241,16 @@ class SpotifySource implements FeedSource<SpotifyFeedItem> {
 							type: "View",
 							className: "flex-1",
 							children: [
-								{ type: "Text", className: "font-semibold text-black dark:text-white", text: track.name },
-								{ type: "Text", className: "text-sm text-gray-500 dark:text-gray-400", text: track.artist },
+								{
+									type: "Text",
+									className: "font-semibold text-black dark:text-white",
+									text: track.name,
+								},
+								{
+									type: "Text",
+									className: "text-sm text-gray-500 dark:text-gray-400",
+									text: track.artist,
+								},
 							],
 						},
 					],
@@ -261,8 +269,8 @@ class SpotifySource implements FeedSource<SpotifyFeedItem> {
 4. `FeedSource.listActions()` is a required method returning `Record<string, ActionDefinition>` (empty record if no actions)
 5. `FeedSource.executeAction()` is a required method (no-op for sources without actions)
 6. `FeedItem.actions` is an optional readonly array of `ItemAction`
-6b. `FeedItem.ui` is an optional json-render tree describing server-driven UI
-6c. `FeedItem.slots` is an optional record of named LLM-fillable slots
+   6b. `FeedItem.ui` is an optional json-render tree describing server-driven UI
+   6c. `FeedItem.slots` is an optional record of named LLM-fillable slots
 7. `FeedEngine.executeAction()` routes to correct source, returns `ActionResult`
 8. `FeedEngine.listActions()` aggregates actions from all sources
 9. Existing tests pass unchanged (all changes are additive)

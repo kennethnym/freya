@@ -8,5 +8,5 @@
 		"ignoreCase": true,
 		"newlinesBetween": true
 	},
-	"ignorePatterns": [".claude", "fixtures"]
+	"ignorePatterns": [".claude", ".ona", "drizzle", "fixtures"]
 }

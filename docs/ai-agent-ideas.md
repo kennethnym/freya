@@ -41,7 +41,7 @@ Sources → Source Graph → FeedEngine
 
 ### One harness, not many agents
 
-The "agents" in this doc describe *behaviors*, not separate running processes. A human PA is one person — they don't have a "calendar agent" and a "follow-up agent" in their head. They look at your whole situation and act on whatever matters.
+The "agents" in this doc describe _behaviors_, not separate running processes. A human PA is one person — they don't have a "calendar agent" and a "follow-up agent" in their head. They look at your whole situation and act on whatever matters.
 
 AELIS works the same way. One LLM harness receives all feed items, all context, all user memory, and all available tools. It returns a single `FeedEnhancement`. Every behavior (preparation, follow-up, anomaly detection, tone adjustment, cross-source reasoning) is an instruction in the system prompt, not a separate agent.
 
@@ -50,20 +50,21 @@ The advantage: the LLM sees everything at once. It doesn't need agent-to-agent c
 The only separate LLM call is the **Query Agent** — because it's user-initiated and synchronous. But it uses the same system prompt and context. It's the same "person," just responding to a question instead of proactively enhancing the feed.
 
 Everything else is either:
+
 - **Rule-based post-processors** — pure functions, no LLM, run on every refresh
 - **The single LLM harness** — runs periodically, produces cached `FeedEnhancement`
 - **Background jobs** — daily summary compression, weekly pattern discovery
 
 ### Component categories
 
-| Component | What it is | Examples |
-|---|---|---|
-| **FeedSource nodes** | Graph participants that produce items | Briefing, Preparation, Anomaly Detection, Follow-up, Social Awareness |
-| **Rule-based post-processors** | Pure functions that rerank/filter/group | TimeOfDay, CalendarGrouping, Deduplication, UserAffinity |
-| **LLM enhancement harness** | Single background LLM call, cached output | Card rewriting, cross-source synthesis, tone, narrative arcs |
-| **Query interface** | Synchronous LLM call, user-initiated | Conversational Q&A, web search, delegation, actions |
-| **Background jobs** | Periodic data processing | Daily summary compression, weekly pattern discovery |
-| **Persistence** | Stored state that feeds into everything | Memory store, affinity model, conversation history, feed snapshots |
+| Component                      | What it is                                | Examples                                                              |
+| ------------------------------ | ----------------------------------------- | --------------------------------------------------------------------- |
+| **FeedSource nodes**           | Graph participants that produce items     | Briefing, Preparation, Anomaly Detection, Follow-up, Social Awareness |
+| **Rule-based post-processors** | Pure functions that rerank/filter/group   | TimeOfDay, CalendarGrouping, Deduplication, UserAffinity              |
+| **LLM enhancement harness**    | Single background LLM call, cached output | Card rewriting, cross-source synthesis, tone, narrative arcs          |
+| **Query interface**            | Synchronous LLM call, user-initiated      | Conversational Q&A, web search, delegation, actions                   |
+| **Background jobs**            | Periodic data processing                  | Daily summary compression, weekly pattern discovery                   |
+| **Persistence**                | Stored state that feeds into everything   | Memory store, affinity model, conversation history, feed snapshots    |
 
 ### AgentContext
 
@@ -71,32 +72,32 @@ The LLM harness and post-processors need a unified view of the user's world: cur
 
 `AgentContext` is **not** on the engine. The engine's job is source orchestration — running sources in dependency order, accumulating context, collecting items. It shouldn't know about user preferences, conversation history, or feed snapshots. Those are separate concerns.
 
-`AgentContext` is a separate object that *reads from* the engine and composes its output with other data stores:
+`AgentContext` is a separate object that _reads from_ the engine and composes its output with other data stores:
 
 ```typescript
 interface AgentContext {
-  /** Current accumulated context from all sources */
-  context: Context
+	/** Current accumulated context from all sources */
+	context: Context
 
-  /** Recent feed items (last N refreshes or time window) */
-  recentItems: FeedItem[]
+	/** Recent feed items (last N refreshes or time window) */
+	recentItems: FeedItem[]
 
-  /** Query items from a specific source */
-  itemsFrom(sourceId: string): FeedItem[]
+	/** Query items from a specific source */
+	itemsFrom(sourceId: string): FeedItem[]
 
-  /** User preference and memory store */
-  preferences: UserPreferences
+	/** User preference and memory store */
+	preferences: UserPreferences
 
-  /** Conversation history */
-  conversationHistory: ConversationEntry[]
+	/** Conversation history */
+	conversationHistory: ConversationEntry[]
 }
 
 // Constructed by composing the engine with persistence layers
 const agentContext = new AgentContext({
-  engine,            // reads current context + items
-  memoryStore,       // reads/writes user preferences, discovered patterns
-  snapshotStore,     // reads feed history for pattern discovery
-  conversationStore, // reads conversation history
+	engine, // reads current context + items
+	memoryStore, // reads/writes user preferences, discovered patterns
+	snapshotStore, // reads feed history for pattern discovery
+	conversationStore, // reads conversation history
 })
 ```
 
@@ -135,20 +136,20 @@ The enhancement output:
 
 ```typescript
 interface FeedEnhancement {
-  /** New items to inject (briefings, nudges, suggestions) */
-  syntheticItems: FeedItem[]
+	/** New items to inject (briefings, nudges, suggestions) */
+	syntheticItems: FeedItem[]
 
-  /** Annotations attached to existing items, keyed by item ID */
-  annotations: Record<string, string>
+	/** Annotations attached to existing items, keyed by item ID */
+	annotations: Record<string, string>
 
-  /** Items to group together with a summary card */
-  groups: Array<{ itemIds: string[], summary: string }>
+	/** Items to group together with a summary card */
+	groups: Array<{ itemIds: string[]; summary: string }>
 
-  /** Item IDs to suppress or deprioritize */
-  suppress: string[]
+	/** Item IDs to suppress or deprioritize */
+	suppress: string[]
 
-  /** Ranking hints: item ID → relative importance (0-1) */
-  rankingHints: Record<string, number>
+	/** Ranking hints: item ID → relative importance (0-1) */
+	rankingHints: Record<string, number>
 }
 ```
 
@@ -185,6 +186,7 @@ These run on every refresh. Fast, deterministic, and cover most of the ranking q
 **Anomaly detection.** Compare event start times against the user's historical distribution. A 6am meeting when the user never has meetings before 9am is a statistical outlier — flag it.
 
 **User affinity scoring.** Track implicit signals per source type per time-of-day bucket:
+
 - Dismissals: user swipes away weather cards → decay affinity for weather
 - Taps: user taps calendar items frequently → boost affinity for calendar
 - Dwell time: user reads TfL alerts carefully → boost
@@ -193,9 +195,9 @@ No LLM needed. A simple decay/boost model:
 
 ```typescript
 interface UserAffinityModel {
-  affinities: Record<string, Record<TimeBucket, number>>
-  dismissalDecay: number
-  tapBoost: number
+	affinities: Record<string, Record<TimeBucket, number>>
+	dismissalDecay: number
+	tapBoost: number
 }
 ```
 
@@ -309,7 +311,7 @@ There are three layers:
 
 None of these have `if` statements. The LLM reads the feed, reads the user's memory, and decides what to say. Add a new source (Spotify, email, tasks) and the LLM automatically incorporates it — no new behavior code needed.
 
-**Infrastructure (plumbing needed, but logic is emergent).** These need tables, APIs, and background jobs. But the *decision-making* — what to extract, when to surface, how to phrase — is all LLM.
+**Infrastructure (plumbing needed, but logic is emergent).** These need tables, APIs, and background jobs. But the _decision-making_ — what to extract, when to surface, how to phrase — is all LLM.
 
 - Gentle Follow-up — needs: extraction pipeline after each conversation turn, `commitments` table. The LLM decides what counts as a commitment and when to remind.
 - Memory — needs: `memories` table, read/write API. The LLM decides what to remember and how to use it.
@@ -321,7 +323,7 @@ None of these have `if` statements. The LLM reads the feed, reads the user's mem
 - Delegation — needs: confirmation flow, write-back infrastructure. The LLM decides what the user wants done.
 - Financial Awareness — needs: `financial_events` table, email extraction. The LLM decides what financial events matter.
 
-**Hardcoded rules (fast path, must be deterministic).** These run on every refresh in <10ms. They *should* be rules because they need to be fast and predictable.
+**Hardcoded rules (fast path, must be deterministic).** These run on every refresh in <10ms. They _should_ be rules because they need to be fast and predictable.
 
 - User affinity scoring — decay/boost math on tap/dismiss events
 - Deduplication — title + time matching across sources
@@ -415,39 +417,38 @@ One per user, living in the `FeedEngineManager` on the backend:
 
 ```typescript
 class EnhancementManager {
-  private cache: FeedEnhancement | null = null
-  private lastInputHash: string | null = null
-  private running = false
+	private cache: FeedEnhancement | null = null
+	private lastInputHash: string | null = null
+	private running = false
 
-  async enhance(
-    items: FeedItem[],
-    context: AgentContext,
-  ): Promise<FeedEnhancement> {
-    const hash = computeHash(items, context)
+	async enhance(items: FeedItem[], context: AgentContext): Promise<FeedEnhancement> {
+		const hash = computeHash(items, context)
 
-    // Nothing changed — return cache
-    if (hash === this.lastInputHash && this.cache) {
-      return this.cache
-    }
+		// Nothing changed — return cache
+		if (hash === this.lastInputHash && this.cache) {
+			return this.cache
+		}
 
-    // Already running — return stale cache
-    if (this.running) {
-      return this.cache ?? emptyEnhancement()
-    }
+		// Already running — return stale cache
+		if (this.running) {
+			return this.cache ?? emptyEnhancement()
+		}
 
-    // Run in background, update cache when done
-    this.running = true
-    this.runHarness(items, context, hash)
-      .then(enhancement => {
-        this.cache = enhancement
-        this.lastInputHash = hash
-        this.notifySubscribers(enhancement)
-      })
-      .finally(() => { this.running = false })
+		// Run in background, update cache when done
+		this.running = true
+		this.runHarness(items, context, hash)
+			.then((enhancement) => {
+				this.cache = enhancement
+				this.lastInputHash = hash
+				this.notifySubscribers(enhancement)
+			})
+			.finally(() => {
+				this.running = false
+			})
 
-    // Return stale cache immediately
-    return this.cache ?? emptyEnhancement()
-  }
+		// Return stale cache immediately
+		return this.cache ?? emptyEnhancement()
+	}
 }
 ```
 
@@ -522,7 +523,7 @@ These are `FeedSource` nodes that depend on calendar, tasks, weather, and other 
 
 #### Anticipatory Logistics
 
-Works backward from events to tell you what you need to *do* to be ready.
+Works backward from events to tell you what you need to _do_ to be ready.
 
 - Flight at 6am → "You need to leave by 4am, which means waking at 3:30. I'd suggest packing tonight."
 - Dinner at a new restaurant → "It's a 25-minute walk or 8-minute Uber. Street parking is difficult — there's a car park on the next street."
@@ -579,7 +580,7 @@ Tracks loose ends — things you said but never wrote down as tasks.
 - "You told James you'd review his PR — it's been 3 days"
 - "You promised to call your mom this weekend"
 
-The key difference from task tracking: this catches things that fell through the cracks *because* they were never formalized.
+The key difference from task tracking: this catches things that fell through the cracks _because_ they were never formalized.
 
 **How intent extraction works:**
 
@@ -614,12 +615,14 @@ Long-term memory of interactions and preferences. Feeds into every other agent.
 A persistent profile that builds over time. Not an agent itself — a system that makes every other agent smarter.
 
 Learns from:
+
 - Explicit statements: "I prefer morning meetings"
 - Implicit behavior: user always dismisses evening suggestions
 - Feedback: user rates suggestions as helpful/not
 - Cross-source patterns: always books aisle seats, always picks the cheaper option
 
 Used by:
+
 - Proactive Agent suggests restaurants the user would actually like
 - Delegation Agent books the right kind of hotel room
 - Summary Agent uses the user's preferred level of detail
@@ -648,27 +651,30 @@ Passive observation. The patterns aren't hardcoded — the LLM discovers them fr
 
 ```typescript
 interface DailySummary {
-  date: string
-  feedCheckTimes: string[]           // when the user opened the feed
-  itemTypeCounts: Record<string, number>  // how many of each type appeared
-  interactions: Array<{              // what the user tapped/dismissed
-    itemType: string
-    action: "tap" | "dismiss" | "dwell"
-    time: string
-  }>
-  locations: Array<{                 // where the user was throughout the day
-    lat: number
-    lng: number
-    time: string
-  }>
-  calendarSummary: Array<{           // what events happened
-    title: string
-    startTime: string
-    endTime: string
-    location?: string
-    attendees?: string[]
-  }>
-  weatherConditions: string[]        // conditions seen throughout the day
+	date: string
+	feedCheckTimes: string[] // when the user opened the feed
+	itemTypeCounts: Record<string, number> // how many of each type appeared
+	interactions: Array<{
+		// what the user tapped/dismissed
+		itemType: string
+		action: "tap" | "dismiss" | "dwell"
+		time: string
+	}>
+	locations: Array<{
+		// where the user was throughout the day
+		lat: number
+		lng: number
+		time: string
+	}>
+	calendarSummary: Array<{
+		// what events happened
+		title: string
+		startTime: string
+		endTime: string
+		location?: string
+		attendees?: string[]
+	}>
+	weatherConditions: string[] // conditions seen throughout the day
 }
 ```
 
@@ -678,20 +684,20 @@ interface DailySummary {
 
 ```typescript
 interface DiscoveredPattern {
-  /** What the pattern is, in natural language */
-  description: string
-  /** How confident (0-1) */
-  confidence: number
-  /** When this pattern is relevant */
-  relevance: {
-    daysOfWeek?: number[]
-    timeRange?: { start: string, end: string }
-    conditions?: string[]
-  }
-  /** How this should affect the feed */
-  feedImplication: string
-  /** Suggested card to surface when pattern is relevant */
-  suggestedAction?: string
+	/** What the pattern is, in natural language */
+	description: string
+	/** How confident (0-1) */
+	confidence: number
+	/** When this pattern is relevant */
+	relevance: {
+		daysOfWeek?: number[]
+		timeRange?: { start: string; end: string }
+		conditions?: string[]
+	}
+	/** How this should affect the feed */
+	feedImplication: string
+	/** Suggested card to surface when pattern is relevant */
+	suggestedAction?: string
 }
 ```
 
@@ -717,9 +723,9 @@ Maintains awareness of relationships and surfaces timely nudges.
 
 Needs: contacts with birthday/anniversary data, calendar history for meeting frequency, email/message signals, optionally social media.
 
-This is what makes an assistant feel like it *cares*. Most tools are transactional. This one remembers the people in your life.
+This is what makes an assistant feel like it _cares_. Most tools are transactional. This one remembers the people in your life.
 
-Beyond frequency, the assistant can understand relationship *dynamics*:
+Beyond frequency, the assistant can understand relationship _dynamics_:
 
 - "You and Sarah always have productive meetings. You and Alex tend to go off-track — maybe set a tighter agenda."
 - "You've cancelled on Tom three times — he might be feeling deprioritized."
@@ -785,7 +791,7 @@ This is where the source graph pays off. All the data is already there — the a
 
 #### Tone & Timing
 
-Controls *when* and *how* information is delivered. The difference between useful and annoying.
+Controls _when_ and _how_ information is delivered. The difference between useful and annoying.
 
 - Bad news before morning coffee? Hold it.
 - Three notifications in a row? Batch them.
@@ -849,6 +855,7 @@ The primary interface. This isn't a feed query tool — it's the person you talk
 The user should be able to ask AELIS anything they'd ask a knowledgeable friend. Some questions are about their data. Most aren't.
 
 **About their life (reads from the source graph):**
+
 - "What's on my calendar tomorrow?"
 - "When's my next flight?"
 - "Do I have any conflicts this week?"
@@ -856,6 +863,7 @@ The user should be able to ask AELIS anything they'd ask a knowledgeable friend.
 - "Tell me more about this" (anchored to a feed item)
 
 **About the world (falls through to web search):**
+
 - "How do I unclog a drain?"
 - "What should I make with chicken and broccoli?"
 - "What's the best way to get from King's Cross to Heathrow?"
@@ -864,6 +872,7 @@ The user should be able to ask AELIS anything they'd ask a knowledgeable friend.
 - "What are some good date night restaurants in Shoreditch?"
 
 **Contextual blend (graph + web):**
+
 - "What's the dress code for The Ivy?" (calendar shows dinner there tonight)
 - "Will I need an umbrella?" (location + weather, but could also web-search venue for indoor/outdoor)
 - "What should I know before my meeting with Acme Corp?" (calendar + web search for company info)
@@ -879,10 +888,12 @@ This is also where intent extraction happens for the Gentle Follow-up Agent. Eve
 The backbone for general knowledge. Makes AELIS a person you can ask things, not just a dashboard you look at.
 
 **Reactive (user asks):**
+
 - Recipe ideas, how-to questions, factual lookups, recommendations
 - Anything the source graph can't answer
 
 **Proactive (agents trigger):**
+
 - Contextual Preparation enriches calendar events: venue info, attendee backgrounds, parking
 - Feed shows a concert → pre-fetches setlist, venue details
 - Ambient Context checks for disruptions, closures, news
@@ -949,7 +960,7 @@ Handles tasks the user delegates via natural language.
 
 Requires write access to sources. Confirmation UX for anything destructive or costly.
 
-**Implementation:** Extends the Query Agent. When the LLM determines the user wants to *do* something (not just ask), it calls a delegation tool with structured output: `{ action: "create_reminder" | "schedule_meeting" | "add_task", params: {...} }`. The backend maps this to `executeAction()` on the relevant source. For "find a time that works for both me and Sarah," the agent queries both calendars (requires Sarah to be a known contact with calendar access — or the agent asks the user to share availability). All write actions go through a confirmation step: the backend sends a `delegation.confirm` notification with the proposed action, and the client shows a confirmation UI. The user approves or modifies before execution. Store delegation history for the Follow-up Agent.
+**Implementation:** Extends the Query Agent. When the LLM determines the user wants to _do_ something (not just ask), it calls a delegation tool with structured output: `{ action: "create_reminder" | "schedule_meeting" | "add_task", params: {...} }`. The backend maps this to `executeAction()` on the relevant source. For "find a time that works for both me and Sarah," the agent queries both calendars (requires Sarah to be a known contact with calendar access — or the agent asks the user to share availability). All write actions go through a confirmation step: the backend sends a `delegation.confirm` notification with the proposed action, and the client shows a confirmation UI. The user approves or modifies before execution. Store delegation history for the Follow-up Agent.
 
 #### Actions
 
