@@ -9,15 +9,14 @@
  * Usage: bun packages/aelis-source-weatherkit/scripts/query.ts
  */
 
+import { Context } from "@aelis/core"
+import { LocationKey } from "@aelis/source-location"
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { createInterface } from "node:readline/promises"
 
-import { Context } from "@aelis/core"
-import { LocationKey } from "@aelis/source-location"
-
-import { DefaultWeatherKitClient } from "../src/weatherkit"
 import { WeatherSource, Units } from "../src/weather-source"
+import { DefaultWeatherKitClient } from "../src/weatherkit"
 
 const SCRIPT_DIR = import.meta.dirname
 const CACHE_DIR = join(SCRIPT_DIR, ".cache")

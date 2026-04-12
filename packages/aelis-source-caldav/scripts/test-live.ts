@@ -7,10 +7,9 @@
  * Writes feed items (with slots) to scripts/.cache/feed-items.json for inspection.
  */
 
+import { Context } from "@aelis/core"
 import { mkdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-
-import { Context } from "@aelis/core"
 
 import { CalDavSource } from "../src/index.ts"
 

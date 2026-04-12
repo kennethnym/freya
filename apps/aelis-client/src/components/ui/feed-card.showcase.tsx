@@ -1,11 +1,11 @@
 import { View } from "react-native"
 import tw from "twrnc"
 
+import { type Showcase, Section } from "../showcase"
 import { Button } from "./button"
 import { FeedCard } from "./feed-card"
 import { SansSerifText } from "./sans-serif-text"
 import { SerifText } from "./serif-text"
-import { type Showcase, Section } from "../showcase"
 
 function FeedCardShowcase() {
 	return (

@@ -47,5 +47,3 @@ export function createFeedEnhancer(config: FeedEnhancerConfig): FeedEnhancer {
 		return mergeEnhancement(items, result, currentTime)
 	}
 }
-
-

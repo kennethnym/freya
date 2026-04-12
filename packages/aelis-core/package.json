@@ -7,11 +7,11 @@
 	"scripts": {
 		"test": "bun test ."
 	},
-	"peerDependencies": {
-		"@nym.sh/jrx": "*",
-		"@json-render/core": "*"
-	},
 	"dependencies": {
 		"@standard-schema/spec": "^1.1.0"
+	},
+	"peerDependencies": {
+		"@json-render/core": "*",
+		"@nym.sh/jrx": "*"
 	}
 }

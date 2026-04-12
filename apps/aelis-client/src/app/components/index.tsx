@@ -15,7 +15,9 @@ const components = [
 export default function ComponentsScreen() {
 	return (
 		<View style={tw`flex-1`}>
-			<View style={tw`mx-4 mt-4 rounded-xl border border-stone-200 dark:border-stone-800 overflow-hidden`}>
+			<View
+				style={tw`mx-4 mt-4 rounded-xl border border-stone-200 dark:border-stone-800 overflow-hidden`}
+			>
 				<FlatList
 					data={components}
 					keyExtractor={(item) => item.name}

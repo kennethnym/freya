@@ -4,7 +4,12 @@ import { Context } from "@aelis/core"
 import { LocationKey } from "@aelis/source-location"
 import { describe, expect, test } from "bun:test"
 
-import type { WeatherKitClient, WeatherKitResponse, HourlyForecast, DailyForecast } from "./weatherkit"
+import type {
+	WeatherKitClient,
+	WeatherKitResponse,
+	HourlyForecast,
+	DailyForecast,
+} from "./weatherkit"
 
 import fixture from "../fixtures/san-francisco.json"
 import { WeatherFeedItemType, type DailyWeatherData, type HourlyWeatherData } from "./feed-items"

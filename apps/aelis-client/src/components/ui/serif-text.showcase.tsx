@@ -1,8 +1,8 @@
 import { View } from "react-native"
 import tw from "twrnc"
 
-import { SerifText } from "./serif-text"
 import { type Showcase, Section } from "../showcase"
+import { SerifText } from "./serif-text"
 
 function SerifTextShowcase() {
 	return (

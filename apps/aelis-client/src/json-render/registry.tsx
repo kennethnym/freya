@@ -14,12 +14,20 @@ type ButtonIconName = React.ComponentProps<typeof Button.Icon>["name"]
 
 export const { registry } = defineRegistry(catalog, {
 	components: {
-		View: ({ props, children }) => <View style={props.style ? tw`${props.style}` : undefined}>{children}</View>,
+		View: ({ props, children }) => (
+			<View style={props.style ? tw`${props.style}` : undefined}>{children}</View>
+		),
 		Button: ({ props, emit }) => (
 			<Button
 				label={props.label}
-				leadingIcon={props.leadingIcon ? <Button.Icon name={props.leadingIcon as ButtonIconName} /> : undefined}
-				trailingIcon={props.trailingIcon ? <Button.Icon name={props.trailingIcon as ButtonIconName} /> : undefined}
+				leadingIcon={
+					props.leadingIcon ? <Button.Icon name={props.leadingIcon as ButtonIconName} /> : undefined
+				}
+				trailingIcon={
+					props.trailingIcon ? (
+						<Button.Icon name={props.trailingIcon as ButtonIconName} />
+					) : undefined
+				}
 				onPress={() => emit("press")}
 			/>
 		),
@@ -27,13 +35,17 @@ export const { registry } = defineRegistry(catalog, {
 			<FeedCard style={props.style ? tw`${props.style}` : undefined}>{children}</FeedCard>
 		),
 		SansSerifText: ({ props }) => (
-			<SansSerifText style={props.style ? tw`${props.style}` : undefined}>{props.text}</SansSerifText>
+			<SansSerifText style={props.style ? tw`${props.style}` : undefined}>
+				{props.text}
+			</SansSerifText>
 		),
 		SerifText: ({ props }) => (
 			<SerifText style={props.style ? tw`${props.style}` : undefined}>{props.text}</SerifText>
 		),
 		MonospaceText: ({ props }) => (
-			<MonospaceText style={props.style ? tw`${props.style}` : undefined}>{props.text}</MonospaceText>
+			<MonospaceText style={props.style ? tw`${props.style}` : undefined}>
+				{props.text}
+			</MonospaceText>
 		),
 	},
 })

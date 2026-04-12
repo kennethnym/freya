@@ -9,8 +9,8 @@
 		"fetch-fixtures": "bun run scripts/fetch-fixtures.ts"
 	},
 	"dependencies": {
-		"@aelis/core": "workspace:*",
 		"@aelis/components": "workspace:*",
+		"@aelis/core": "workspace:*",
 		"@aelis/source-location": "workspace:*",
 		"arktype": "^2.1.0"
 	},

@@ -135,9 +135,7 @@ describe("schema sync", () => {
 
 			// JSON Schema structure matches
 			const jsonSchema = enhancementResultJsonSchema
-			expect(Object.keys(jsonSchema.properties).sort()).toEqual(
-				Object.keys(payload).sort(),
-			)
+			expect(Object.keys(jsonSchema.properties).sort()).toEqual(Object.keys(payload).sort())
 			expect([...jsonSchema.required].sort()).toEqual(Object.keys(payload).sort())
 
 			// syntheticItems item schema has the right required fields
@@ -167,11 +165,7 @@ describe("schema sync", () => {
 
 		// JSON Schema only allows string or null for slot values
 		const slotValueSchema =
-			enhancementResultJsonSchema.properties.slotFills.additionalProperties
-				.additionalProperties
-		expect(slotValueSchema.anyOf).toEqual([
-			{ type: "string" },
-			{ type: "null" },
-		])
+			enhancementResultJsonSchema.properties.slotFills.additionalProperties.additionalProperties
+		expect(slotValueSchema.anyOf).toEqual([{ type: "string" }, { type: "null" }])
 	})
 })

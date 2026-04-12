@@ -1,5 +1,5 @@
-import { Hono } from "hono"
 import { describe, expect, test } from "bun:test"
+import { Hono } from "hono"
 
 import type { Auth } from "./index.ts"
 import type { AuthSession, AuthUser } from "./session.ts"

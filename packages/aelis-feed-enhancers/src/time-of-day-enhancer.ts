@@ -1,16 +1,13 @@
 import type { Context, FeedEnhancement, FeedItem, FeedPostProcessor } from "@aelis/core"
-
-import { TimeRelevance } from "@aelis/core"
-
 import type { CalDavEventData } from "@aelis/source-caldav"
 import type { CalendarEventData } from "@aelis/source-google-calendar"
 import type { CurrentWeatherData } from "@aelis/source-weatherkit"
 
+import { TimeRelevance } from "@aelis/core"
 import { CalDavFeedItemType } from "@aelis/source-caldav"
 import { CalendarFeedItemType } from "@aelis/source-google-calendar"
 import { TflFeedItemType } from "@aelis/source-tfl"
 import { WeatherFeedItemType } from "@aelis/source-weatherkit"
-
 
 export const TimePeriod = {
 	Morning: "morning",
@@ -27,7 +24,6 @@ export const DayType = {
 } as const
 
 export type DayType = (typeof DayType)[keyof typeof DayType]
-
 
 const PRE_MEETING_WINDOW_MS = 30 * 60 * 1000
 const TRANSITION_WINDOW_MS = 30 * 60 * 1000
@@ -144,7 +140,6 @@ export function createTimeOfDayEnhancer(options?: TimeOfDayEnhancerOptions): Fee
 	return timeOfDayEnhancer
 }
 
-
 export function getTimePeriod(date: Date): TimePeriod {
 	const hour = date.getHours()
 	if (hour >= 22 || hour < 6) return TimePeriod.Night
@@ -182,7 +177,9 @@ function getNextPeriodBoundary(date: Date): { period: TimePeriod; msUntil: numbe
  * Google Calendar uses `startTime`, CalDAV uses `startDate`.
  */
 function getEventStartTime(data: CalendarEventData | CalDavEventData): Date {
-	return "startTime" in data ? (data as CalendarEventData).startTime : (data as CalDavEventData).startDate
+	return "startTime" in data
+		? (data as CalendarEventData).startTime
+		: (data as CalDavEventData).startDate
 }
 
 /**
@@ -195,7 +192,6 @@ function hasPrecipitationOrExtreme(item: FeedItem): boolean {
 	if (data.temperature < 0 || data.temperature > 35) return true
 	return false
 }
-
 
 interface PreMeetingInfo {
 	/** IDs of calendar items starting within the pre-meeting window */
@@ -225,7 +221,6 @@ function detectPreMeetingItems(items: FeedItem[], now: Date): PreMeetingInfo {
 	return { upcomingMeetingIds, hasLocationMeeting }
 }
 
-
 function findFirstEventOfDay(items: FeedItem[], now: Date): string | null {
 	let earliest: { id: string; time: number } | null = null
 
@@ -251,7 +246,6 @@ function findFirstEventOfDay(items: FeedItem[], now: Date): string | null {
 
 	return earliest?.id ?? null
 }
-
 
 function applyMorningWeekday(
 	items: FeedItem[],
@@ -415,7 +409,6 @@ function applyNight(items: FeedItem[], boost: Record<string, number>, suppress: 
 	}
 }
 
-
 function applyPreMeetingOverrides(
 	items: FeedItem[],
 	preMeeting: PreMeetingInfo,
@@ -487,7 +480,6 @@ function applyWindDown(
 	}
 }
 
-
 function applyTransitionLookahead(
 	items: FeedItem[],
 	now: Date,
@@ -544,7 +536,6 @@ function getNextPeriodBoostTargets(period: TimePeriod, dayType: DayType): Readon
 	return targets
 }
 
-
 function applyWeatherTimeCorrelation(
 	items: FeedItem[],
 	period: TimePeriod,
@@ -562,7 +553,11 @@ function applyWeatherTimeCorrelation(
 				break
 			}
 			case WeatherFeedItemType.Current:
-				if (period === TimePeriod.Morning && dayType === DayType.Weekday && hasPrecipitationOrExtreme(item)) {
+				if (
+					period === TimePeriod.Morning &&
+					dayType === DayType.Weekday &&
+					hasPrecipitationOrExtreme(item)
+				) {
 					boost[item.id] = (boost[item.id] ?? 0) + 0.1
 				}
 				if (period === TimePeriod.Evening && hasEveningEventWithLocation) {
@@ -591,5 +586,3 @@ function hasEveningCalendarEventWithLocation(items: FeedItem[], now: Date): bool
 
 	return false
 }
-
-

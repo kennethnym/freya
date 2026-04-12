@@ -23,7 +23,11 @@ type ButtonProps = Omit<PressableProps, "children"> & {
 export function Button({ style, label, leadingIcon, trailingIcon, ...props }: ButtonProps) {
 	const hasIcons = leadingIcon != null || trailingIcon != null
 
-	const textElement = <SansSerifText style={tw`text-stone-100 dark:text-stone-200 font-medium`}>{label}</SansSerifText>
+	const textElement = (
+		<SansSerifText style={tw`text-stone-100 dark:text-stone-200 font-medium`}>
+			{label}
+		</SansSerifText>
+	)
 
 	return (
 		<Pressable style={[tw`rounded-full bg-teal-600 px-4 py-3 w-fit`, style]} {...props}>
