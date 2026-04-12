@@ -11,17 +11,23 @@
 		"lint": "oxlint .",
 		"lint:fix": "oxlint --fix .",
 		"format": "oxfmt --write .",
-		"format:check": "oxfmt --check ."
+		"format:check": "oxfmt --check .",
+		"prepare": "husky"
 	},
 	"devDependencies": {
 		"@json-render/core": "^0.12.1",
 		"@nym.sh/jrx": "^0.2.0",
 		"@types/bun": "latest",
 		"@typescript/native-preview": "^7.0.0-dev.20260412.1",
+		"husky": "^9.1.7",
+		"lint-staged": "^16.4.0",
 		"oxfmt": "^0.24.0",
 		"oxlint": "^1.39.0"
 	},
 	"peerDependencies": {
 		"typescript": "^6"
+	},
+	"lint-staged": {
+		"*.{ts,tsx,js,jsx,json,css,md}": "oxfmt --write"
 	}
 }
