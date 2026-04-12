@@ -20,13 +20,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import {
-	fetchSourceConfig,
-	pushLocation,
-	replaceSource,
-	updateProviderConfig,
-	updateSourceCredentials,
-} from "@/lib/api"
+import { fetchSourceConfig, pushLocation, replaceSource, updateProviderConfig } from "@/lib/api"
 
 interface SourceConfigPanelProps {
 	source: SourceDefinition
@@ -80,23 +74,24 @@ export function SourceConfigPanel({ source, onUpdate }: SourceConfigPanelProps) 
 
 	const saveMutation = useMutation({
 		mutationFn: async () => {
-			const promises: Promise<void>[] = [
-				replaceSource(source.id, { enabled, config: getUserConfig() }),
-			]
-
 			const credentialFields = getCredentialFields()
 			const hasCredentials = Object.values(credentialFields).some(
 				(v) => typeof v === "string" && v.length > 0,
 			)
-			if (hasCredentials) {
-				if (source.perUserCredentials) {
-					promises.push(updateSourceCredentials(source.id, credentialFields))
-				} else {
-					promises.push(updateProviderConfig(source.id, { credentials: credentialFields }))
-				}
-			}
 
-			await Promise.all(promises)
+			const body: Parameters<typeof replaceSource>[1] = {
+				enabled,
+				config: getUserConfig(),
+			}
+			if (hasCredentials && source.perUserCredentials) {
+				body.credentials = credentialFields
+			}
+			await replaceSource(source.id, body)
+
+			// For non-per-user credentials (provider-level), still use the admin endpoint.
+			if (hasCredentials && !source.perUserCredentials) {
+				await updateProviderConfig(source.id, { credentials: credentialFields })
+			}
 		},
 		onSuccess() {
 			setDirty({})

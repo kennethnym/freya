@@ -81,6 +81,9 @@ mock.module("../sources/user-sources.ts", () => ({
 				updatedAt: now,
 			}
 		},
+		async upsertConfig(_sourceId: string, _data: { enabled: boolean; config: unknown }) {
+			// no-op for tests
+		},
 		async updateCredentials(sourceId: string, credentials: Buffer) {
 			if (mockUpdateCredentialsError) {
 				throw mockUpdateCredentialsError
@@ -822,5 +825,123 @@ describe("UserSessionManager.updateSourceCredentials", () => {
 		expect(mockUpdateCredentialsCalls).toHaveLength(1)
 		// feedSourceForUser should not have been called (no session to refresh)
 		expect(factory).not.toHaveBeenCalled()
+	})
+})
+
+describe("UserSessionManager.saveSourceConfig", () => {
+	test("upserts config without credentials (existing behavior)", async () => {
+		setEnabledSources(["test"])
+		const factory = mock(async () => createStubSource("test"))
+		const provider: FeedSourceProvider = { sourceId: "test", feedSourceForUser: factory }
+		const manager = new UserSessionManager({
+			db: fakeDb,
+			providers: [provider],
+			credentialEncryptor: testEncryptor,
+		})
+
+		// Create a session first so we can verify the source is refreshed
+		await manager.getOrCreate("user-1")
+
+		await manager.saveSourceConfig("user-1", "test", {
+			enabled: true,
+			config: { key: "value" },
+		})
+
+		// feedSourceForUser called once for session creation, once for upsert refresh
+		expect(factory).toHaveBeenCalledTimes(2)
+		// No credentials should have been persisted
+		expect(mockUpdateCredentialsCalls).toHaveLength(0)
+	})
+
+	test("upserts config with credentials — persists both and passes credentials to source", async () => {
+		setEnabledSources(["test"])
+		let receivedCredentials: unknown = null
+		const factory = mock(async (_userId: string, _config: unknown, creds: unknown) => {
+			receivedCredentials = creds
+			return createStubSource("test")
+		})
+		const provider: FeedSourceProvider = { sourceId: "test", feedSourceForUser: factory }
+		const manager = new UserSessionManager({
+			db: fakeDb,
+			providers: [provider],
+			credentialEncryptor: testEncryptor,
+		})
+
+		// Create a session so the source refresh path runs
+		await manager.getOrCreate("user-1")
+
+		const creds = { username: "alice", password: "s3cret" }
+		await manager.saveSourceConfig("user-1", "test", {
+			enabled: true,
+			config: { serverUrl: "https://example.com" },
+			credentials: creds,
+		})
+
+		// Credentials were encrypted and persisted
+		expect(mockUpdateCredentialsCalls).toHaveLength(1)
+		const decrypted = JSON.parse(testEncryptor.decrypt(mockUpdateCredentialsCalls[0]!.credentials))
+		expect(decrypted).toEqual(creds)
+
+		// feedSourceForUser received the provided credentials (not null)
+		expect(receivedCredentials).toEqual(creds)
+	})
+
+	test("upserts config with credentials adds source to session when not already present", async () => {
+		// Start with no enabled sources so the session is empty
+		setEnabledSources([])
+		const factory = mock(async () => createStubSource("test"))
+		const provider: FeedSourceProvider = { sourceId: "test", feedSourceForUser: factory }
+		const manager = new UserSessionManager({
+			db: fakeDb,
+			providers: [provider],
+			credentialEncryptor: testEncryptor,
+		})
+
+		const session = await manager.getOrCreate("user-1")
+		expect(session.hasSource("test")).toBe(false)
+
+		// Set mockFindResult to undefined so find() returns a row (simulating the row was just created by upsertConfig)
+		await manager.saveSourceConfig("user-1", "test", {
+			enabled: true,
+			config: {},
+			credentials: { token: "abc" },
+		})
+
+		// Source should now be in the session
+		expect(session.hasSource("test")).toBe(true)
+		expect(mockUpdateCredentialsCalls).toHaveLength(1)
+	})
+
+	test("throws CredentialStorageUnavailableError when credentials provided without encryptor", async () => {
+		setEnabledSources(["test"])
+		const provider = createStubProvider("test")
+		const manager = new UserSessionManager({
+			db: fakeDb,
+			providers: [provider],
+			// No credentialEncryptor
+		})
+
+		await expect(
+			manager.saveSourceConfig("user-1", "test", {
+				enabled: true,
+				config: {},
+				credentials: { token: "abc" },
+			}),
+		).rejects.toBeInstanceOf(CredentialStorageUnavailableError)
+	})
+
+	test("throws SourceNotFoundError for unknown provider", async () => {
+		const manager = new UserSessionManager({
+			db: fakeDb,
+			providers: [],
+			credentialEncryptor: testEncryptor,
+		})
+
+		await expect(
+			manager.saveSourceConfig("user-1", "unknown", {
+				enabled: true,
+				config: {},
+			}),
+		).rejects.toBeInstanceOf(SourceNotFoundError)
 	})
 })
