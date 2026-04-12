@@ -738,6 +738,42 @@ describe("PUT /api/sources/:sourceId", () => {
 
 		expect(res.status).toBe(204)
 	})
+
+	test("returns 204 when credentials are included alongside config", async () => {
+		activeStore = createInMemoryStore()
+		const { app } = createAppWithEncryptor(
+			[createStubProvider("aelis.weather", weatherConfig)],
+			MOCK_USER_ID,
+		)
+
+		const res = await put(app, "aelis.weather", {
+			enabled: true,
+			config: { units: "metric" },
+			credentials: { apiKey: "secret123" },
+		})
+
+		expect(res.status).toBe(204)
+		const row = activeStore.rows.get(`${MOCK_USER_ID}:aelis.weather`)
+		expect(row).toBeDefined()
+		expect(row!.enabled).toBe(true)
+		expect(row!.config).toEqual({ units: "metric" })
+	})
+
+	test("returns 503 when credentials are provided but no encryptor is configured", async () => {
+		activeStore = createInMemoryStore()
+		// createApp does NOT configure an encryptor
+		const { app } = createApp([createStubProvider("aelis.weather", weatherConfig)], MOCK_USER_ID)
+
+		const res = await put(app, "aelis.weather", {
+			enabled: true,
+			config: { units: "metric" },
+			credentials: { apiKey: "secret123" },
+		})
+
+		expect(res.status).toBe(503)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toContain("not configured")
+	})
 })
 
 describe("PUT /api/sources/:sourceId/credentials", () => {

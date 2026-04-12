@@ -114,7 +114,7 @@ const sourceDefinitions: SourceDefinition[] = [
 			timeZone: {
 				type: "string",
 				label: "Timezone",
-				description: "IANA timezone for determining \"today\" (e.g. Europe/London). Defaults to UTC.",
+				description: 'IANA timezone for determining "today" (e.g. Europe/London). Defaults to UTC.',
 			},
 		},
 	},
@@ -174,7 +174,7 @@ export async function fetchConfigs(): Promise<SourceConfig[]> {
 
 export async function replaceSource(
 	sourceId: string,
-	body: { enabled: boolean; config: unknown },
+	body: { enabled: boolean; config: unknown; credentials?: Record<string, unknown> },
 ): Promise<void> {
 	const res = await fetch(`${serverBase()}/sources/${sourceId}`, {
 		method: "PUT",

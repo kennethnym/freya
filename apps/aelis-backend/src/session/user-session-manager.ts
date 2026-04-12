@@ -11,6 +11,7 @@ import type { FeedSourceProvider } from "./feed-source-provider.ts"
 import {
 	CredentialStorageUnavailableError,
 	InvalidSourceConfigError,
+	InvalidSourceCredentialsError,
 	SourceNotFoundError,
 } from "../sources/errors.ts"
 import { sources } from "../sources/user-sources.ts"
@@ -171,13 +172,18 @@ export class UserSessionManager {
 	 * inserts a new row if one doesn't exist and fully replaces config
 	 * (no merge).
 	 *
+	 * When `credentials` is provided, they are encrypted and persisted
+	 * alongside the config in the same flow, avoiding the race condition
+	 * of separate config + credential requests.
+	 *
 	 * @throws {SourceNotFoundError} if the sourceId has no registered provider
 	 * @throws {InvalidSourceConfigError} if config fails schema validation
+	 * @throws {CredentialStorageUnavailableError} if credentials are provided but no encryptor is configured
 	 */
 	async upsertSourceConfig(
 		userId: string,
 		sourceId: string,
-		data: { enabled: boolean; config?: unknown },
+		data: { enabled: boolean; config?: unknown; credentials?: unknown },
 	): Promise<void> {
 		const provider = this.providers.get(sourceId)
 		if (!provider) {
@@ -191,6 +197,10 @@ export class UserSessionManager {
 			}
 		}
 
+		if (data.credentials !== undefined && !this.encryptor) {
+			throw new CredentialStorageUnavailableError()
+		}
+
 		const config = data.config ?? {}
 
 		// Fetch existing row before upsert to capture credentials for session refresh.
@@ -202,14 +212,24 @@ export class UserSessionManager {
 			config,
 		})
 
+		// Persist credentials after the upsert so the row exists.
+		if (data.credentials !== undefined && this.encryptor) {
+			const encrypted = this.encryptor.encrypt(JSON.stringify(data.credentials))
+			await sources(this.db, userId).updateCredentials(sourceId, encrypted)
+		}
+
 		const session = this.sessions.get(userId)
 		if (session) {
 			if (!data.enabled) {
 				session.removeSource(sourceId)
 			} else {
-				const credentials = existingRow?.credentials
-					? this.decryptCredentials(existingRow.credentials)
-					: null
+				// Prefer the just-provided credentials over what was in the DB.
+				const credentials =
+					data.credentials !== undefined
+						? data.credentials
+						: existingRow?.credentials
+							? this.decryptCredentials(existingRow.credentials)
+							: null
 				const source = await provider.feedSourceForUser(userId, config, credentials)
 				if (session.hasSource(sourceId)) {
 					session.replaceSource(sourceId, source)

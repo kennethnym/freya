@@ -34,11 +34,13 @@ const ReplaceSourceConfigRequestBody = type({
 	"+": "reject",
 	enabled: "boolean",
 	config: "unknown",
+	"credentials?": "unknown",
 })
 
 const ReplaceSourceConfigNoConfigRequestBody = type({
 	"+": "reject",
 	enabled: "boolean",
+	"credentials?": "unknown",
 })
 
 export function registerSourcesHttpHandlers(
@@ -161,7 +163,7 @@ async function handleReplaceSource(c: Context<Env>) {
 		return c.json({ error: parsed.summary }, 400)
 	}
 
-	const { enabled } = parsed
+	const { enabled, credentials } = parsed
 	const config = "config" in parsed ? parsed.config : undefined
 	const user = c.get("user")!
 
@@ -169,6 +171,7 @@ async function handleReplaceSource(c: Context<Env>) {
 		await sessionManager.upsertSourceConfig(user.id, sourceId, {
 			enabled,
 			config,
+			credentials,
 		})
 	} catch (err) {
 		if (err instanceof SourceNotFoundError) {
@@ -176,6 +179,9 @@ async function handleReplaceSource(c: Context<Env>) {
 		}
 		if (err instanceof InvalidSourceConfigError) {
 			return c.json({ error: err.message }, 400)
+		}
+		if (err instanceof CredentialStorageUnavailableError) {
+			return c.json({ error: err.message }, 503)
 		}
 		throw err
 	}
