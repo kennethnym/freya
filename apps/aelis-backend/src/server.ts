@@ -23,17 +23,22 @@ function main() {
 	const { db, close: closeDb } = createDatabase(process.env.DATABASE_URL!)
 	const auth = createAuth(db)
 
-	const openrouterApiKey = process.env.OPENROUTER_API_KEY
-	const feedEnhancer = openrouterApiKey
-		? createFeedEnhancer({
-				client: createLlmClient({
-					apiKey: openrouterApiKey,
-					model: process.env.OPENROUTER_MODEL || undefined,
-				}),
-			})
-		: null
+	const cfAccountId = process.env.CF_ACCOUNT_ID
+	const workersAiApiKey = process.env.WORKERS_AI_API_KEY
+	const feedEnhancer =
+		cfAccountId && workersAiApiKey
+			? createFeedEnhancer({
+					client: createLlmClient({
+						accountId: cfAccountId,
+						apiKey: workersAiApiKey,
+						model: process.env.WORKERS_AI_MODEL || undefined,
+					}),
+				})
+			: null
 	if (!feedEnhancer) {
-		console.warn("[enhancement] OPENROUTER_API_KEY not set — feed enhancement disabled")
+		console.warn(
+			"[enhancement] CF_ACCOUNT_ID/WORKERS_AI_API_KEY not set — feed enhancement disabled",
+		)
 	}
 
 	const credentialEncryptionKey = process.env.CREDENTIAL_ENCRYPTION_KEY
