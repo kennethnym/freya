@@ -81,6 +81,24 @@ mock.module("../sources/user-sources.ts", () => ({
 				updatedAt: now,
 			}
 		},
+		async findForUpdate(sourceId: string) {
+			// Delegates to find — row locking is a no-op in tests.
+			if (mockFindResult !== undefined) return mockFindResult
+			const now = new Date()
+			return {
+				id: crypto.randomUUID(),
+				userId,
+				sourceId,
+				enabled: true,
+				config: {},
+				credentials: null,
+				createdAt: now,
+				updatedAt: now,
+			}
+		},
+		async updateConfig(_sourceId: string, _update: { enabled?: boolean; config?: unknown }) {
+			// no-op for tests
+		},
 		async upsertConfig(_sourceId: string, _data: { enabled: boolean; config: unknown }) {
 			// no-op for tests
 		},
@@ -93,7 +111,9 @@ mock.module("../sources/user-sources.ts", () => ({
 	}),
 }))
 
-const fakeDb = {} as Database
+const fakeDb = {
+	transaction: <T>(fn: (tx: unknown) => Promise<T>) => fn(fakeDb),
+} as unknown as Database
 
 function createStubSource(id: string, items: FeedItem[] = []): FeedSource {
 	return {

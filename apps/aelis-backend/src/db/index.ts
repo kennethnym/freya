@@ -1,9 +1,12 @@
+import type { PgDatabase } from "drizzle-orm/pg-core"
+
 import { SQL } from "bun"
-import { drizzle, type BunSQLDatabase } from "drizzle-orm/bun-sql"
+import { drizzle, type BunSQLQueryResultHKT } from "drizzle-orm/bun-sql"
 
 import * as schema from "./schema.ts"
 
-export type Database = BunSQLDatabase<typeof schema>
+/** Covers both the top-level drizzle instance and transaction handles. */
+export type Database = PgDatabase<BunSQLQueryResultHKT, typeof schema>
 
 export interface DatabaseConnection {
 	db: Database
