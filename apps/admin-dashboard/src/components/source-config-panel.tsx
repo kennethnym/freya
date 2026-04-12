@@ -20,7 +20,13 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { fetchSourceConfig, pushLocation, replaceSource, updateProviderConfig } from "@/lib/api"
+import {
+	fetchSourceConfig,
+	pushLocation,
+	replaceSource,
+	updateProviderConfig,
+	updateSourceCredentials,
+} from "@/lib/api"
 
 interface SourceConfigPanelProps {
 	source: SourceDefinition
@@ -83,7 +89,11 @@ export function SourceConfigPanel({ source, onUpdate }: SourceConfigPanelProps) 
 				(v) => typeof v === "string" && v.length > 0,
 			)
 			if (hasCredentials) {
-				promises.push(updateProviderConfig(source.id, { credentials: credentialFields }))
+				if (source.perUserCredentials) {
+					promises.push(updateSourceCredentials(source.id, credentialFields))
+				} else {
+					promises.push(updateProviderConfig(source.id, { credentials: credentialFields }))
+				}
 			}
 
 			await Promise.all(promises)
