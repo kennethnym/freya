@@ -80,6 +80,9 @@ function createInMemoryStore() {
 				async find(sourceId: string) {
 					return rows.get(key(userId, sourceId))
 				},
+				async findForUpdate(sourceId: string) {
+					return rows.get(key(userId, sourceId))
+				},
 				async updateConfig(sourceId: string, update: { enabled?: boolean; config?: unknown }) {
 					const existing = rows.get(key(userId, sourceId))
 					if (!existing) {
@@ -125,7 +128,9 @@ mock.module("../sources/user-sources.ts", () => ({
 	},
 }))
 
-const fakeDb = {} as Database
+const fakeDb = {
+	transaction: <T>(fn: (tx: unknown) => Promise<T>) => fn(fakeDb),
+} as unknown as Database
 
 function createApp(providers: FeedSourceProvider[], userId?: string) {
 	const sessionManager = new UserSessionManager({ providers, db: fakeDb })

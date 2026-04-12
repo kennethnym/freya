@@ -26,6 +26,18 @@ export function sources(db: Database, userId: string) {
 			return rows[0]
 		},
 
+		/** Like find(), but acquires a row lock to prevent concurrent modifications. Must be called inside a transaction. */
+		async findForUpdate(sourceId: string) {
+			const rows = await db
+				.select()
+				.from(userSources)
+				.where(and(eq(userSources.userId, userId), eq(userSources.sourceId, sourceId)))
+				.limit(1)
+				.for("update")
+
+			return rows[0]
+		},
+
 		/** Enables a source for the user. Throws if the source row doesn't exist. */
 		async enableSource(sourceId: string) {
 			const rows = await db

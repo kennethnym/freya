@@ -126,27 +126,29 @@ export class UserSessionManager {
 			return
 		}
 
-		// Fetch the existing row for config merging and credential access.
-		// NOTE: find + updateConfig is not atomic. A concurrent update could
-		// read stale config. Use SELECT FOR UPDATE or atomic jsonb merge if
-		// this becomes a problem.
-		const existingRow = await sources(this.db, userId).find(sourceId)
+		// Use a transaction with SELECT FOR UPDATE to prevent lost updates
+		// when concurrent PATCH requests merge config against the same base.
+		const { existingRow, mergedConfig } = await this.db.transaction(async (tx) => {
+			const existingRow = await sources(tx, userId).findForUpdate(sourceId)
 
-		let mergedConfig: Record<string, unknown> | undefined
-		if (update.config !== undefined && provider.configSchema) {
-			const existingConfig = (existingRow?.config ?? {}) as Record<string, unknown>
-			mergedConfig = merge({}, existingConfig, update.config)
+			let mergedConfig: Record<string, unknown> | undefined
+			if (update.config !== undefined && provider.configSchema) {
+				const existingConfig = (existingRow?.config ?? {}) as Record<string, unknown>
+				mergedConfig = merge({}, existingConfig, update.config)
 
-			const validated = provider.configSchema(mergedConfig)
-			if (validated instanceof type.errors) {
-				throw new InvalidSourceConfigError(sourceId, validated.summary)
+				const validated = provider.configSchema(mergedConfig)
+				if (validated instanceof type.errors) {
+					throw new InvalidSourceConfigError(sourceId, validated.summary)
+				}
 			}
-		}
 
-		// Throws SourceNotFoundError if the row doesn't exist
-		await sources(this.db, userId).updateConfig(sourceId, {
-			enabled: update.enabled,
-			config: mergedConfig,
+			// Throws SourceNotFoundError if the row doesn't exist
+			await sources(tx, userId).updateConfig(sourceId, {
+				enabled: update.enabled,
+				config: mergedConfig,
+			})
+
+			return { existingRow, mergedConfig }
 		})
 
 		// Refresh the specific source in the active session instead of
@@ -202,20 +204,23 @@ export class UserSessionManager {
 
 		const config = data.config ?? {}
 
-		// Fetch existing row before upsert to capture credentials for session refresh.
-		// For new rows this will be undefined — credentials will be null.
-		const existingRow = await sources(this.db, userId).find(sourceId)
+		// Run the upsert + credential update atomically so a failure in
+		// either step doesn't leave the row in an inconsistent state.
+		const existingRow = await this.db.transaction(async (tx) => {
+			const existing = await sources(tx, userId).find(sourceId)
 
-		await sources(this.db, userId).upsertConfig(sourceId, {
-			enabled: data.enabled,
-			config,
+			await sources(tx, userId).upsertConfig(sourceId, {
+				enabled: data.enabled,
+				config,
+			})
+
+			if (data.credentials !== undefined && this.encryptor) {
+				const encrypted = this.encryptor.encrypt(JSON.stringify(data.credentials))
+				await sources(tx, userId).updateCredentials(sourceId, encrypted)
+			}
+
+			return existing
 		})
-
-		// Persist credentials after the upsert so the row exists.
-		if (data.credentials !== undefined && this.encryptor) {
-			const encrypted = this.encryptor.encrypt(JSON.stringify(data.credentials))
-			await sources(this.db, userId).updateCredentials(sourceId, encrypted)
-		}
 
 		const session = this.sessions.get(userId)
 		if (session) {
