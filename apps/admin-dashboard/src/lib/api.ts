@@ -23,6 +23,8 @@ export interface SourceDefinition {
 	name: string
 	description: string
 	alwaysEnabled?: boolean
+	/** When true, secret fields are stored as per-user credentials via /api/sources/:id/credentials. */
+	perUserCredentials?: boolean
 	fields: Record<string, ConfigFieldDef>
 }
 
@@ -75,6 +77,44 @@ const sourceDefinitions: SourceDefinition[] = [
 				label: "Daily Forecast Limit",
 				defaultValue: 7,
 				description: "Number of daily forecasts to include",
+			},
+		},
+	},
+	{
+		id: "aelis.caldav",
+		name: "CalDAV",
+		description: "Calendar events from any CalDAV server (Nextcloud, Radicale, Baikal, etc.).",
+		perUserCredentials: true,
+		fields: {
+			serverUrl: {
+				type: "string",
+				label: "Server URL",
+				required: true,
+				secret: false,
+				description: "CalDAV server URL (e.g. https://nextcloud.example.com/remote.php/dav)",
+			},
+			username: {
+				type: "string",
+				label: "Username",
+				required: true,
+				secret: false,
+			},
+			password: {
+				type: "string",
+				label: "Password",
+				required: true,
+				secret: true,
+			},
+			lookAheadDays: {
+				type: "number",
+				label: "Look-ahead Days",
+				defaultValue: 0,
+				description: "Number of additional days beyond today to fetch events for",
+			},
+			timeZone: {
+				type: "string",
+				label: "Timezone",
+				description: "IANA timezone for determining \"today\" (e.g. Europe/London). Defaults to UTC.",
 			},
 		},
 	},
@@ -161,6 +201,22 @@ export async function updateProviderConfig(
 	if (!res.ok) {
 		const data = (await res.json()) as { error?: string }
 		throw new Error(data.error ?? `Failed to update provider config: ${res.status}`)
+	}
+}
+
+export async function updateSourceCredentials(
+	sourceId: string,
+	credentials: Record<string, unknown>,
+): Promise<void> {
+	const res = await fetch(`${serverBase()}/sources/${sourceId}/credentials`, {
+		method: "PUT",
+		headers: { "Content-Type": "application/json" },
+		credentials: "include",
+		body: JSON.stringify(credentials),
+	})
+	if (!res.ok) {
+		const data = (await res.json()) as { error?: string }
+		throw new Error(data.error ?? `Failed to update credentials: ${res.status}`)
 	}
 }
 
