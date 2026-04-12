@@ -806,6 +806,31 @@ describe("UserSessionManager.updateSourceCredentials", () => {
 		expect(receivedCredentials).toEqual({ token: "refreshed" })
 	})
 
+	test("adds source to session when source is enabled but not yet in session", async () => {
+		// Simulate a source that was never added to the session (e.g. credentials
+		// were missing at config time), but is enabled in the DB.
+		setEnabledSources([]) // no sources during session creation
+		const factory = mock(async () => createStubSource("test"))
+		const provider: FeedSourceProvider = { sourceId: "test", feedSourceForUser: factory }
+		const manager = new UserSessionManager({
+			db: fakeDb,
+			providers: [provider],
+			credentialEncryptor: testEncryptor,
+		})
+
+		const session = await manager.getOrCreate("user-1")
+		// Source is NOT in the session
+		expect(session.hasSource("test")).toBe(false)
+
+		// mockFindResult returns an enabled row by default, so the source
+		// row exists and is enabled in the DB.
+		await manager.updateSourceCredentials("user-1", "test", { token: "new-token" })
+
+		// Source should now be added to the session
+		expect(session.hasSource("test")).toBe(true)
+		expect(factory).toHaveBeenCalledTimes(1)
+	})
+
 	test("persists credentials without session refresh when no active session", async () => {
 		setEnabledSources(["test"])
 		const factory = mock(async () => createStubSource("test"))

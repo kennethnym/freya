@@ -249,11 +249,15 @@ export class UserSessionManager {
 		// the DB already has the new credentials but the session keeps the old
 		// source. The next session creation will pick up the persisted credentials.
 		const session = this.sessions.get(userId)
-		if (session && session.hasSource(sourceId)) {
+		if (session) {
 			const row = await sources(this.db, userId).find(sourceId)
 			if (row?.enabled) {
 				const source = await provider.feedSourceForUser(userId, row.config ?? {}, credentials)
-				session.replaceSource(sourceId, source)
+				if (session.hasSource(sourceId)) {
+					session.replaceSource(sourceId, source)
+				} else {
+					session.addSource(source)
+				}
 			}
 		}
 	}
