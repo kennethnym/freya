@@ -17,10 +17,11 @@
 		"@json-render/core": "^0.12.1",
 		"@nym.sh/jrx": "^0.2.0",
 		"@types/bun": "latest",
+		"@typescript/native-preview": "^7.0.0-dev.20260412.1",
 		"oxfmt": "^0.24.0",
 		"oxlint": "^1.39.0"
 	},
 	"peerDependencies": {
-		"typescript": "^5"
+		"typescript": "^6"
 	}
 }
