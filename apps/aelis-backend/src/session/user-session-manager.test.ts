@@ -45,6 +45,15 @@ function getEnabledSourceIds(userId: string): string[] {
 let mockFindResult: unknown | undefined
 
 /**
+ * Spy for `upsertConfig` calls. Tests can inspect calls via
+ * `mockUpsertConfigCalls`.
+ */
+const mockUpsertConfigCalls: Array<{
+	sourceId: string
+	data: { enabled: boolean; config: unknown }
+}> = []
+
+/**
  * Spy for `updateCredentials` calls. Tests can inspect calls via
  * `mockUpdateCredentialsCalls` or override behavior.
  */
@@ -80,6 +89,9 @@ mock.module("../sources/user-sources.ts", () => ({
 				createdAt: now,
 				updatedAt: now,
 			}
+		},
+		async upsertConfig(sourceId: string, data: { enabled: boolean; config: unknown }) {
+			mockUpsertConfigCalls.push({ sourceId, data })
 		},
 		async updateCredentials(sourceId: string, credentials: Buffer) {
 			if (mockUpdateCredentialsError) {
@@ -138,6 +150,7 @@ const weatherProvider: FeedSourceProvider = {
 beforeEach(() => {
 	enabledByUser.clear()
 	mockFindResult = undefined
+	mockUpsertConfigCalls.length = 0
 	mockUpdateCredentialsCalls.length = 0
 	mockUpdateCredentialsError = null
 })
@@ -822,5 +835,67 @@ describe("UserSessionManager.updateSourceCredentials", () => {
 		expect(mockUpdateCredentialsCalls).toHaveLength(1)
 		// feedSourceForUser should not have been called (no session to refresh)
 		expect(factory).not.toHaveBeenCalled()
+	})
+})
+
+describe("UserSessionManager.upsertSourceConfig", () => {
+	test("persists config to DB even when feedSourceForUser throws", async () => {
+		setEnabledSources(["test"])
+		let callCount = 0
+		const factory = mock(async (_userId: string, _config: unknown, _credentials: unknown) => {
+			callCount++
+			// Succeed on first call (session creation), throw on second (upsert refresh)
+			if (callCount > 1) {
+				throw new InvalidSourceCredentialsError("test", "credentials required")
+			}
+			return createStubSource("test")
+		})
+		const provider: FeedSourceProvider = { sourceId: "test", feedSourceForUser: factory }
+		const manager = new UserSessionManager({ db: fakeDb, providers: [provider] })
+
+		// Create a session so the session-refresh path is exercised
+		await manager.getOrCreate("user-1")
+
+		const spy = spyOn(console, "warn").mockImplementation(() => {})
+
+		// upsertSourceConfig with no existing credentials — provider will throw
+		await manager.upsertSourceConfig("user-1", "test", {
+			enabled: true,
+			config: { url: "https://example.com" },
+		})
+
+		// Config should still have been persisted to DB
+		expect(mockUpsertConfigCalls).toHaveLength(1)
+		expect(mockUpsertConfigCalls[0]!.sourceId).toBe("test")
+		expect(mockUpsertConfigCalls[0]!.data.enabled).toBe(true)
+
+		// The error should have been logged, not thrown
+		expect(spy).toHaveBeenCalled()
+
+		spy.mockRestore()
+	})
+
+	test("adds source to session when feedSourceForUser succeeds", async () => {
+		setEnabledSources(["test"])
+		const factory = mock(async () => createStubSource("test"))
+		const provider: FeedSourceProvider = { sourceId: "test", feedSourceForUser: factory }
+		const manager = new UserSessionManager({ db: fakeDb, providers: [provider] })
+
+		const session = await manager.getOrCreate("user-1")
+		await manager.upsertSourceConfig("user-1", "test", { enabled: true })
+
+		// Config persisted
+		expect(mockUpsertConfigCalls).toHaveLength(1)
+		// Source should be in the session (feedSourceForUser succeeded)
+		expect(session.getSource("test")).toBeDefined()
+	})
+
+	test("throws SourceNotFoundError for unknown provider", async () => {
+		setEnabledSources([])
+		const manager = new UserSessionManager({ db: fakeDb, providers: [] })
+
+		await expect(
+			manager.upsertSourceConfig("user-1", "unknown", { enabled: true }),
+		).rejects.toBeInstanceOf(SourceNotFoundError)
 	})
 })

@@ -210,11 +210,22 @@ export class UserSessionManager {
 				const credentials = existingRow?.credentials
 					? this.decryptCredentials(existingRow.credentials)
 					: null
-				const source = await provider.feedSourceForUser(userId, config, credentials)
-				if (session.hasSource(sourceId)) {
-					session.replaceSource(sourceId, source)
-				} else {
-					session.addSource(source)
+				try {
+					const source = await provider.feedSourceForUser(userId, config, credentials)
+					if (session.hasSource(sourceId)) {
+						session.replaceSource(sourceId, source)
+					} else {
+						session.addSource(source)
+					}
+				} catch (err) {
+					// Provider may fail when credentials are not yet available (e.g. new
+					// source added before updateSourceCredentials is called). The config
+					// is already persisted above; updateSourceCredentials will add the
+					// source to the session later.
+					console.warn(
+						`[UserSessionManager] feedSourceForUser("${sourceId}") failed during upsert for user ${userId}, skipping session update:`,
+						err,
+					)
 				}
 			}
 		}
