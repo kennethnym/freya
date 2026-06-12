@@ -201,6 +201,14 @@
         "arktype": "^2.1.0",
       },
     },
+    "packages/freya-source-mcp": {
+      "name": "@freya/source-mcp",
+      "version": "0.0.0",
+      "dependencies": {
+        "@freya/core": "workspace:*",
+        "@modelcontextprotocol/sdk": "^1.27.1",
+      },
+    },
     "packages/freya-source-tfl": {
       "name": "@freya/source-tfl",
       "version": "0.0.0",
