@@ -200,6 +200,14 @@
         "arktype": "^2.1.0",
       },
     },
+    "packages/freya-source-mcp": {
+      "name": "@freya/source-mcp",
+      "version": "0.0.0",
+      "dependencies": {
+        "@freya/core": "workspace:*",
+        "@modelcontextprotocol/sdk": "^1.27.1",
+      },
+    },
     "packages/freya-source-tfl": {
       "name": "@freya/source-tfl",
       "version": "0.0.0",
@@ -240,6 +248,8 @@
     "@freya/source-google-calendar": ["@freya/source-google-calendar@workspace:packages/freya-source-google-calendar"],
 
     "@freya/source-location": ["@freya/source-location@workspace:packages/freya-source-location"],
+
+    "@freya/source-mcp": ["@freya/source-mcp@workspace:packages/freya-source-mcp"],
 
     "@freya/source-tfl": ["@freya/source-tfl@workspace:packages/freya-source-tfl"],
 
