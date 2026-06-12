@@ -9,7 +9,6 @@ const tsIp = (await $`tailscale ip -4`.text()).trim()
 const base = `http://${tsIp}:${PROXY_PORT}`
 
 interface DebugTarget {
-	devtoolsFrontendUrl: string
 	webSocketDebuggerUrl: string
 	reactNative?: {
 		capabilities?: {
@@ -24,7 +23,13 @@ if (!res.ok) {
 	process.exit(1)
 }
 
-const targets: DebugTarget[] = await res.json()
+const parsedTargets: unknown = await res.json()
+if (!Array.isArray(parsedTargets)) {
+	console.error("Invalid /json response from Metro.")
+	process.exit(1)
+}
+
+const targets = parsedTargets.filter(isDebugTarget)
 const target = targets.find((t) => t.reactNative?.capabilities?.prefersFuseboxFrontend)
 
 if (!target) {
@@ -49,4 +54,23 @@ try {
 	} catch {
 		console.log("Open the URL above in Chrome.")
 	}
+}
+
+function isDebugTarget(value: unknown): value is DebugTarget {
+	if (!isRecord(value) || typeof value.webSocketDebuggerUrl !== "string") return false
+
+	const reactNative = value.reactNative
+	if (reactNative === undefined) return true
+	if (!isRecord(reactNative)) return false
+
+	const capabilities = reactNative.capabilities
+	if (capabilities === undefined) return true
+	if (!isRecord(capabilities)) return false
+
+	const prefersFuseboxFrontend = capabilities.prefersFuseboxFrontend
+	return prefersFuseboxFrontend === undefined || typeof prefersFuseboxFrontend === "boolean"
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null
 }
