@@ -18,6 +18,7 @@ import { UserSessionManager } from "./session/index.ts"
 import { registerSourcesHttpHandlers } from "./sources/http.ts"
 import { TflSourceProvider } from "./tfl/provider.ts"
 import { WeatherSourceProvider } from "./weather/provider.ts"
+import { WebSearchSourceProvider } from "./web-search/provider.ts"
 
 function main() {
 	const { db, close: closeDb } = createDatabase(process.env.DATABASE_URL!)
@@ -60,6 +61,7 @@ function main() {
 				},
 			}),
 			new TflSourceProvider({ apiKey: process.env.TFL_API_KEY! }),
+			new WebSearchSourceProvider({ apiKey: process.env.EXA_API_KEY }),
 		],
 		feedEnhancer,
 		credentialEncryptor,

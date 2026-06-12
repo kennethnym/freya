@@ -151,6 +151,12 @@ const sourceDefinitions: SourceDefinition[] = [
 			},
 		},
 	},
+	{
+		id: "freya.web-search",
+		name: "Web Search",
+		description: "Exa web search action. Requires EXA_API_KEY on the backend.",
+		fields: {},
+	},
 ]
 
 export function fetchSources(): Promise<SourceDefinition[]> {
@@ -174,7 +180,7 @@ export async function fetchConfigs(): Promise<SourceConfig[]> {
 
 export async function replaceSource(
 	sourceId: string,
-	body: { enabled: boolean; config: unknown; credentials?: Record<string, unknown> },
+	body: { enabled: boolean; config?: unknown; credentials?: Record<string, unknown> },
 ): Promise<void> {
 	const res = await fetch(`${serverBase()}/sources/${sourceId}`, {
 		method: "PUT",
