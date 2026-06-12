@@ -30,7 +30,7 @@ export const INITIAL_MESSAGES: Message[] = [
 	},
 	{
 		role: "system",
-		message: `Hey! I'm **Aelis** — your personal assistant that brings you the right thing, at the right time, in the right place.
+		message: `Hey! I'm **Freya** — your personal assistant that brings you the right thing, at the right time, in the right place.
 
 - Jubilee line down? I've already found you an alternative route.
 - Dinner reservation at 8? I'll have the restaurant, directions, and the menu ready before you head out.

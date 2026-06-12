@@ -36,14 +36,14 @@ export interface SourceConfig {
 
 const sourceDefinitions: SourceDefinition[] = [
 	{
-		id: "aelis.location",
+		id: "freya.location",
 		name: "Location",
 		description: "Device location provider. Always enabled as a dependency for other sources.",
 		alwaysEnabled: true,
 		fields: {},
 	},
 	{
-		id: "aelis.weather",
+		id: "freya.weather",
 		name: "WeatherKit",
 		description: "Apple WeatherKit weather data. Requires Apple Developer credentials.",
 		fields: {
@@ -81,7 +81,7 @@ const sourceDefinitions: SourceDefinition[] = [
 		},
 	},
 	{
-		id: "aelis.caldav",
+		id: "freya.caldav",
 		name: "CalDAV",
 		description: "Calendar events from any CalDAV server (Nextcloud, Radicale, Baikal, etc.).",
 		perUserCredentials: true,
@@ -119,7 +119,7 @@ const sourceDefinitions: SourceDefinition[] = [
 		},
 	},
 	{
-		id: "aelis.tfl",
+		id: "freya.tfl",
 		name: "TfL",
 		description: "Transport for London tube line status alerts.",
 		fields: {

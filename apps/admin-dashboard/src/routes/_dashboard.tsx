@@ -45,11 +45,11 @@ import { getSession, signOut } from "@/lib/auth"
 import { Route as rootRoute } from "./__root"
 
 const SOURCE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-	"aelis.location": MapPin,
-	"aelis.weather": CloudSun,
-	"aelis.caldav": CalendarDays,
-	"aelis.google-calendar": Calendar,
-	"aelis.tfl": TrainFront,
+	"freya.location": MapPin,
+	"freya.weather": CloudSun,
+	"freya.caldav": CalendarDays,
+	"freya.google-calendar": Calendar,
+	"freya.tfl": TrainFront,
 }
 
 export const Route = createRoute({

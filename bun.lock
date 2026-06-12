@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "aelis",
+      "name": "freya",
       "devDependencies": {
         "@json-render/core": "^0.12.1",
         "@nym.sh/jrx": "^0.2.0",
@@ -46,16 +46,16 @@
         "vite": "^7.2.4",
       },
     },
-    "apps/aelis-backend": {
-      "name": "@aelis/backend",
+    "apps/freya-backend": {
+      "name": "@freya/backend",
       "version": "0.0.0",
       "dependencies": {
-        "@aelis/core": "workspace:*",
-        "@aelis/source-caldav": "workspace:*",
-        "@aelis/source-google-calendar": "workspace:*",
-        "@aelis/source-location": "workspace:*",
-        "@aelis/source-tfl": "workspace:*",
-        "@aelis/source-weatherkit": "workspace:*",
+        "@freya/core": "workspace:*",
+        "@freya/source-caldav": "workspace:*",
+        "@freya/source-google-calendar": "workspace:*",
+        "@freya/source-location": "workspace:*",
+        "@freya/source-tfl": "workspace:*",
+        "@freya/source-weatherkit": "workspace:*",
         "@openrouter/sdk": "^0.9.11",
         "arktype": "^2.1.29",
         "better-auth": "^1",
@@ -68,8 +68,8 @@
         "drizzle-kit": "^0.31.9",
       },
     },
-    "apps/aelis-client": {
-      "name": "aelis-client",
+    "apps/freya-client": {
+      "name": "freya-client",
       "version": "1.0.0",
       "dependencies": {
         "@expo-google-fonts/inter": "^0.4.2",
@@ -144,16 +144,16 @@
         "vite-tsconfig-paths": "^5.1.4",
       },
     },
-    "packages/aelis-components": {
-      "name": "@aelis/components",
+    "packages/freya-components": {
+      "name": "@freya/components",
       "version": "0.0.0",
       "peerDependencies": {
         "@json-render/core": "*",
         "@nym.sh/jrx": "*",
       },
     },
-    "packages/aelis-core": {
-      "name": "@aelis/core",
+    "packages/freya-core": {
+      "name": "@freya/core",
       "version": "0.0.0",
       "dependencies": {
         "@standard-schema/spec": "^1.1.0",
@@ -163,50 +163,50 @@
         "@nym.sh/jrx": "*",
       },
     },
-    "packages/aelis-feed-enhancers": {
-      "name": "@aelis/feed-enhancers",
+    "packages/freya-feed-enhancers": {
+      "name": "@freya/feed-enhancers",
       "version": "0.0.0",
       "dependencies": {
-        "@aelis/core": "workspace:*",
-        "@aelis/source-caldav": "workspace:*",
-        "@aelis/source-google-calendar": "workspace:*",
-        "@aelis/source-tfl": "workspace:*",
-        "@aelis/source-weatherkit": "workspace:*",
+        "@freya/core": "workspace:*",
+        "@freya/source-caldav": "workspace:*",
+        "@freya/source-google-calendar": "workspace:*",
+        "@freya/source-tfl": "workspace:*",
+        "@freya/source-weatherkit": "workspace:*",
       },
     },
-    "packages/aelis-source-caldav": {
-      "name": "@aelis/source-caldav",
+    "packages/freya-source-caldav": {
+      "name": "@freya/source-caldav",
       "version": "0.0.0",
       "dependencies": {
-        "@aelis/components": "workspace:*",
-        "@aelis/core": "workspace:*",
+        "@freya/components": "workspace:*",
+        "@freya/core": "workspace:*",
         "ical.js": "^2.1.0",
         "tsdav": "^2.1.7",
       },
     },
-    "packages/aelis-source-google-calendar": {
-      "name": "@aelis/source-google-calendar",
+    "packages/freya-source-google-calendar": {
+      "name": "@freya/source-google-calendar",
       "version": "0.0.0",
       "dependencies": {
-        "@aelis/core": "workspace:*",
+        "@freya/core": "workspace:*",
         "arktype": "^2.1.0",
       },
     },
-    "packages/aelis-source-location": {
-      "name": "@aelis/source-location",
+    "packages/freya-source-location": {
+      "name": "@freya/source-location",
       "version": "0.0.0",
       "dependencies": {
-        "@aelis/core": "workspace:*",
+        "@freya/core": "workspace:*",
         "arktype": "^2.1.0",
       },
     },
-    "packages/aelis-source-tfl": {
-      "name": "@aelis/source-tfl",
+    "packages/freya-source-tfl": {
+      "name": "@freya/source-tfl",
       "version": "0.0.0",
       "dependencies": {
-        "@aelis/components": "workspace:*",
-        "@aelis/core": "workspace:*",
-        "@aelis/source-location": "workspace:*",
+        "@freya/components": "workspace:*",
+        "@freya/core": "workspace:*",
+        "@freya/source-location": "workspace:*",
         "arktype": "^2.1.0",
       },
       "peerDependencies": {
@@ -214,12 +214,12 @@
         "@nym.sh/jrx": "*",
       },
     },
-    "packages/aelis-source-weatherkit": {
-      "name": "@aelis/source-weatherkit",
+    "packages/freya-source-weatherkit": {
+      "name": "@freya/source-weatherkit",
       "version": "0.0.0",
       "dependencies": {
-        "@aelis/core": "workspace:*",
-        "@aelis/source-location": "workspace:*",
+        "@freya/core": "workspace:*",
+        "@freya/source-location": "workspace:*",
         "arktype": "^2.1.0",
       },
     },
@@ -227,23 +227,23 @@
   "packages": {
     "@0no-co/graphql.web": ["@0no-co/graphql.web@1.2.0", "", { "peerDependencies": { "graphql": "^14.0.0 || ^15.0.0 || ^16.0.0" }, "optionalPeers": ["graphql"] }, "sha512-/1iHy9TTr63gE1YcR5idjx8UREz1s0kFhydf3bBLCXyqjhkIc6igAzTOx3zPifCwFR87tsh/4Pa9cNts6d2otw=="],
 
-    "@aelis/backend": ["@aelis/backend@workspace:apps/aelis-backend"],
+    "@freya/backend": ["@freya/backend@workspace:apps/freya-backend"],
 
-    "@aelis/components": ["@aelis/components@workspace:packages/aelis-components"],
+    "@freya/components": ["@freya/components@workspace:packages/freya-components"],
 
-    "@aelis/core": ["@aelis/core@workspace:packages/aelis-core"],
+    "@freya/core": ["@freya/core@workspace:packages/freya-core"],
 
-    "@aelis/feed-enhancers": ["@aelis/feed-enhancers@workspace:packages/aelis-feed-enhancers"],
+    "@freya/feed-enhancers": ["@freya/feed-enhancers@workspace:packages/freya-feed-enhancers"],
 
-    "@aelis/source-caldav": ["@aelis/source-caldav@workspace:packages/aelis-source-caldav"],
+    "@freya/source-caldav": ["@freya/source-caldav@workspace:packages/freya-source-caldav"],
 
-    "@aelis/source-google-calendar": ["@aelis/source-google-calendar@workspace:packages/aelis-source-google-calendar"],
+    "@freya/source-google-calendar": ["@freya/source-google-calendar@workspace:packages/freya-source-google-calendar"],
 
-    "@aelis/source-location": ["@aelis/source-location@workspace:packages/aelis-source-location"],
+    "@freya/source-location": ["@freya/source-location@workspace:packages/freya-source-location"],
 
-    "@aelis/source-tfl": ["@aelis/source-tfl@workspace:packages/aelis-source-tfl"],
+    "@freya/source-tfl": ["@freya/source-tfl@workspace:packages/freya-source-tfl"],
 
-    "@aelis/source-weatherkit": ["@aelis/source-weatherkit@workspace:packages/aelis-source-weatherkit"],
+    "@freya/source-weatherkit": ["@freya/source-weatherkit@workspace:packages/freya-source-weatherkit"],
 
     "@alloc/quick-lru": ["@alloc/quick-lru@5.2.0", "", {}, "sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw=="],
 
@@ -1529,7 +1529,7 @@
 
     "admin-dashboard": ["admin-dashboard@workspace:apps/admin-dashboard"],
 
-    "aelis-client": ["aelis-client@workspace:apps/aelis-client"],
+    "freya-client": ["freya-client@workspace:apps/freya-client"],
 
     "agent-base": ["agent-base@7.1.4", "", {}, "sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ=="],
 
@@ -3921,11 +3921,11 @@
 
     "accepts/negotiator": ["negotiator@0.6.3", "", {}, "sha512-+EUsqGPLsM+j/zdChZjsnX51g4XrHFOIXwfnCVPGlQk/k5giakcKsuxCObBRu6DSm9opw/O6slWbJdghQM4bBg=="],
 
-    "aelis-client/@types/react": ["@types/react@19.1.17", "", { "dependencies": { "csstype": "^3.0.2" } }, "sha512-Qec1E3mhALmaspIrhWt9jkQMNdw6bReVu64mjvhbhq2NFPftLPVr+l1SZgmw/66WwBNpDh7ao5AT6gF5v41PFA=="],
+    "freya-client/@types/react": ["@types/react@19.1.17", "", { "dependencies": { "csstype": "^3.0.2" } }, "sha512-Qec1E3mhALmaspIrhWt9jkQMNdw6bReVu64mjvhbhq2NFPftLPVr+l1SZgmw/66WwBNpDh7ao5AT6gF5v41PFA=="],
 
-    "aelis-client/react": ["react@19.1.0", "", {}, "sha512-FS+XFBNvn3GTAWq26joslQgWNoFu08F4kl0J4CgdNKADkdSGXQyTCnKteIAJy96Br6YbpEU1LSzV5dYtjMkMDg=="],
+    "freya-client/react": ["react@19.1.0", "", {}, "sha512-FS+XFBNvn3GTAWq26joslQgWNoFu08F4kl0J4CgdNKADkdSGXQyTCnKteIAJy96Br6YbpEU1LSzV5dYtjMkMDg=="],
 
-    "aelis-client/react-dom": ["react-dom@19.1.0", "", { "dependencies": { "scheduler": "^0.26.0" }, "peerDependencies": { "react": "^19.1.0" } }, "sha512-Xs1hdnE+DyKgeHJeJznQmYMIBG3TKIHJJT95Q58nHLSrElKlGQqDTR2HQ9fx5CN/Gk6Vh/kupBTDLU11/nDk/g=="],
+    "freya-client/react-dom": ["react-dom@19.1.0", "", { "dependencies": { "scheduler": "^0.26.0" }, "peerDependencies": { "react": "^19.1.0" } }, "sha512-Xs1hdnE+DyKgeHJeJznQmYMIBG3TKIHJJT95Q58nHLSrElKlGQqDTR2HQ9fx5CN/Gk6Vh/kupBTDLU11/nDk/g=="],
 
     "ansi-escapes/type-fest": ["type-fest@0.21.3", "", {}, "sha512-t0rzBq87m3fVcduHDUFhKmyyX+9eo6WQjZvf51Ea/M0Q7+T374Jp1aUiyUl0GKxp8M/OETVHSDvmkyPgvX+X2w=="],
 
@@ -4559,7 +4559,7 @@
 
     "@typescript-eslint/typescript-estree/minimatch/brace-expansion": ["brace-expansion@5.0.4", "", { "dependencies": { "balanced-match": "^4.0.2" } }, "sha512-h+DEnpVvxmfVefa4jFbCf5HdH5YMDXRsmKflpf1pILZWRFlTbJpxeU55nJl4Smt5HQaGzg1o6RHFPJaOqnmBDg=="],
 
-    "aelis-client/react-dom/scheduler": ["scheduler@0.26.0", "", {}, "sha512-NlHwttCI/l5gCPR3D1nNXtWABUmBwvZpEQiD4IXSbIDq8BzLIK/7Ir5gTFSGZDUu37K5cMNp0hFtzO38sC7gWA=="],
+    "freya-client/react-dom/scheduler": ["scheduler@0.26.0", "", {}, "sha512-NlHwttCI/l5gCPR3D1nNXtWABUmBwvZpEQiD4IXSbIDq8BzLIK/7Ir5gTFSGZDUu37K5cMNp0hFtzO38sC7gWA=="],
 
     "better-opn/open/define-lazy-prop": ["define-lazy-prop@2.0.0", "", {}, "sha512-Ds09qNh8yw3khSjiJjiUInaGX9xlqZDY7JVryGxdxV7NPeuqQfplOpQ66yJFZut3jLa5zOwkXw1g9EI2uKh4Og=="],
 

@@ -1,4 +1,4 @@
-# aelis
+# freya
 
 To install dependencies:
 
@@ -8,14 +8,14 @@ bun install
 
 ## Packages
 
-### @aelis/source-tfl
+### @freya/source-tfl
 
 TfL (Transport for London) feed source for tube, overground, and Elizabeth line alerts.
 
 #### Testing
 
 ```bash
-cd packages/aelis-source-tfl
+cd packages/freya-source-tfl
 bun run test
 ```
 

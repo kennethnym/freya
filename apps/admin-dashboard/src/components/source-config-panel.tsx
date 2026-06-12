@@ -247,7 +247,7 @@ export function SourceConfigPanel({ source, onUpdate }: SourceConfigPanelProps) 
 			)}
 
 			{/* Always-on sources */}
-			{source.alwaysEnabled && source.id !== "aelis.location" && (
+			{source.alwaysEnabled && source.id !== "freya.location" && (
 				<>
 					<Separator />
 					<p className="text-sm text-muted-foreground">
@@ -256,7 +256,7 @@ export function SourceConfigPanel({ source, onUpdate }: SourceConfigPanelProps) 
 				</>
 			)}
 
-			{source.id === "aelis.location" && <LocationCard />}
+			{source.id === "freya.location" && <LocationCard />}
 		</div>
 	)
 }

@@ -1,5 +1,5 @@
 {
-	"name": "aelis",
+	"name": "freya",
 	"private": true,
 	"workspaces": [
 		"packages/*",
@@ -7,9 +7,9 @@
 	],
 	"type": "module",
 	"scripts": {
-		"expo": "cd apps/aelis-client && bun run start",
-		"drizzle-studio": "TS_IP=$(tailscale ip -4); echo \"Drizzle Studio: https://local.drizzle.studio/?host=${TS_IP}&port=4983\"; cd apps/aelis-backend && bunx drizzle-kit studio --host 0.0.0.0 --port 4983",
-		"aelis-backend": "TS_IP=$(tailscale ip -4); echo \"Aelis Backend: http://${TS_IP}:3000\"; echo \"\"; echo \"------------------ Bun Debugger ------------------\"; echo \"https://debug.bun.sh/#${TS_IP}:6499\"; echo \"------------------ Bun Debugger ------------------\"; echo \"\"; cd apps/aelis-backend && bun run dev",
+		"expo": "cd apps/freya-client && bun run start",
+		"drizzle-studio": "TS_IP=$(tailscale ip -4); echo \"Drizzle Studio: https://local.drizzle.studio/?host=${TS_IP}&port=4983\"; cd apps/freya-backend && bunx drizzle-kit studio --host 0.0.0.0 --port 4983",
+		"freya-backend": "TS_IP=$(tailscale ip -4); echo \"Freya Backend: http://${TS_IP}:3000\"; echo \"\"; echo \"------------------ Bun Debugger ------------------\"; echo \"https://debug.bun.sh/#${TS_IP}:6499\"; echo \"------------------ Bun Debugger ------------------\"; echo \"\"; cd apps/freya-backend && bun run dev",
 		"admin-dashboard": "TS_IP=$(tailscale ip -4); echo \"Admin Dashboard: http://${TS_IP}:5174\"; cd apps/admin-dashboard && bun run dev --host 0.0.0.0",
 		"test": "bun run --filter '*' test",
 		"lint": "oxlint .",

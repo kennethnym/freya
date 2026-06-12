@@ -1,0 +1,220 @@
+{
+	"expo": {
+		"name": "Freya",
+		"slug": "freya-client",
+		"version": "1.0.0",
+		"orientation": "portrait",
+		"icon": "./assets/images/icon.png",
+		"scheme": "freya",
+		"userInterfaceStyle": "automatic",
+		"newArchEnabled": true,
+		"ios": {
+			"infoPlist": {
+				"NSAppTransportSecurity": {
+					"NSAllowsArbitraryLoads": true
+				},
+				"ITSAppUsesNonExemptEncryption": false
+			},
+			"bundleIdentifier": "sh.nym.freya"
+		},
+		"android": {
+			"adaptiveIcon": {
+				"backgroundColor": "#E6F4FE",
+				"foregroundImage": "./assets/images/android-icon-foreground.png",
+				"backgroundImage": "./assets/images/android-icon-background.png",
+				"monochromeImage": "./assets/images/android-icon-monochrome.png"
+			},
+			"edgeToEdgeEnabled": true,
+			"predictiveBackGestureEnabled": false,
+			"package": "sh.nym.freya"
+		},
+		"web": {
+			"output": "static",
+			"favicon": "./assets/images/favicon.png"
+		},
+		"plugins": [
+			"expo-router",
+			[
+				"expo-splash-screen",
+				{
+					"image": "./assets/images/splash-icon.png",
+					"imageWidth": 200,
+					"resizeMode": "contain",
+					"backgroundColor": "#ffffff",
+					"dark": {
+						"backgroundColor": "#000000"
+					}
+				}
+			],
+			[
+				"expo-font",
+				{
+					"android": {
+						"fonts": [
+							{
+								"fontFamily": "Inter",
+								"fontDefinitions": [
+									{ "path": "./assets/fonts/Inter_100Thin.ttf", "weight": 100 },
+									{
+										"path": "./assets/fonts/Inter_100Thin_Italic.ttf",
+										"weight": 100,
+										"style": "italic"
+									},
+									{ "path": "./assets/fonts/Inter_200ExtraLight.ttf", "weight": 200 },
+									{
+										"path": "./assets/fonts/Inter_200ExtraLight_Italic.ttf",
+										"weight": 200,
+										"style": "italic"
+									},
+									{ "path": "./assets/fonts/Inter_300Light.ttf", "weight": 300 },
+									{
+										"path": "./assets/fonts/Inter_300Light_Italic.ttf",
+										"weight": 300,
+										"style": "italic"
+									},
+									{ "path": "./assets/fonts/Inter_400Regular.ttf", "weight": 400 },
+									{
+										"path": "./assets/fonts/Inter_400Regular_Italic.ttf",
+										"weight": 400,
+										"style": "italic"
+									},
+									{ "path": "./assets/fonts/Inter_500Medium.ttf", "weight": 500 },
+									{
+										"path": "./assets/fonts/Inter_500Medium_Italic.ttf",
+										"weight": 500,
+										"style": "italic"
+									},
+									{ "path": "./assets/fonts/Inter_600SemiBold.ttf", "weight": 600 },
+									{
+										"path": "./assets/fonts/Inter_600SemiBold_Italic.ttf",
+										"weight": 600,
+										"style": "italic"
+									},
+									{ "path": "./assets/fonts/Inter_700Bold.ttf", "weight": 700 },
+									{
+										"path": "./assets/fonts/Inter_700Bold_Italic.ttf",
+										"weight": 700,
+										"style": "italic"
+									},
+									{ "path": "./assets/fonts/Inter_800ExtraBold.ttf", "weight": 800 },
+									{
+										"path": "./assets/fonts/Inter_800ExtraBold_Italic.ttf",
+										"weight": 800,
+										"style": "italic"
+									},
+									{ "path": "./assets/fonts/Inter_900Black.ttf", "weight": 900 },
+									{
+										"path": "./assets/fonts/Inter_900Black_Italic.ttf",
+										"weight": 900,
+										"style": "italic"
+									}
+								]
+							},
+							{
+								"fontFamily": "Source Serif 4",
+								"fontDefinitions": [
+									{ "path": "./assets/fonts/SourceSerif4_200ExtraLight.ttf", "weight": 200 },
+									{
+										"path": "./assets/fonts/SourceSerif4_200ExtraLight_Italic.ttf",
+										"weight": 200,
+										"style": "italic"
+									},
+									{ "path": "./assets/fonts/SourceSerif4_300Light.ttf", "weight": 300 },
+									{
+										"path": "./assets/fonts/SourceSerif4_300Light_Italic.ttf",
+										"weight": 300,
+										"style": "italic"
+									},
+									{ "path": "./assets/fonts/SourceSerif4_400Regular.ttf", "weight": 400 },
+									{
+										"path": "./assets/fonts/SourceSerif4_400Regular_Italic.ttf",
+										"weight": 400,
+										"style": "italic"
+									},
+									{ "path": "./assets/fonts/SourceSerif4_500Medium.ttf", "weight": 500 },
+									{
+										"path": "./assets/fonts/SourceSerif4_500Medium_Italic.ttf",
+										"weight": 500,
+										"style": "italic"
+									},
+									{ "path": "./assets/fonts/SourceSerif4_600SemiBold.ttf", "weight": 600 },
+									{
+										"path": "./assets/fonts/SourceSerif4_600SemiBold_Italic.ttf",
+										"weight": 600,
+										"style": "italic"
+									},
+									{ "path": "./assets/fonts/SourceSerif4_700Bold.ttf", "weight": 700 },
+									{
+										"path": "./assets/fonts/SourceSerif4_700Bold_Italic.ttf",
+										"weight": 700,
+										"style": "italic"
+									},
+									{ "path": "./assets/fonts/SourceSerif4_800ExtraBold.ttf", "weight": 800 },
+									{
+										"path": "./assets/fonts/SourceSerif4_800ExtraBold_Italic.ttf",
+										"weight": 800,
+										"style": "italic"
+									},
+									{ "path": "./assets/fonts/SourceSerif4_900Black.ttf", "weight": 900 },
+									{
+										"path": "./assets/fonts/SourceSerif4_900Black_Italic.ttf",
+										"weight": 900,
+										"style": "italic"
+									}
+								]
+							}
+						]
+					},
+					"ios": {
+						"fonts": [
+							"./assets/fonts/Inter_100Thin.ttf",
+							"./assets/fonts/Inter_100Thin_Italic.ttf",
+							"./assets/fonts/Inter_200ExtraLight.ttf",
+							"./assets/fonts/Inter_200ExtraLight_Italic.ttf",
+							"./assets/fonts/Inter_300Light.ttf",
+							"./assets/fonts/Inter_300Light_Italic.ttf",
+							"./assets/fonts/Inter_400Regular.ttf",
+							"./assets/fonts/Inter_400Regular_Italic.ttf",
+							"./assets/fonts/Inter_500Medium.ttf",
+							"./assets/fonts/Inter_500Medium_Italic.ttf",
+							"./assets/fonts/Inter_600SemiBold.ttf",
+							"./assets/fonts/Inter_600SemiBold_Italic.ttf",
+							"./assets/fonts/Inter_700Bold.ttf",
+							"./assets/fonts/Inter_700Bold_Italic.ttf",
+							"./assets/fonts/Inter_800ExtraBold.ttf",
+							"./assets/fonts/Inter_800ExtraBold_Italic.ttf",
+							"./assets/fonts/Inter_900Black.ttf",
+							"./assets/fonts/Inter_900Black_Italic.ttf",
+							"./assets/fonts/SourceSerif4_200ExtraLight.ttf",
+							"./assets/fonts/SourceSerif4_200ExtraLight_Italic.ttf",
+							"./assets/fonts/SourceSerif4_300Light.ttf",
+							"./assets/fonts/SourceSerif4_300Light_Italic.ttf",
+							"./assets/fonts/SourceSerif4_400Regular.ttf",
+							"./assets/fonts/SourceSerif4_400Regular_Italic.ttf",
+							"./assets/fonts/SourceSerif4_500Medium.ttf",
+							"./assets/fonts/SourceSerif4_500Medium_Italic.ttf",
+							"./assets/fonts/SourceSerif4_600SemiBold.ttf",
+							"./assets/fonts/SourceSerif4_600SemiBold_Italic.ttf",
+							"./assets/fonts/SourceSerif4_700Bold.ttf",
+							"./assets/fonts/SourceSerif4_700Bold_Italic.ttf",
+							"./assets/fonts/SourceSerif4_800ExtraBold.ttf",
+							"./assets/fonts/SourceSerif4_800ExtraBold_Italic.ttf",
+							"./assets/fonts/SourceSerif4_900Black.ttf",
+							"./assets/fonts/SourceSerif4_900Black_Italic.ttf"
+						]
+					}
+				}
+			]
+		],
+		"experiments": {
+			"typedRoutes": true,
+			"reactCompiler": true
+		},
+		"extra": {
+			"router": {},
+			"eas": {
+				"projectId": "61092d23-36aa-418e-929d-ea40dc912e8f"
+			}
+		}
+	}
+}
