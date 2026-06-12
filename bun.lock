@@ -53,6 +53,7 @@
         "@freya/core": "workspace:*",
         "@freya/source-caldav": "workspace:*",
         "@freya/source-google-calendar": "workspace:*",
+        "@freya/source-google-maps": "workspace:*",
         "@freya/source-location": "workspace:*",
         "@freya/source-tfl": "workspace:*",
         "@freya/source-weatherkit": "workspace:*",
@@ -190,6 +191,14 @@
       "version": "0.0.0",
       "dependencies": {
         "@freya/core": "workspace:*",
+        "arktype": "^2.1.0",
+      },
+    },
+    "packages/freya-source-google-maps": {
+      "name": "@freya/source-google-maps",
+      "version": "0.0.0",
+      "dependencies": {
+        "@freya/source-mcp": "workspace:*",
         "arktype": "^2.1.0",
       },
     },
@@ -671,6 +680,8 @@
     "@freya/source-caldav": ["@freya/source-caldav@workspace:packages/freya-source-caldav"],
 
     "@freya/source-google-calendar": ["@freya/source-google-calendar@workspace:packages/freya-source-google-calendar"],
+
+    "@freya/source-google-maps": ["@freya/source-google-maps@workspace:packages/freya-source-google-maps"],
 
     "@freya/source-location": ["@freya/source-location@workspace:packages/freya-source-location"],
 

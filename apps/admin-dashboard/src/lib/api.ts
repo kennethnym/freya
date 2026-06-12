@@ -157,6 +157,12 @@ const sourceDefinitions: SourceDefinition[] = [
 		description: "Exa web search action. Requires EXA_API_KEY on the backend.",
 		fields: {},
 	},
+	{
+		id: "freya.google-maps",
+		name: "Google Maps",
+		description: "Google Maps Grounding Lite MCP tools for places, weather, routes, and Place IDs.",
+		fields: {},
+	},
 ]
 
 export function fetchSources(): Promise<SourceDefinition[]> {

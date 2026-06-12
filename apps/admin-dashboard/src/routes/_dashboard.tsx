@@ -15,6 +15,7 @@ import {
 	Loader2,
 	TrainFront,
 	LogOut,
+	Map as MapIcon,
 	MapPin,
 	Rss,
 	Server,
@@ -49,6 +50,7 @@ const SOURCE_ICONS: Record<string, React.ComponentType<{ className?: string }>> 
 	"freya.weather": CloudSun,
 	"freya.caldav": CalendarDays,
 	"freya.google-calendar": Calendar,
+	"freya.google-maps": MapIcon,
 	"freya.tfl": TrainFront,
 }
 
