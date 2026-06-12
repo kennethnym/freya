@@ -186,6 +186,18 @@ function put(app: Hono, sourceId: string, body: unknown) {
 	})
 }
 
+function listActions(app: Hono, sourceId: string) {
+	return app.request(`/api/sources/${sourceId}/actions`, { method: "GET" })
+}
+
+function executeAction(app: Hono, sourceId: string, actionId: string, body: unknown) {
+	return app.request(`/api/sources/${sourceId}/actions/${actionId}`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(body),
+	})
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -778,6 +790,168 @@ describe("PUT /api/sources/:sourceId", () => {
 		expect(res.status).toBe(503)
 		const body = (await res.json()) as { error: string }
 		expect(body.error).toContain("not configured")
+	})
+})
+
+describe("GET /api/sources/:sourceId/actions", () => {
+	test("returns 401 without auth", async () => {
+		activeStore = createInMemoryStore()
+		const { app } = createApp([createStubProvider("freya.location")])
+
+		const res = await listActions(app, "freya.location")
+
+		expect(res.status).toBe(401)
+	})
+
+	test("returns 404 for source that is not enabled in the user session", async () => {
+		activeStore = createInMemoryStore()
+		const { app } = createApp([createStubProvider("freya.location")], MOCK_USER_ID)
+
+		const res = await listActions(app, "freya.location")
+
+		expect(res.status).toBe(404)
+	})
+
+	test("returns serializable action definitions", async () => {
+		activeStore = createInMemoryStore()
+		activeStore.seed(MOCK_USER_ID, "test.actions")
+		const provider: FeedSourceProvider = {
+			sourceId: "test.actions",
+			async feedSourceForUser() {
+				return {
+					id: "test.actions",
+					async listActions() {
+						return {
+							search: {
+								id: "search",
+								description: "Search something",
+								input: tflConfig,
+							},
+						}
+					},
+					async executeAction() {
+						return undefined
+					},
+					async fetchContext() {
+						return null
+					},
+				}
+			},
+		}
+		const { app } = createApp([provider], MOCK_USER_ID)
+
+		const res = await listActions(app, "test.actions")
+
+		expect(res.status).toBe(200)
+		const body = (await res.json()) as {
+			actions: Record<string, { id: string; description?: string; input?: unknown }>
+		}
+		expect(body.actions.search).toEqual({
+			id: "search",
+			description: "Search something",
+		})
+	})
+})
+
+describe("POST /api/sources/:sourceId/actions/:actionId", () => {
+	test("returns 401 without auth", async () => {
+		activeStore = createInMemoryStore()
+		const { app } = createApp([createStubProvider("freya.location")])
+
+		const res = await executeAction(app, "freya.location", "update-location", {})
+
+		expect(res.status).toBe(401)
+	})
+
+	test("executes source action with request body as params", async () => {
+		activeStore = createInMemoryStore()
+		activeStore.seed(MOCK_USER_ID, "test.actions")
+		let receivedParams: unknown
+		const provider: FeedSourceProvider = {
+			sourceId: "test.actions",
+			async feedSourceForUser() {
+				return {
+					id: "test.actions",
+					async listActions() {
+						return {
+							search: { id: "search", description: "Search something" },
+						}
+					},
+					async executeAction(_actionId: string, params: unknown) {
+						receivedParams = params
+						return { ok: true, count: 2 }
+					},
+					async fetchContext() {
+						return null
+					},
+				}
+			},
+		}
+		const { app } = createApp([provider], MOCK_USER_ID)
+
+		const res = await executeAction(app, "test.actions", "search", { query: "exa" })
+
+		expect(res.status).toBe(200)
+		expect(receivedParams).toEqual({ query: "exa" })
+		const body = (await res.json()) as { result: unknown }
+		expect(body.result).toEqual({ ok: true, count: 2 })
+	})
+
+	test("returns 404 for unknown action", async () => {
+		activeStore = createInMemoryStore()
+		activeStore.seed(MOCK_USER_ID, "freya.location")
+		const { app } = createApp([createStubProvider("freya.location")], MOCK_USER_ID)
+
+		const res = await executeAction(app, "freya.location", "missing", {})
+
+		expect(res.status).toBe(404)
+	})
+
+	test("returns 400 for invalid JSON", async () => {
+		activeStore = createInMemoryStore()
+		activeStore.seed(MOCK_USER_ID, "freya.location")
+		const { app } = createApp([createStubProvider("freya.location")], MOCK_USER_ID)
+
+		const res = await app.request("/api/sources/freya.location/actions/search", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: "not-json",
+		})
+
+		expect(res.status).toBe(400)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toBe("Invalid JSON")
+	})
+
+	test("returns 400 when source rejects params", async () => {
+		activeStore = createInMemoryStore()
+		activeStore.seed(MOCK_USER_ID, "test.actions")
+		const provider: FeedSourceProvider = {
+			sourceId: "test.actions",
+			async feedSourceForUser() {
+				return {
+					id: "test.actions",
+					async listActions() {
+						return {
+							search: { id: "search" },
+						}
+					},
+					async executeAction() {
+						throw new Error("query must not be empty")
+					},
+					async fetchContext() {
+						return null
+					},
+				}
+			},
+		}
+		const { app } = createApp([provider], MOCK_USER_ID)
+
+		const res = await executeAction(app, "test.actions", "search", { query: "" })
+
+		expect(res.status).toBe(400)
+		const body = (await res.json()) as { error: string }
+		expect(body.error).toBe("query must not be empty")
 	})
 })
 

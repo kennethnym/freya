@@ -66,6 +66,14 @@ export function SourceConfigPanel({ source, onUpdate }: SourceConfigPanelProps) 
 		return creds
 	}
 
+	function buildReplaceBody(enabledValue: boolean): Parameters<typeof replaceSource>[1] {
+		const body: Parameters<typeof replaceSource>[1] = { enabled: enabledValue }
+		if (Object.keys(source.fields).length > 0) {
+			body.config = getUserConfig()
+		}
+		return body
+	}
+
 	function invalidate() {
 		queryClient.invalidateQueries({ queryKey: ["sourceConfig", source.id] })
 		queryClient.invalidateQueries({ queryKey: ["configs"] })
@@ -79,10 +87,7 @@ export function SourceConfigPanel({ source, onUpdate }: SourceConfigPanelProps) 
 				(v) => typeof v === "string" && v.length > 0,
 			)
 
-			const body: Parameters<typeof replaceSource>[1] = {
-				enabled,
-				config: getUserConfig(),
-			}
+			const body = buildReplaceBody(enabled)
 			if (hasCredentials && source.perUserCredentials) {
 				body.credentials = credentialFields
 			}
@@ -104,8 +109,7 @@ export function SourceConfigPanel({ source, onUpdate }: SourceConfigPanelProps) 
 	})
 
 	const toggleMutation = useMutation({
-		mutationFn: (checked: boolean) =>
-			replaceSource(source.id, { enabled: checked, config: getUserConfig() }),
+		mutationFn: (checked: boolean) => replaceSource(source.id, buildReplaceBody(checked)),
 		onSuccess(_data, checked) {
 			invalidate()
 			toast.success(`Source ${checked ? "enabled" : "disabled"}`)
@@ -116,7 +120,7 @@ export function SourceConfigPanel({ source, onUpdate }: SourceConfigPanelProps) 
 	})
 
 	const deleteMutation = useMutation({
-		mutationFn: () => replaceSource(source.id, { enabled: false, config: {} }),
+		mutationFn: () => replaceSource(source.id, buildReplaceBody(false)),
 		onSuccess() {
 			setDirty({})
 			invalidate()

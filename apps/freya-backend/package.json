@@ -21,6 +21,7 @@
 		"@freya/source-location": "workspace:*",
 		"@freya/source-tfl": "workspace:*",
 		"@freya/source-weatherkit": "workspace:*",
+		"@freya/source-web-search": "workspace:*",
 		"@openrouter/sdk": "^0.9.11",
 		"arktype": "^2.1.29",
 		"better-auth": "^1",
