@@ -7,6 +7,7 @@
 import type { ServerWebSocket } from "bun"
 
 const PROXY_PORT = parseInt(process.env.PROXY_PORT || "8080", 10)
+const PROXY_HOST = process.env.PROXY_HOST || "0.0.0.0"
 const METRO_PORT = parseInt(process.env.METRO_PORT || "8081", 10)
 const METRO_BASE = `http://127.0.0.1:${METRO_PORT}`
 
@@ -23,7 +24,15 @@ interface WsData {
 	isDevice: boolean
 }
 
+interface DebugTarget {
+	webSocketDebuggerUrl: string
+	reactNative?: {
+		capabilities?: { prefersFuseboxFrontend?: boolean }
+	}
+}
+
 Bun.serve<WsData>({
+	hostname: PROXY_HOST,
 	port: PROXY_PORT,
 
 	async fetch(req, server) {
@@ -55,10 +64,11 @@ Bun.serve<WsData>({
 
 		// HTTP proxy
 		const upstream = `${METRO_BASE}${url.pathname}${url.search}`
+		const body = req.body ? await req.arrayBuffer() : undefined
 		const res = await fetch(upstream, {
 			method: req.method,
 			headers: forwardHeaders(req.headers),
-			body: req.body,
+			body,
 			redirect: "manual",
 		})
 
@@ -104,14 +114,10 @@ async function printDebuggerUrl() {
 	const res = await fetch(`${METRO_BASE}/json`)
 	if (!res.ok) return
 
-	interface DebugTarget {
-		webSocketDebuggerUrl: string
-		reactNative?: {
-			capabilities?: { prefersFuseboxFrontend?: boolean }
-		}
-	}
+	const parsedTargets: unknown = await res.json()
+	if (!Array.isArray(parsedTargets)) return
 
-	const targets: DebugTarget[] = await res.json()
+	const targets = parsedTargets.filter(isDebugTarget)
 	const target = targets.find((t) => t.reactNative?.capabilities?.prefersFuseboxFrontend)
 	if (!target) return
 
@@ -124,4 +130,25 @@ async function printDebuggerUrl() {
 	)
 }
 
-console.log(`[proxy] listening on :${PROXY_PORT}, forwarding to 127.0.0.1:${METRO_PORT}`)
+console.log(
+	`[proxy] listening on ${PROXY_HOST}:${PROXY_PORT}, forwarding to 127.0.0.1:${METRO_PORT}`,
+)
+
+function isDebugTarget(value: unknown): value is DebugTarget {
+	if (!isRecord(value) || typeof value.webSocketDebuggerUrl !== "string") return false
+
+	const reactNative = value.reactNative
+	if (reactNative === undefined) return true
+	if (!isRecord(reactNative)) return false
+
+	const capabilities = reactNative.capabilities
+	if (capabilities === undefined) return true
+	if (!isRecord(capabilities)) return false
+
+	const prefersFuseboxFrontend = capabilities.prefersFuseboxFrontend
+	return prefersFuseboxFrontend === undefined || typeof prefersFuseboxFrontend === "boolean"
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null
+}
