@@ -1,0 +1,14 @@
+{
+	"name": "@freya/source-mcp",
+	"version": "0.0.0",
+	"type": "module",
+	"main": "src/index.ts",
+	"types": "src/index.ts",
+	"scripts": {
+		"test": "bun test src/"
+	},
+	"dependencies": {
+		"@freya/core": "workspace:*",
+		"@modelcontextprotocol/sdk": "^1.27.1"
+	}
+}
