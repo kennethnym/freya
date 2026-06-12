@@ -1,8 +1,8 @@
-# AELIS Backend Specification
+# FREYA Backend Specification
 
 ## Problem Statement
 
-AELIS needs a backend service that manages per-user FeedEngine instances and delivers real-time feed updates to clients. The backend must handle authentication, maintain WebSocket connections for live updates, and accept context updates (like location) that trigger feed recalculations.
+FREYA needs a backend service that manages per-user FeedEngine instances and delivers real-time feed updates to clients. The backend must handle authentication, maintain WebSocket connections for live updates, and accept context updates (like location) that trigger feed recalculations.
 
 ## Requirements
 
@@ -105,7 +105,7 @@ All WebSocket communication uses JSON-RPC 2.0.
 
 ### Phase 1: Project Setup
 
-1. Create `apps/aelis-backend` with Hono
+1. Create `apps/freya-backend` with Hono
 2. Configure TypeScript, add dependencies (hono, better-auth, postgres driver)
 3. Set up database connection and BetterAuth
 
@@ -152,7 +152,7 @@ All WebSocket communication uses JSON-RPC 2.0.
 ## Package Structure
 
 ```
-apps/aelis-backend/
+apps/freya-backend/
 ├── package.json
 ├── src/
 │   ├── index.ts              # Entry point, Hono app
@@ -177,10 +177,10 @@ apps/aelis-backend/
 		"hono": "^4",
 		"better-auth": "^1",
 		"postgres": "^3",
-		"@aelis/core": "workspace:*",
-		"@aelis/source-location": "workspace:*",
-		"@aelis/source-weatherkit": "workspace:*",
-		"@aelis/data-source-tfl": "workspace:*"
+		"@freya/core": "workspace:*",
+		"@freya/source-location": "workspace:*",
+		"@freya/source-weatherkit": "workspace:*",
+		"@freya/data-source-tfl": "workspace:*"
 	}
 }
 ```

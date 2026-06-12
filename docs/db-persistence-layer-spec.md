@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-AELIS currently hardcodes the same set of feed sources for every user. Source configuration (TFL lines, weather units, calendar IDs, etc.) and credentials (OAuth tokens) are not persisted. Users cannot customize which sources appear in their feed or configure source-specific settings.
+FREYA currently hardcodes the same set of feed sources for every user. Source configuration (TFL lines, weather units, calendar IDs, etc.) and credentials (OAuth tokens) are not persisted. Users cannot customize which sources appear in their feed or configure source-specific settings.
 
 The backend uses a raw `pg` Pool for Better Auth and has no ORM. We need a persistence layer that stores per-user source configuration and credentials, using Drizzle ORM with Bun.sql as the Postgres driver.
 
@@ -28,7 +28,7 @@ A `user_sources` table stores per-user source state:
 | ------------- | --------------------- | -------------------------------------------------------------- |
 | `id`          | `uuid` PK             | Row ID                                                         |
 | `user_id`     | `text` FK → `user.id` | Owner                                                          |
-| `source_id`   | `text`                | Source identifier (e.g., `aelis.tfl`, `aelis.weather`)         |
+| `source_id`   | `text`                | Source identifier (e.g., `freya.tfl`, `freya.weather`)         |
 | `enabled`     | `boolean`             | Whether this source is active in the user's feed               |
 | `config`      | `jsonb`               | Source-specific configuration (validated by source at runtime) |
 | `credentials` | `bytea`               | Encrypted OAuth tokens / secrets (AES-256-GCM)                 |
@@ -52,9 +52,9 @@ When a new user is created, seed `user_sources` rows for default sources:
 
 | Source           | Default config                                              |
 | ---------------- | ----------------------------------------------------------- |
-| `aelis.location` | `{}`                                                        |
-| `aelis.weather`  | `{ "units": "metric", "hourlyLimit": 12, "dailyLimit": 7 }` |
-| `aelis.tfl`      | `{ "lines": <all default lines> }`                          |
+| `freya.location` | `{}`                                                        |
+| `freya.weather`  | `{ "units": "metric", "hourlyLimit": 12, "dailyLimit": 7 }` |
+| `freya.tfl`      | `{ "lines": <all default lines> }`                          |
 
 - Seeding happens via a Better Auth `after` hook on user creation, or via application-level logic after signup.
 - Sources requiring credentials (Google Calendar, CalDAV) are **not** enabled by default — they require the user to connect an account first.
@@ -79,14 +79,14 @@ class TflSourceProvider implements FeedSourceProvider {
 			.where(
 				and(
 					eq(userSources.userId, userId),
-					eq(userSources.sourceId, "aelis.tfl"),
+					eq(userSources.sourceId, "freya.tfl"),
 					eq(userSources.enabled, true),
 				),
 			)
 			.limit(1)
 
 		if (!row[0]) {
-			throw new SourceDisabledError("aelis.tfl", userId)
+			throw new SourceDisabledError("freya.tfl", userId)
 		}
 
 		const config = tflSourceConfig(row[0].config ?? {})
@@ -104,8 +104,8 @@ No interface changes are needed — the existing async `FeedSourceProvider` and 
 ### 7. Drizzle Kit migrations
 
 - Use `drizzle-kit` for schema migrations
-- `drizzle.config.ts` at `apps/aelis-backend/drizzle.config.ts`
-- Migration files stored in `apps/aelis-backend/drizzle/`
+- `drizzle.config.ts` at `apps/freya-backend/drizzle.config.ts`
+- Migration files stored in `apps/freya-backend/drizzle/`
 - Scripts in `package.json`: `db:generate`, `db:migrate`, `db:studio`
 
 ## Acceptance Criteria
@@ -190,7 +190,7 @@ _`FeedSourceProvider` is already async and `UserSessionManager.getOrCreate` alre
 ## File Structure (new/modified)
 
 ```
-apps/aelis-backend/
+apps/freya-backend/
 ├── drizzle.config.ts                    # NEW
 ├── drizzle/                             # NEW — migration files
 ├── src/

@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for aelis-waitlist-website on 2026-03-08T01:11:12Z
+# fly.toml app configuration file generated for freya-waitlist-website on 2026-03-08T01:11:12Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'aelis-waitlist-website'
+app = 'freya-waitlist-website'
 primary_region = 'lhr'
 
 [build]

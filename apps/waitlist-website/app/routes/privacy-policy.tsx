@@ -7,8 +7,8 @@ import type { Route } from "./+types/privacy-policy"
 
 export function meta({}: Route.MetaArgs) {
 	return [
-		{ title: "Privacy Policy — Aelis" },
-		{ name: "description", content: "Aelis privacy policy" },
+		{ title: "Privacy Policy — Freya" },
+		{ name: "description", content: "Freya privacy policy" },
 	]
 }
 
@@ -40,7 +40,7 @@ const POLICY = `# Privacy Policy
 
 **Last updated:** March 5, 2026
 
-This Privacy Policy describes how **Aelis** ("we", "us", or "our") collects, uses, and protects your personal information when you visit **https://ael.is** or interact with our services.
+This Privacy Policy describes how **Freya** ("we", "us", or "our") collects, uses, and protects your personal information when you visit **https://ael.is** or interact with our services.
 
 If you do not agree with this Privacy Policy, please do not use the website.
 
@@ -230,7 +230,7 @@ We encourage users to review this Privacy Policy regularly.
 
 If you have questions or comments about this Privacy Policy, you may contact us:
 
-**Aelis**
+**Freya**
 
 Email: **[kenneth@nym.sh](mailto:kenneth@nym.sh)**
 

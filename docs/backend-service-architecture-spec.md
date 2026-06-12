@@ -32,7 +32,7 @@ server.ts
 
 ## Scope
 
-**Backend only** (`apps/aelis-backend`). No changes to `aelis-core` or source packages (`packages/aelis-source-*`). The `FeedSource` interface and source implementations remain unchanged.
+**Backend only** (`apps/freya-backend`). No changes to `freya-core` or source packages (`packages/freya-source-*`). The `FeedSource` interface and source implementations remain unchanged.
 
 ## Architectural Options
 

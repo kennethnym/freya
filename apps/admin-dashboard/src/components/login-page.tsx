@@ -71,7 +71,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 								type="email"
 								value={email}
 								onChange={(e) => setEmail(e.target.value)}
-								placeholder="admin@aelis.local"
+								placeholder="admin@freya.local"
 								required
 							/>
 						</div>

@@ -1,4 +1,4 @@
-const STORAGE_KEY = "aelis-server-url"
+const STORAGE_KEY = "freya-server-url"
 const DEFAULT_URL = "https://3000--019cf276-6ed6-7529-a425-210182693908.eu-runner.flex.doptig.cloud"
 
 export function getServerUrl(): string {

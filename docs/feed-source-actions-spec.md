@@ -6,7 +6,7 @@
 
 ## Scope
 
-**`aelis-core` only.** Add action support to `FeedSource` and `FeedItem`. No changes to existing fields or methods — purely additive.
+**`freya-core` only.** Add action support to `FeedSource` and `FeedItem`. No changes to existing fields or methods — purely additive.
 
 ## Design
 
@@ -16,7 +16,7 @@ MCP was considered. It doesn't fit because:
 
 - MCP resources don't accept input context (FeedSource needs accumulated context as input)
 - MCP has no structured feed items (priority, timestamp, type)
-- MCP's isolation model conflicts with AELIS's dependency graph
+- MCP's isolation model conflicts with FREYA's dependency graph
 - Adding these as MCP extensions would mean the extensions are the entire protocol
 
 The interface is designed to be **protocol-compatible** — a future `RemoteFeedSource` adapter can map each field/method to a JSON-RPC operation without changing the interface:
@@ -35,20 +35,20 @@ No interface changes needed when the transport layer is built.
 
 ### Source ID & Action ID Convention
 
-Source IDs use reverse domain notation. Built-in sources use `aelis.<name>`. Third parties use their own domain.
+Source IDs use reverse domain notation. Built-in sources use `freya.<name>`. Third parties use their own domain.
 
 Action IDs are descriptive verb-noun pairs in kebab-case, scoped to their source. The globally unique form is `<sourceId>/<actionId>`.
 
 | Source ID        | Action IDs                                                     |
 | ---------------- | -------------------------------------------------------------- |
-| `aelis.location` | `update-location` (migrated from `pushLocation()`)             |
-| `aelis.tfl`      | `set-lines-of-interest` (migrated from `setLinesOfInterest()`) |
-| `aelis.weather`  | _(none)_                                                       |
+| `freya.location` | `update-location` (migrated from `pushLocation()`)             |
+| `freya.tfl`      | `set-lines-of-interest` (migrated from `setLinesOfInterest()`) |
+| `freya.weather`  | _(none)_                                                       |
 | `com.spotify`    | `play-track`, `pause-playback`, `skip-track`, `like-track`     |
-| `aelis.calendar` | `rsvp`, `create-event`                                         |
+| `freya.calendar` | `rsvp`, `create-event`                                         |
 | `com.todoist`    | `complete-task`, `snooze-task`                                 |
 
-This means existing source packages need their `id` updated (e.g., `"location"` → `"aelis.location"`).
+This means existing source packages need their `id` updated (e.g., `"location"` → `"freya.location"`).
 
 ### New Types
 
@@ -278,17 +278,17 @@ class SpotifySource implements FeedSource<SpotifyFeedItem> {
 
 ## Implementation Steps
 
-1. Create `action.ts` in `aelis-core/src` with `ActionDefinition`, `ActionResult`, `ItemAction`
+1. Create `action.ts` in `freya-core/src` with `ActionDefinition`, `ActionResult`, `ItemAction`
 2. Add optional `actions` and `executeAction` to `FeedSource` interface in `feed-source.ts`
 3. Add optional `actions` field to `FeedItem` interface in `feed.ts`
 4. Add `executeAction()` and `listActions()` to `FeedEngine` in `feed-engine.ts`
-5. Export new types from `aelis-core/index.ts`
+5. Export new types from `freya-core/index.ts`
 6. Add tests for `FeedEngine.executeAction()` routing
 7. Add tests for `FeedEngine.listActions()` aggregation
 8. Add tests for error cases (unknown action, unknown source, source without actions)
-9. Update source IDs to reverse-domain format (`"location"` → `"aelis.location"`, etc.) across all source packages
-10. Migrate `LocationSource.pushLocation()` → action `update-location` on `aelis.location`
-11. Migrate `TflSource.setLinesOfInterest()` → action `set-lines-of-interest` on `aelis.tfl`
+9. Update source IDs to reverse-domain format (`"location"` → `"freya.location"`, etc.) across all source packages
+10. Migrate `LocationSource.pushLocation()` → action `update-location` on `freya.location`
+11. Migrate `TflSource.setLinesOfInterest()` → action `set-lines-of-interest` on `freya.tfl`
 12. Add `async listActions() { return {} }` and no-op `executeAction()` to sources without actions (WeatherSource, GoogleCalendarSource, AppleCalendarSource)
 13. Update any tests or code referencing old source IDs
 14. Run all tests to confirm nothing breaks

@@ -24,9 +24,9 @@ import { ProgressiveBlur } from "~/components/progressive-blur"
 
 import type { Route } from "./+types/home"
 
-const PAGE_TITLE = "Aelis - Next Generation AI Assistant"
+const PAGE_TITLE = "Freya - Next Generation AI Assistant"
 const PAGE_DESCRIPTION =
-	"Meet Aelis, a personal assistant that stays one step ahead of your day. Join the waitlist now."
+	"Meet Freya, a personal assistant that stays one step ahead of your day. Join the waitlist now."
 
 export function meta({}: Route.MetaArgs) {
 	return [
@@ -84,7 +84,7 @@ export async function action({ request }: Route.ActionArgs) {
 	await new Promise((resolve) => setTimeout(resolve, 1000))
 
 	const emailRes = await resend.emails.send({
-		from: "Aelis <no-reply@ael.is>",
+		from: "Freya <no-reply@ael.is>",
 		to: email,
 		template: {
 			id: "waitlist-confirmation",
