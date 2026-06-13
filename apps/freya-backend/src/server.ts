@@ -15,6 +15,7 @@ import { GoogleMapsSourceProvider } from "./google-maps/provider.ts"
 import { CredentialEncryptor } from "./lib/crypto.ts"
 import { registerLocationHttpHandlers } from "./location/http.ts"
 import { LocationSourceProvider } from "./location/provider.ts"
+import { ReminderSourceProvider } from "./reminders/provider.ts"
 import { UserSessionManager } from "./session/index.ts"
 import { registerSourcesHttpHandlers } from "./sources/http.ts"
 import { TflSourceProvider } from "./tfl/provider.ts"
@@ -58,6 +59,7 @@ function main() {
 		providers: [
 			new CalDavSourceProvider(),
 			new LocationSourceProvider(),
+			new ReminderSourceProvider({ db }),
 			new WeatherSourceProvider({
 				credentials: {
 					privateKey: process.env.WEATHERKIT_PRIVATE_KEY!,

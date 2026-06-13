@@ -20,6 +20,7 @@
 		"@freya/source-google-calendar": "workspace:*",
 		"@freya/source-google-maps": "workspace:*",
 		"@freya/source-location": "workspace:*",
+		"@freya/source-reminders": "workspace:*",
 		"@freya/source-tfl": "workspace:*",
 		"@freya/source-weatherkit": "workspace:*",
 		"@freya/source-web-search": "workspace:*",
