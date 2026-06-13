@@ -11,6 +11,7 @@ import { createDatabase } from "./db/index.ts"
 import { registerFeedHttpHandlers } from "./engine/http.ts"
 import { createFeedEnhancer } from "./enhancement/enhance-feed.ts"
 import { createLlmClient } from "./enhancement/llm-client.ts"
+import { GoogleMapsSourceProvider } from "./google-maps/provider.ts"
 import { CredentialEncryptor } from "./lib/crypto.ts"
 import { registerLocationHttpHandlers } from "./location/http.ts"
 import { LocationSourceProvider } from "./location/provider.ts"
@@ -47,6 +48,11 @@ function main() {
 		)
 	}
 
+	const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY ?? process.env.GOOGLE_MAPS_MCP_API_KEY
+	if (!googleMapsApiKey) {
+		throw new Error("GOOGLE_MAPS_API_KEY or GOOGLE_MAPS_MCP_API_KEY must be set")
+	}
+
 	const sessionManager = new UserSessionManager({
 		db,
 		providers: [
@@ -62,6 +68,9 @@ function main() {
 			}),
 			new TflSourceProvider({ apiKey: process.env.TFL_API_KEY! }),
 			new WebSearchSourceProvider({ apiKey: process.env.EXA_API_KEY }),
+			new GoogleMapsSourceProvider({
+				apiKey: googleMapsApiKey,
+			}),
 		],
 		feedEnhancer,
 		credentialEncryptor,

@@ -18,6 +18,7 @@
 		"@freya/core": "workspace:*",
 		"@freya/source-caldav": "workspace:*",
 		"@freya/source-google-calendar": "workspace:*",
+		"@freya/source-google-maps": "workspace:*",
 		"@freya/source-location": "workspace:*",
 		"@freya/source-tfl": "workspace:*",
 		"@freya/source-weatherkit": "workspace:*",

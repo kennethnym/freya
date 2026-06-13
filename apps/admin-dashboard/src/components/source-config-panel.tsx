@@ -66,11 +66,17 @@ export function SourceConfigPanel({ source, onUpdate }: SourceConfigPanelProps) 
 		return creds
 	}
 
+	function hasUserConfigFields(): boolean {
+		return Object.values(source.fields).some((field) => !isCredentialField(field))
+	}
+
 	function buildReplaceBody(enabledValue: boolean): Parameters<typeof replaceSource>[1] {
 		const body: Parameters<typeof replaceSource>[1] = { enabled: enabledValue }
-		if (Object.keys(source.fields).length > 0) {
+
+		if (hasUserConfigFields()) {
 			body.config = getUserConfig()
 		}
+
 		return body
 	}
 
