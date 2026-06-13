@@ -9,12 +9,12 @@ function serverBase() {
 }
 
 export interface ConfigFieldDef {
-	type: "string" | "number" | "select" | "multiselect"
+	type: "string" | "number" | "select" | "multiselect" | "boolean"
 	label: string
 	required?: boolean
 	description?: string
 	secret?: boolean
-	defaultValue?: string | number | string[]
+	defaultValue?: string | number | string[] | boolean
 	options?: { label: string; value: string }[]
 }
 
@@ -152,6 +152,37 @@ const sourceDefinitions: SourceDefinition[] = [
 		},
 	},
 	{
+		id: "freya.reminders",
+		name: "Reminders",
+		description: "One-off and recurring reminders in the contextual feed.",
+		fields: {
+			lookAheadMs: {
+				type: "number",
+				label: "Look-ahead Milliseconds",
+				defaultValue: 24 * 60 * 60 * 1000,
+				description: "How far into the future reminders should appear in the feed.",
+			},
+			lookBackMs: {
+				type: "number",
+				label: "Look-back Milliseconds",
+				defaultValue: 24 * 60 * 60 * 1000,
+				description: "How far into the past due reminders should remain visible.",
+			},
+			includeCompleted: {
+				type: "boolean",
+				label: "Include Completed",
+				defaultValue: false,
+				description: "Show completed reminder occurrences in the feed.",
+			},
+			defaultTimeZone: {
+				type: "string",
+				label: "Default Timezone",
+				defaultValue: "UTC",
+				description: "IANA timezone used when new reminders omit a timezone.",
+			},
+		},
+	},
+	{
 		id: "freya.web-search",
 		name: "Web Search",
 		description: "Exa web search action. Requires EXA_API_KEY on the backend.",
@@ -230,6 +261,25 @@ export async function updateSourceCredentials(
 		const data = (await res.json()) as { error?: string }
 		throw new Error(data.error ?? `Failed to update credentials: ${res.status}`)
 	}
+}
+
+export async function executeSourceAction(
+	sourceId: string,
+	actionId: string,
+	params: unknown,
+): Promise<unknown> {
+	const res = await fetch(`${serverBase()}/sources/${sourceId}/actions/${actionId}`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		credentials: "include",
+		body: JSON.stringify(params),
+	})
+	if (!res.ok) {
+		const data = (await res.json()) as { error?: string }
+		throw new Error(data.error ?? `Failed to execute source action: ${res.status}`)
+	}
+	const data = (await res.json()) as { result: unknown }
+	return data.result
 }
 
 export interface LocationInput {

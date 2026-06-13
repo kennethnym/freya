@@ -5,6 +5,7 @@ import { toast } from "sonner"
 
 import type { ConfigFieldDef, SourceDefinition } from "@/lib/api"
 
+import { ReminderCrudPanel } from "@/components/reminder-crud-panel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -267,6 +268,8 @@ export function SourceConfigPanel({ source, onUpdate }: SourceConfigPanelProps) 
 			)}
 
 			{source.id === "freya.location" && <LocationCard />}
+
+			{source.id === "freya.reminders" && enabled && <ReminderCrudPanel />}
 		</div>
 	)
 }
@@ -477,6 +480,17 @@ function FieldInput({
 		)
 	}
 
+	if (field.type === "boolean") {
+		return (
+			<div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
+				<Label htmlFor={name} className="text-xs font-medium">
+					{labelContent}
+				</Label>
+				<Switch id={name} checked={value === true} onCheckedChange={onChange} disabled={disabled} />
+			</div>
+		)
+	}
+
 	return (
 		<div className="space-y-2">
 			<Label htmlFor={name} className="text-xs font-medium">
@@ -504,6 +518,8 @@ function buildInitialValues(
 			values[name] = saved[name]
 		} else if (field.defaultValue !== undefined) {
 			values[name] = field.defaultValue
+		} else if (field.type === "boolean") {
+			values[name] = false
 		} else if (field.type === "multiselect") {
 			values[name] = []
 		} else {

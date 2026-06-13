@@ -8,6 +8,7 @@ import {
 	Link,
 } from "@tanstack/react-router"
 import {
+	Bell,
 	Calendar,
 	CalendarDays,
 	CircleDot,
@@ -51,6 +52,7 @@ const SOURCE_ICONS: Record<string, React.ComponentType<{ className?: string }>> 
 	"freya.caldav": CalendarDays,
 	"freya.google-calendar": Calendar,
 	"freya.google-maps": MapIcon,
+	"freya.reminders": Bell,
 	"freya.tfl": TrainFront,
 }
 

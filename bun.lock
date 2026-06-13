@@ -55,6 +55,7 @@
         "@freya/source-google-calendar": "workspace:*",
         "@freya/source-google-maps": "workspace:*",
         "@freya/source-location": "workspace:*",
+        "@freya/source-reminders": "workspace:*",
         "@freya/source-tfl": "workspace:*",
         "@freya/source-weatherkit": "workspace:*",
         "@freya/source-web-search": "workspace:*",
@@ -216,6 +217,19 @@
       "dependencies": {
         "@freya/core": "workspace:*",
         "@modelcontextprotocol/sdk": "^1.27.1",
+      },
+    },
+    "packages/freya-source-reminders": {
+      "name": "@freya/source-reminders",
+      "version": "0.0.0",
+      "dependencies": {
+        "@freya/components": "workspace:*",
+        "@freya/core": "workspace:*",
+        "arktype": "^2.1.0",
+      },
+      "peerDependencies": {
+        "@json-render/core": "*",
+        "@nym.sh/jrx": "*",
       },
     },
     "packages/freya-source-tfl": {
@@ -684,6 +698,8 @@
     "@freya/source-google-maps": ["@freya/source-google-maps@workspace:packages/freya-source-google-maps"],
 
     "@freya/source-location": ["@freya/source-location@workspace:packages/freya-source-location"],
+
+    "@freya/source-reminders": ["@freya/source-reminders@workspace:packages/freya-source-reminders"],
 
     "@freya/source-tfl": ["@freya/source-tfl@workspace:packages/freya-source-tfl"],
 
