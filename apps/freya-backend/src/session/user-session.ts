@@ -1,4 +1,10 @@
-import { FeedEngine, type FeedItem, type FeedResult, type FeedSource } from "@freya/core"
+import {
+	FeedEngine,
+	type ActionDefinition,
+	type FeedItem,
+	type FeedResult,
+	type FeedSource,
+} from "@freya/core"
 
 import type { FeedEnhancer } from "../enhancement/enhance-feed.ts"
 
@@ -71,6 +77,21 @@ export class UserSession {
 
 	hasSource(sourceId: string): boolean {
 		return this.sources.has(sourceId)
+	}
+
+	async listActions(): Promise<
+		Array<{ sourceId: string; actions: Record<string, ActionDefinition> }>
+	> {
+		const result: Array<{ sourceId: string; actions: Record<string, ActionDefinition> }> = []
+
+		for (const [sourceId, source] of this.sources) {
+			result.push({
+				sourceId,
+				actions: await source.listActions(),
+			})
+		}
+
+		return result
 	}
 
 	/**

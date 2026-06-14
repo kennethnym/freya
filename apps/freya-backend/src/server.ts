@@ -2,6 +2,9 @@ import { Hono } from "hono"
 import { cors } from "hono/cors"
 
 import { registerAdminHttpHandlers } from "./admin/http.ts"
+import { createQueryDebugTools } from "./agent/debug-tools.ts"
+import { registerAgentHttpHandlers, registerDebugAgentHttpHandlers } from "./agent/http.ts"
+import { PiQueryAgent } from "./agent/pi-query-agent.ts"
 import { createRequireAdmin } from "./auth/admin-middleware.ts"
 import { registerAuthHandlers } from "./auth/http.ts"
 import { createAuth } from "./auth/index.ts"
@@ -61,10 +64,21 @@ function main() {
 		feedEnhancer,
 		credentialEncryptor,
 	})
+	const piApiKey = process.env.PI_API_KEY ?? env.openrouterApiKey
+	const queryAgent = new PiQueryAgent({
+		sessionManager,
+		modelProvider: process.env.PI_MODEL_PROVIDER ?? "openrouter",
+		modelId: process.env.PI_MODEL ?? env.openrouterModel ?? "z-ai/glm-4.7-flash",
+		apiKey: piApiKey,
+	})
+	if (!piApiKey) {
+		console.warn("[query] PI_API_KEY or OPENROUTER_API_KEY not set — query agent unavailable")
+	}
 
 	const app = new Hono()
 
 	const isDev = process.env.NODE_ENV !== "production"
+	const isDebugMode = isDev
 	const allowedOrigins = process.env.CORS_ORIGINS?.split(",").map((o) => o.trim()) ?? []
 
 	function resolveOrigin(origin: string): string | undefined {
@@ -105,9 +119,21 @@ function main() {
 	})
 	registerLocationHttpHandlers(app, { sessionManager, authSessionMiddleware })
 	registerSourcesHttpHandlers(app, { sessionManager, authSessionMiddleware })
+	registerAgentHttpHandlers(app, {
+		queryAgent,
+		authSessionMiddleware,
+	})
+	if (isDebugMode) {
+		registerDebugAgentHttpHandlers(app, {
+			authSessionMiddleware,
+			debugTools: createQueryDebugTools(sessionManager),
+			debug: isDebugMode,
+		})
+	}
 	registerAdminHttpHandlers(app, { sessionManager, adminMiddleware, db })
 
 	process.on("SIGTERM", async () => {
+		queryAgent.dispose()
 		await closeDb()
 		process.exit(0)
 	})
