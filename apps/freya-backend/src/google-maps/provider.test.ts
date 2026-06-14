@@ -30,7 +30,7 @@ describe("GoogleMapsSourceProvider", () => {
 
 	test("throws when service API key is empty", () => {
 		expect(() => new GoogleMapsSourceProvider({ apiKey: "" })).toThrow(
-			"Google Maps MCP API key must be configured",
+			"Google Maps API key must be configured",
 		)
 	})
 

@@ -13,6 +13,7 @@ import { createFeedEnhancer } from "./enhancement/enhance-feed.ts"
 import { createLlmClient } from "./enhancement/llm-client.ts"
 import { GoogleMapsSourceProvider } from "./google-maps/provider.ts"
 import { CredentialEncryptor } from "./lib/crypto.ts"
+import { ensureEnv } from "./lib/env.ts"
 import { registerLocationHttpHandlers } from "./location/http.ts"
 import { LocationSourceProvider } from "./location/provider.ts"
 import { ReminderSourceProvider } from "./reminders/provider.ts"
@@ -23,36 +24,19 @@ import { WeatherSourceProvider } from "./weather/provider.ts"
 import { WebSearchSourceProvider } from "./web-search/provider.ts"
 
 function main() {
-	const { db, close: closeDb } = createDatabase(process.env.DATABASE_URL!)
+	const env = ensureEnv(process.env)
+
+	const { db, close: closeDb } = createDatabase(env.databaseUrl)
 	const auth = createAuth(db)
 
-	const openrouterApiKey = process.env.OPENROUTER_API_KEY
-	const feedEnhancer = openrouterApiKey
-		? createFeedEnhancer({
-				client: createLlmClient({
-					apiKey: openrouterApiKey,
-					model: process.env.OPENROUTER_MODEL || undefined,
-				}),
-			})
-		: null
-	if (!feedEnhancer) {
-		console.warn("[enhancement] OPENROUTER_API_KEY not set — feed enhancement disabled")
-	}
+	const feedEnhancer = createFeedEnhancer({
+		client: createLlmClient({
+			apiKey: env.openrouterApiKey,
+			model: env.openrouterModel,
+		}),
+	})
 
-	const credentialEncryptionKey = process.env.CREDENTIAL_ENCRYPTION_KEY
-	const credentialEncryptor = credentialEncryptionKey
-		? new CredentialEncryptor(credentialEncryptionKey)
-		: null
-	if (!credentialEncryptor) {
-		console.warn(
-			"[credentials] CREDENTIAL_ENCRYPTION_KEY not set — per-user credential storage disabled",
-		)
-	}
-
-	const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY ?? process.env.GOOGLE_MAPS_MCP_API_KEY
-	if (!googleMapsApiKey) {
-		throw new Error("GOOGLE_MAPS_API_KEY or GOOGLE_MAPS_MCP_API_KEY must be set")
-	}
+	const credentialEncryptor = new CredentialEncryptor(env.credentialEncryptionKey)
 
 	const sessionManager = new UserSessionManager({
 		db,
@@ -62,16 +46,16 @@ function main() {
 			new ReminderSourceProvider({ db }),
 			new WeatherSourceProvider({
 				credentials: {
-					privateKey: process.env.WEATHERKIT_PRIVATE_KEY!,
-					keyId: process.env.WEATHERKIT_KEY_ID!,
-					teamId: process.env.WEATHERKIT_TEAM_ID!,
-					serviceId: process.env.WEATHERKIT_SERVICE_ID!,
+					privateKey: env.weatherkitPrivateKey,
+					keyId: env.weatherkitKeyId,
+					teamId: env.weatherkitTeamId,
+					serviceId: env.weatherkitServiceId,
 				},
 			}),
-			new TflSourceProvider({ apiKey: process.env.TFL_API_KEY! }),
-			new WebSearchSourceProvider({ apiKey: process.env.EXA_API_KEY }),
+			new TflSourceProvider({ apiKey: env.tflApiKey }),
+			new WebSearchSourceProvider({ apiKey: env.exaApiKey }),
 			new GoogleMapsSourceProvider({
-				apiKey: googleMapsApiKey,
+				apiKey: env.googleMapsApiKey,
 			}),
 		],
 		feedEnhancer,
