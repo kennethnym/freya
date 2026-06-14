@@ -5,8 +5,6 @@ import { type } from "arktype"
 
 import { Location, type LocationSourceOptions } from "./types.ts"
 
-export const LocationKey: ContextKey<Location> = contextKey("freya.location", "location")
-
 /**
  * A FeedSource that provides location context.
  *
@@ -16,7 +14,9 @@ export const LocationKey: ContextKey<Location> = contextKey("freya.location", "l
  * Does not produce feed items - always returns empty array from `fetchItems`.
  */
 export class LocationSource implements FeedSource {
-	readonly id = "freya.location"
+	static readonly id = "freya.location"
+
+	readonly id = LocationSource.id
 
 	private readonly historySize: number
 	private locations: Location[] = []
@@ -97,3 +97,5 @@ export class LocationSource implements FeedSource {
 		return []
 	}
 }
+
+export const LocationKey: ContextKey<Location> = contextKey(LocationSource.id, "location")

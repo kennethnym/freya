@@ -41,7 +41,9 @@ const SearchInput = type({
  * action and receive structured web results.
  */
 export class WebSearchSource implements FeedSource {
-	readonly id = "freya.web-search"
+	static readonly id = "freya.web-search"
+
+	readonly id = WebSearchSource.id
 
 	private readonly client: WebSearchClient
 

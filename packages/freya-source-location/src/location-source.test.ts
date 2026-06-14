@@ -18,7 +18,7 @@ describe("LocationSource", () => {
 	describe("FeedSource interface", () => {
 		test("has correct id", () => {
 			const source = new LocationSource()
-			expect(source.id).toBe("freya.location")
+			expect(source.id).toBe(LocationSource.id)
 		})
 
 		test("fetchItems always returns empty array", async () => {

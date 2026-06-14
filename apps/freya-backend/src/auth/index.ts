@@ -5,6 +5,7 @@ import { admin } from "better-auth/plugins"
 import type { Database } from "../db/index.ts"
 
 import * as schema from "../db/schema.ts"
+import { insertDefaultUserSources } from "../sources/default-sources.ts"
 
 export function createAuth(db: Database) {
 	if (!process.env.BETTER_AUTH_SECRET) {
@@ -21,6 +22,15 @@ export function createAuth(db: Database) {
 		},
 		emailAndPassword: {
 			enabled: true,
+		},
+		databaseHooks: {
+			user: {
+				create: {
+					async after(user, _context) {
+						await insertDefaultUserSources(db, user.id)
+					},
+				},
+			},
 		},
 		plugins: [admin()],
 	})
