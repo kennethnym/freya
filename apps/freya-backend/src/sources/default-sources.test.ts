@@ -1,4 +1,5 @@
 import { LocationSource } from "@freya/source-location"
+import { ReminderSource } from "@freya/source-reminders"
 import { WebSearchSource } from "@freya/source-web-search"
 import { describe, expect, test } from "bun:test"
 
@@ -55,8 +56,12 @@ function createRecordingDb(): RecordingDb {
 }
 
 describe("default user sources", () => {
-	test("defines location and web search as default enabled sources", () => {
-		expect(DEFAULT_ENABLED_SOURCE_IDS).toEqual([LocationSource.id, WebSearchSource.id])
+	test("defines default enabled sources", () => {
+		expect(DEFAULT_ENABLED_SOURCE_IDS).toEqual([
+			LocationSource.id,
+			ReminderSource.id,
+			WebSearchSource.id,
+		])
 	})
 
 	test("inserts default enabled source rows for a user", async () => {
@@ -70,7 +75,7 @@ describe("default user sources", () => {
 		}
 
 		expect(recording.table()).toBe(userSources)
-		expect(rows).toHaveLength(2)
+		expect(rows).toHaveLength(3)
 		expect(rows.map((row) => row.sourceId)).toEqual([...DEFAULT_ENABLED_SOURCE_IDS])
 		expect(recording.conflictTarget()).toEqual([userSources.userId, userSources.sourceId])
 
