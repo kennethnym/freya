@@ -125,4 +125,12 @@ export class Context {
 	get size(): number {
 		return this.store.size
 	}
+
+	/** Returns all context entries for serialization and diagnostics. */
+	entries(): Array<{ key: readonly ContextKeyPart[]; value: unknown }> {
+		return Array.from(this.store.values()).map((entry) => ({
+			key: entry.key,
+			value: entry.value,
+		}))
+	}
 }

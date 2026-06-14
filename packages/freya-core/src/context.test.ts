@@ -181,4 +181,19 @@ describe("Context", () => {
 			expect(ctx.size).toBe(2)
 		})
 	})
+
+	describe("entries", () => {
+		test("returns serializable key-value entries", () => {
+			const ctx = new Context()
+			ctx.set([
+				[WeatherKey, { temperature: 20 }],
+				[NextEventKey, { title: "Standup" }],
+			])
+
+			expect(ctx.entries()).toEqual([
+				{ key: WeatherKey, value: { temperature: 20 } },
+				{ key: NextEventKey, value: { title: "Standup" } },
+			])
+		})
+	})
 })
