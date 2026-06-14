@@ -15,7 +15,7 @@ export class GoogleMapsSourceProvider implements FeedSourceProvider {
 
 	constructor(options: GoogleMapsSourceProviderOptions) {
 		if (!nonEmptyString(options.apiKey)) {
-			throw new Error("Google Maps MCP API key must be configured")
+			throw new Error("Google Maps API key must be configured")
 		}
 
 		this.apiKey = options.apiKey
