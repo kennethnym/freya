@@ -1,11 +1,16 @@
 import { LocationSource } from "@freya/source-location"
+import { ReminderSource } from "@freya/source-reminders"
 import { WebSearchSource } from "@freya/source-web-search"
 
 import type { Database } from "../db/index.ts"
 
 import { userSources } from "../db/schema.ts"
 
-export const DEFAULT_ENABLED_SOURCE_IDS = [LocationSource.id, WebSearchSource.id] as const
+export const DEFAULT_ENABLED_SOURCE_IDS = [
+	LocationSource.id,
+	ReminderSource.id,
+	WebSearchSource.id,
+] as const
 
 export type DefaultEnabledSourceId = (typeof DEFAULT_ENABLED_SOURCE_IDS)[number]
 

@@ -84,7 +84,9 @@ const ONE_DAY_MS = 24 * 60 * 60 * 1000
  * It owns recurrence expansion, edit-scope semantics, and feed item signals.
  */
 export class ReminderSource implements FeedSource<ReminderFeedItem> {
-	readonly id = "freya.reminders"
+	static readonly id = "freya.reminders"
+
+	readonly id = ReminderSource.id
 
 	private readonly storage: ReminderStorage
 	private readonly lookAheadMs: number
