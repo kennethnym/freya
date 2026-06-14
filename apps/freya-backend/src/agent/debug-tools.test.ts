@@ -57,6 +57,28 @@ describe("query debug tools", () => {
 			},
 		])
 	})
+
+	test("executes source action directly", async () => {
+		const tools = createTestDebugTools()
+		const params = { title: "Buy tea" }
+
+		const result = await tools.execute("user-1", "freya_execute_action", {
+			sourceId: "freya.reminders",
+			actionId: "create-reminder",
+			params,
+		})
+
+		expect(result).toEqual({
+			ok: true,
+			sourceId: "freya.reminders",
+			actionId: "create-reminder",
+			result: {
+				sourceId: "freya.reminders",
+				actionId: "create-reminder",
+				params,
+			},
+		})
+	})
 })
 
 function createTestDebugTools() {
@@ -108,6 +130,16 @@ function createTestDebugTools() {
 			},
 			async listActions(sourceId: string) {
 				return actions[sourceId] ?? {}
+			},
+			async executeAction(sourceId: string, actionId: string, params: unknown) {
+				const sourceActions = actions[sourceId]
+				if (!sourceActions) {
+					throw new Error(`Source not found: ${sourceId}`)
+				}
+				if (!(actionId in sourceActions)) {
+					throw new Error(`Action "${actionId}" not found on source "${sourceId}"`)
+				}
+				return { sourceId, actionId, params }
 			},
 		},
 		hasSource(sourceId: string) {

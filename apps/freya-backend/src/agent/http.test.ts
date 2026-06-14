@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { Hono } from "hono"
 
 import type { QueryDebugTools, QueryDebugToolDefinition } from "./debug-tools.ts"
-import type { ProposedAction, QueryAgent, QueryAgentAsk, QueryAgentEvent } from "./query-agent.ts"
+import type { QueryAgent, QueryAgentAsk, QueryAgentEvent } from "./query-agent.ts"
 
 import { mockAuthSessionMiddleware } from "../auth/session-middleware.ts"
 import { registerAgentHttpHandlers, registerDebugAgentHttpHandlers } from "./http.ts"
@@ -80,21 +80,10 @@ describe("POST /api/agent", () => {
 		expect(res.status).toBe(401)
 	})
 
-	test("collects text deltas and proposed actions", async () => {
-		const action: ProposedAction = {
-			id: "proposal-1",
-			title: "Update commute line",
-			description: "Set the user's commute line to Victoria.",
-			sourceId: "freya.tfl",
-			actionId: "set-lines-of-interest",
-			params: ["victoria"],
-			requiresConfirmation: true,
-			createdAt: "2026-06-12T12:00:00.000Z",
-		}
+	test("collects text deltas", async () => {
 		const agent = new FakeQueryAgent([
 			{ type: "text_delta", text: "You should " },
 			{ type: "text_delta", text: "leave at 8:30." },
-			{ type: "action_proposed", action },
 			{ type: "done" },
 		])
 		const app = buildTestApp(agent, "user-1")
@@ -112,10 +101,8 @@ describe("POST /api/agent", () => {
 
 		const body = (await res.json()) as {
 			message: string
-			proposedActions: ProposedAction[]
 		}
 		expect(body.message).toBe("You should leave at 8:30.")
-		expect(body.proposedActions).toEqual([action])
 	})
 
 	test("returns 400 for invalid body", async () => {

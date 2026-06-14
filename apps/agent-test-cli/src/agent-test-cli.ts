@@ -15,20 +15,8 @@ interface AuthSession {
 	}
 }
 
-interface ProposedAction {
-	id: string
-	title: string
-	description: string
-	sourceId?: string
-	actionId?: string
-	params?: unknown
-	requiresConfirmation: true
-	createdAt: string
-}
-
 interface QueryResponse {
 	message: string
-	proposedActions: ProposedAction[]
 }
 
 interface QueryToolDefinition {
@@ -187,7 +175,6 @@ async function askAgent(backendUrl: string, cookies: CookieJar, message: string)
 	}
 
 	console.log(`\nagent> ${data.message || "(no message)"}`)
-	printProposedActions(data.proposedActions)
 	console.log("")
 }
 
@@ -364,22 +351,6 @@ function printHelp(): void {
 	console.log("  /session     Show the signed-in user")
 	console.log("  /help        Show commands")
 	console.log("  /quit        Exit\n")
-}
-
-function printProposedActions(actions: ProposedAction[]): void {
-	if (actions.length === 0) return
-
-	console.log("\nProposed actions:")
-	for (const action of actions) {
-		console.log(`- ${action.title} (${action.id})`)
-		console.log(`  ${action.description}`)
-		if (action.sourceId || action.actionId) {
-			console.log(`  source=${action.sourceId ?? "-"} action=${action.actionId ?? "-"}`)
-		}
-		if (action.params !== undefined) {
-			console.log(`  params=${JSON.stringify(action.params)}`)
-		}
-	}
 }
 
 function askRequired(
@@ -579,9 +550,7 @@ function isAuthSession(value: unknown): value is AuthSession {
 
 function isQueryResponse(value: unknown): value is QueryResponse {
 	if (!isJsonObject(value)) return false
-	if (typeof value.message !== "string") return false
-	if (!Array.isArray(value.proposedActions)) return false
-	return value.proposedActions.every(isProposedAction)
+	return typeof value.message === "string"
 }
 
 function isQueryToolsResponse(value: unknown): value is QueryToolsResponse {
@@ -613,20 +582,6 @@ function isSourceActionDefinition(value: unknown): value is { id: string; descri
 		isJsonObject(value) &&
 		typeof value.id === "string" &&
 		(value.description === undefined || typeof value.description === "string")
-	)
-}
-
-function isProposedAction(value: unknown): value is ProposedAction {
-	if (!isJsonObject(value)) return false
-
-	return (
-		typeof value.id === "string" &&
-		typeof value.title === "string" &&
-		typeof value.description === "string" &&
-		(value.sourceId === undefined || typeof value.sourceId === "string") &&
-		(value.actionId === undefined || typeof value.actionId === "string") &&
-		value.requiresConfirmation === true &&
-		typeof value.createdAt === "string"
 	)
 }
 
