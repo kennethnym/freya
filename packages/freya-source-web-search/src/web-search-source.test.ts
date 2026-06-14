@@ -37,7 +37,7 @@ describe("WebSearchSource", () => {
 	test("has correct id", () => {
 		const source = new WebSearchSource({ client: new RecordingSearchClient() })
 
-		expect(source.id).toBe("freya.web-search")
+		expect(source.id).toBe(WebSearchSource.id)
 	})
 
 	test("does not provide context or feed items", async () => {

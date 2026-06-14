@@ -7,7 +7,7 @@ export type WebSearchSourceProviderOptions =
 	| { apiKey?: never; client: WebSearchClient }
 
 export class WebSearchSourceProvider implements FeedSourceProvider {
-	readonly sourceId = "freya.web-search"
+	readonly sourceId = WebSearchSource.id
 
 	private readonly apiKey: string | undefined
 	private readonly client: WebSearchClient | undefined
