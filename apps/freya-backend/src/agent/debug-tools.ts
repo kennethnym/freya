@@ -1,7 +1,6 @@
 import { contextKey, type ContextKeyPart } from "@freya/core"
 
 import type { UserSessionManager } from "../session/index.ts"
-import type { ProposedAction } from "./query-agent.ts"
 
 type ToolParams = Record<string, unknown>
 
@@ -23,7 +22,7 @@ const FreyaGetContextTool = "freya_get_context"
 const FreyaListContextTool = "freya_list_context"
 const FreyaGetSourceDataTool = "freya_get_source_data"
 const FreyaGetFeedItemTool = "freya_get_feed_item"
-const FreyaProposeActionTool = "freya_propose_action"
+const FreyaExecuteActionTool = "freya_execute_action"
 
 export function createQueryDebugTools(sessionManager: UserSessionManager): QueryDebugTools {
 	return new DefaultQueryDebugTools(sessionManager)
@@ -86,14 +85,12 @@ class DefaultQueryDebugTools implements QueryDebugTools {
 				},
 			},
 			{
-				name: FreyaProposeActionTool,
-				label: "Propose FREYA Action",
-				description: "Create a proposed action object without executing it.",
+				name: FreyaExecuteActionTool,
+				label: "Execute FREYA Action",
+				description: "Execute an available source action immediately.",
 				parameters: {
-					title: "string",
-					description: "string",
-					sourceId: "string?",
-					actionId: "string?",
+					sourceId: "string",
+					actionId: "string",
 					params: "unknown?",
 				},
 			},
@@ -114,8 +111,8 @@ class DefaultQueryDebugTools implements QueryDebugTools {
 				return this.listContext(userId)
 			case FreyaGetSourceDataTool:
 				return this.getSourceData(userId, expectToolParams(params, ["sourceId"]))
-			case FreyaProposeActionTool:
-				return proposeAction(expectToolParams(params, ["title", "description"]))
+			case FreyaExecuteActionTool:
+				return this.executeAction(userId, expectToolParams(params, ["sourceId", "actionId"]))
 			default:
 				throw new Error(`Unknown debug tool: ${toolName}`)
 		}
@@ -322,27 +319,20 @@ class DefaultQueryDebugTools implements QueryDebugTools {
 			errors,
 		}
 	}
-}
 
-function proposeAction(params: ToolParams): unknown {
-	const sourceId = optionalString(params, "sourceId")
-	const actionId = optionalString(params, "actionId")
-	const action: ProposedAction = {
-		id: crypto.randomUUID(),
-		title: expectString(params, "title"),
-		description: expectString(params, "description"),
-		requiresConfirmation: true,
-		createdAt: new Date().toISOString(),
-		...(sourceId ? { sourceId } : {}),
-		...(actionId ? { actionId } : {}),
-		...("params" in params ? { params: params.params } : {}),
-	}
+	private async executeAction(userId: string, params: ToolParams): Promise<unknown> {
+		const sourceId = expectString(params, "sourceId")
+		const actionId = expectString(params, "actionId")
+		const actionParams = "params" in params ? params.params : undefined
+		const userSession = await this.sessionManager.getOrCreate(userId)
+		const result = await userSession.engine.executeAction(sourceId, actionId, actionParams)
 
-	return {
-		ok: true,
-		proposedActionId: action.id,
-		requiresConfirmation: true,
-		proposedAction: action,
+		return {
+			ok: true,
+			sourceId,
+			actionId,
+			result: result ?? null,
+		}
 	}
 }
 

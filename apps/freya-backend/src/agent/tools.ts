@@ -3,15 +3,12 @@ import { Type } from "typebox"
 
 import type { UserSessionManager } from "../session/index.ts"
 import type { QueryDebugTools } from "./debug-tools.ts"
-import type { ProposedAction } from "./query-agent.ts"
 
 import { createQueryDebugTools } from "./debug-tools.ts"
 
 interface CreateFreyaAgentToolsConfig {
 	userId: string
 	sessionManager: UserSessionManager
-	clock: () => Date
-	proposeAction(action: ProposedAction): void
 }
 
 export const FREYA_QUERY_CONTEXT_TOOL = "freya_query_context"
@@ -20,7 +17,7 @@ export const FREYA_GET_CONTEXT_TOOL = "freya_get_context"
 export const FREYA_LIST_CONTEXT_TOOL = "freya_list_context"
 export const FREYA_GET_SOURCE_DATA_TOOL = "freya_get_source_data"
 export const FREYA_GET_FEED_ITEM_TOOL = "freya_get_feed_item"
-export const FREYA_PROPOSE_ACTION_TOOL = "freya_propose_action"
+export const FREYA_EXECUTE_ACTION_TOOL = "freya_execute_action"
 
 export const FREYA_AGENT_TOOL_NAMES = [
 	FREYA_LIST_SOURCES_TOOL,
@@ -29,7 +26,7 @@ export const FREYA_AGENT_TOOL_NAMES = [
 	FREYA_QUERY_CONTEXT_TOOL,
 	FREYA_LIST_CONTEXT_TOOL,
 	FREYA_GET_SOURCE_DATA_TOOL,
-	FREYA_PROPOSE_ACTION_TOOL,
+	FREYA_EXECUTE_ACTION_TOOL,
 ]
 
 export function createFreyaAgentTools(config: CreateFreyaAgentToolsConfig) {
@@ -121,28 +118,21 @@ export function createFreyaAgentTools(config: CreateFreyaAgentToolsConfig) {
 		execute: async (_toolCallId, params) => executeGetSourceDataTool(config, params),
 	})
 
-	const proposeActionTool = defineTool({
-		name: FREYA_PROPOSE_ACTION_TOOL,
-		label: "Propose FREYA Action",
-		description: "Create a proposed action for the user to review. This never executes the action.",
+	const executeActionTool = defineTool({
+		name: FREYA_EXECUTE_ACTION_TOOL,
+		label: "Execute FREYA Action",
+		description:
+			"Execute an available FREYA source action immediately without creating a proposal.",
 		parameters: Type.Object({
-			title: Type.String({ description: "Short user-facing action title." }),
-			description: Type.String({
-				description: "What will happen if the user confirms this action.",
-			}),
-			sourceId: Type.Optional(
-				Type.String({ description: "Source ID that should execute the action, if known." }),
-			),
-			actionId: Type.Optional(
-				Type.String({ description: "Source action ID to execute after confirmation, if known." }),
-			),
+			sourceId: Type.String({ description: "Source ID that should execute the action." }),
+			actionId: Type.String({ description: "Source action ID to execute." }),
 			params: Type.Optional(
 				Type.Unknown({
-					description: "Parameters to pass to the source action after confirmation.",
+					description: "Parameters to pass to the source action.",
 				}),
 			),
 		}),
-		execute: async (_toolCallId, params) => executeProposeActionTool(config, params),
+		execute: async (_toolCallId, params) => executeActionToolCall(config, params),
 	})
 
 	return [
@@ -152,7 +142,7 @@ export function createFreyaAgentTools(config: CreateFreyaAgentToolsConfig) {
 		queryContextTool,
 		listContextTool,
 		getSourceDataTool,
-		proposeActionTool,
+		executeActionTool,
 	]
 }
 
@@ -285,28 +275,26 @@ async function executeGetSourceDataTool(
 	}
 }
 
-function executeProposeActionTool(
+async function executeActionToolCall(
 	config: CreateFreyaAgentToolsConfig,
 	params: {
-		title: string
-		description: string
-		sourceId?: string
-		actionId?: string
+		sourceId: string
+		actionId: string
 		params?: unknown
 	},
 ) {
-	const action: ProposedAction = {
-		id: crypto.randomUUID(),
-		title: params.title,
-		description: params.description,
-		requiresConfirmation: true,
-		createdAt: config.clock().toISOString(),
-		...(params.sourceId ? { sourceId: params.sourceId } : {}),
-		...(params.actionId ? { actionId: params.actionId } : {}),
-		...(params.params !== undefined ? { params: params.params } : {}),
-	}
+	const userSession = await config.sessionManager.getOrCreate(config.userId)
+	const result = await userSession.engine.executeAction(
+		params.sourceId,
+		params.actionId,
+		params.params,
+	)
 
-	config.proposeAction(action)
+	const actionExecution = {
+		sourceId: params.sourceId,
+		actionId: params.actionId,
+		result: result ?? null,
+	}
 
 	return {
 		content: [
@@ -314,11 +302,10 @@ function executeProposeActionTool(
 				type: "text" as const,
 				text: JSON.stringify({
 					ok: true,
-					proposedActionId: action.id,
-					requiresConfirmation: true,
+					...actionExecution,
 				}),
 			},
 		],
-		details: { proposedAction: action },
+		details: { actionExecution },
 	}
 }

@@ -10,7 +10,7 @@ import {
 import { tmpdir } from "node:os"
 
 import type { UserSessionManager } from "../session/index.ts"
-import type { ProposedAction, QueryAgent, QueryAgentAsk, QueryAgentEvent } from "./query-agent.ts"
+import type { QueryAgent, QueryAgentAsk, QueryAgentEvent } from "./query-agent.ts"
 
 import { InMemoryResourceLoader } from "./in-memory-resource-loader.ts"
 import defaultSystemPrompt from "./prompts/system.txt"
@@ -28,24 +28,18 @@ export interface PiQueryAgentConfig {
 	apiKey?: string
 	cwd?: string
 	systemPrompt?: string
-	clock?: () => Date
-}
-
-interface ActiveRun {
-	proposedActions: ProposedAction[]
 }
 
 export class PiQueryAgent implements QueryAgent {
 	private readonly sessionManager: UserSessionManager
 	private readonly cwd: string
 	private readonly systemPrompt: string
-	private readonly clock: () => Date
 	private readonly modelProvider: string
 	private readonly modelId: string
 	private readonly apiKey: string | undefined
 	private readonly sessions = new Map<string, PiSession>()
 	private readonly pendingSessions = new Map<string, Promise<PiSession>>()
-	private readonly activeRuns = new Map<string, ActiveRun>()
+	private readonly activeRuns = new Map<string, symbol>()
 
 	constructor(config: PiQueryAgentConfig) {
 		this.sessionManager = config.sessionManager
@@ -54,7 +48,6 @@ export class PiQueryAgent implements QueryAgent {
 		this.apiKey = config.apiKey
 		this.cwd = config.cwd ?? tmpdir()
 		this.systemPrompt = config.systemPrompt ?? defaultSystemPrompt
-		this.clock = config.clock ?? (() => new Date())
 	}
 
 	async *ask(input: QueryAgentAsk): AsyncIterable<QueryAgentEvent> {
@@ -66,7 +59,7 @@ export class PiQueryAgent implements QueryAgent {
 			return
 		}
 
-		const run: ActiveRun = { proposedActions: [] }
+		const run = Symbol(input.userId)
 		this.activeRuns.set(input.userId, run)
 
 		let session: PiSession
@@ -117,9 +110,6 @@ export class PiQueryAgent implements QueryAgent {
 		void this.runPrompt(session, input)
 			.then(() => {
 				if (runFailed) return
-				for (const action of run.proposedActions) {
-					pushRunEvent({ type: "action_proposed", action })
-				}
 				pushRunEvent({ type: "done" })
 			})
 			.catch((err: unknown) => {
@@ -161,7 +151,7 @@ export class PiQueryAgent implements QueryAgent {
 		this.activeRuns.clear()
 	}
 
-	private clearActiveRun(userId: string, run: ActiveRun): void {
+	private clearActiveRun(userId: string, run: symbol): void {
 		if (this.activeRuns.get(userId) === run) {
 			this.activeRuns.delete(userId)
 		}
@@ -214,10 +204,6 @@ export class PiQueryAgent implements QueryAgent {
 			customTools: createFreyaAgentTools({
 				userId,
 				sessionManager: this.sessionManager,
-				clock: this.clock,
-				proposeAction: (action) => {
-					this.activeRuns.get(userId)?.proposedActions.push(action)
-				},
 			}),
 			tools: [...FREYA_AGENT_TOOL_NAMES],
 		})
