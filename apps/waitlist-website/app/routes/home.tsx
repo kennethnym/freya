@@ -37,13 +37,13 @@ export function meta({}: Route.MetaArgs) {
 		},
 		{ property: "og:title", content: PAGE_TITLE },
 		{ property: "og:description", content: PAGE_DESCRIPTION },
-		{ property: "og:image", content: "https://ael.is/social-media-preview.png" },
+		{ property: "og:image", content: "https://ael.is/social-media-preview.jpg" },
 		{ property: "og:url", content: "https://ael.is" },
 		{ property: "og:type", content: "website" },
 		{ name: "twitter:card", content: "summary_large_image" },
 		{ name: "twitter:title", content: PAGE_TITLE },
 		{ name: "twitter:description", content: PAGE_DESCRIPTION },
-		{ name: "twitter:image", content: "https://ael.is/social-media-preview.png" },
+		{ name: "twitter:image", content: "https://ael.is/social-media-preview.jpg" },
 	]
 }
 
