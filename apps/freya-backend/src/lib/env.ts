@@ -5,7 +5,6 @@ export interface ServerEnv {
 	exaApiKey: string
 	googleMapsApiKey: string
 	openrouterApiKey: string
-	openrouterModel: string | undefined
 	tflApiKey: string
 	weatherkitKeyId: string
 	weatherkitPrivateKey: string
@@ -39,7 +38,6 @@ export function ensureEnv(env: Record<string, string | undefined>): ServerEnv {
 		exaApiKey,
 		googleMapsApiKey,
 		openrouterApiKey,
-		openrouterModel: readOptionalEnv(env, "OPENROUTER_MODEL"),
 		tflApiKey,
 		weatherkitKeyId,
 		weatherkitPrivateKey,

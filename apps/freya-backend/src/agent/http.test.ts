@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { Hono } from "hono"
 
+import type { UserSessionManager } from "../session/index.ts"
 import type { QueryDebugTools, QueryDebugToolDefinition } from "./debug-tools.ts"
 import type { QueryAgent, QueryAgentAsk, QueryAgentEvent } from "./query-agent.ts"
 
@@ -23,8 +24,6 @@ class FakeQueryAgent implements QueryAgent {
 			yield event
 		}
 	}
-
-	disposeUser(): void {}
 
 	dispose(): void {}
 }
@@ -52,8 +51,14 @@ class FakeDebugTools implements QueryDebugTools {
 
 function buildTestApp(queryAgent: QueryAgent, userId?: string) {
 	const app = new Hono()
+	const sessionManager = {
+		async getOrCreate() {
+			return { agent: queryAgent }
+		},
+	} as unknown as UserSessionManager
+
 	registerAgentHttpHandlers(app, {
-		queryAgent,
+		sessionManager,
 		authSessionMiddleware: mockAuthSessionMiddleware(userId),
 	})
 	return app

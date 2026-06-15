@@ -4,7 +4,6 @@ import { cors } from "hono/cors"
 import { registerAdminHttpHandlers } from "./admin/http.ts"
 import { createQueryDebugTools } from "./agent/debug-tools.ts"
 import { registerAgentHttpHandlers, registerDebugAgentHttpHandlers } from "./agent/http.ts"
-import { PiQueryAgent } from "./agent/pi-query-agent.ts"
 import { createRequireAdmin } from "./auth/admin-middleware.ts"
 import { registerAuthHandlers } from "./auth/http.ts"
 import { createAuth } from "./auth/index.ts"
@@ -35,11 +34,11 @@ function main() {
 	const feedEnhancer = createFeedEnhancer({
 		client: createLlmClient({
 			apiKey: env.openrouterApiKey,
-			model: env.openrouterModel,
 		}),
 	})
 
 	const credentialEncryptor = new CredentialEncryptor(env.credentialEncryptionKey)
+	const piApiKey = process.env.PI_API_KEY ?? env.openrouterApiKey
 
 	const sessionManager = new UserSessionManager({
 		db,
@@ -63,13 +62,9 @@ function main() {
 		],
 		feedEnhancer,
 		credentialEncryptor,
-	})
-	const piApiKey = process.env.PI_API_KEY ?? env.openrouterApiKey
-	const queryAgent = new PiQueryAgent({
-		sessionManager,
-		modelProvider: process.env.PI_MODEL_PROVIDER ?? "openrouter",
-		modelId: process.env.PI_MODEL ?? env.openrouterModel ?? "z-ai/glm-4.7-flash",
-		apiKey: piApiKey,
+		queryAgent: {
+			apiKey: piApiKey,
+		},
 	})
 	if (!piApiKey) {
 		console.warn("[query] PI_API_KEY or OPENROUTER_API_KEY not set — query agent unavailable")
@@ -120,7 +115,7 @@ function main() {
 	registerLocationHttpHandlers(app, { sessionManager, authSessionMiddleware })
 	registerSourcesHttpHandlers(app, { sessionManager, authSessionMiddleware })
 	registerAgentHttpHandlers(app, {
-		queryAgent,
+		sessionManager,
 		authSessionMiddleware,
 	})
 	if (isDebugMode) {
@@ -133,7 +128,7 @@ function main() {
 	registerAdminHttpHandlers(app, { sessionManager, adminMiddleware, db })
 
 	process.on("SIGTERM", async () => {
-		queryAgent.dispose()
+		sessionManager.dispose()
 		await closeDb()
 		process.exit(0)
 	})

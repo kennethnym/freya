@@ -1,7 +1,6 @@
 import type { FeedSource } from "@freya/core"
-import type { type } from "arktype"
 
-export type ConfigSchema = ReturnType<typeof type>
+export type ConfigSchema = (value: unknown) => unknown
 
 export interface FeedSourceProvider {
 	/** The source ID this provider is responsible for (e.g., "freya.location"). */

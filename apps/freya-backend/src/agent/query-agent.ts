@@ -1,5 +1,4 @@
 export interface QueryAgentAsk {
-	userId: string
 	message: string
 }
 
@@ -12,7 +11,6 @@ export type QueryAgentEvent =
 
 export interface QueryAgent {
 	ask(input: QueryAgentAsk): AsyncIterable<QueryAgentEvent>
-	disposeUser(userId: string): void
 	dispose(): void
 }
 

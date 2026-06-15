@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 
-import type { UserSessionManager } from "../session/index.ts"
+import type { QueryAgentToolbox } from "./query-agent-toolbox.ts"
 import type { QueryAgentEvent } from "./query-agent.ts"
 
 interface FakePiSession {
@@ -11,6 +11,8 @@ interface FakePiSession {
 
 let createAgentSessionCalls = 0
 let createAgentSessionOptions: unknown
+let runtimeApiKeyCalls: Array<{ provider: string; apiKey: string }> = []
+let modelFindCalls: Array<{ provider: string; modelId: string }> = []
 let promptCalls = 0
 let unsubscribeCalls = 0
 let sessionListeners: Array<(event: unknown) => void> = []
@@ -53,7 +55,9 @@ mock.module("@earendil-works/pi-coding-agent", () => ({
 	AuthStorage: {
 		inMemory() {
 			return {
-				setRuntimeApiKey(_provider: string, _apiKey: string): void {},
+				setRuntimeApiKey(provider: string, apiKey: string): void {
+					runtimeApiKeyCalls.push({ provider, apiKey })
+				},
 			}
 		},
 	},
@@ -73,7 +77,8 @@ mock.module("@earendil-works/pi-coding-agent", () => ({
 	ModelRegistry: {
 		inMemory(_authStorage: unknown) {
 			return {
-				find(_provider: string, _modelId: string): unknown {
+				find(provider: string, modelId: string): unknown {
+					modelFindCalls.push({ provider, modelId })
 					return { id: "mock-model" }
 				},
 			}
@@ -94,6 +99,8 @@ mock.module("@earendil-works/pi-coding-agent", () => ({
 beforeEach(() => {
 	createAgentSessionCalls = 0
 	createAgentSessionOptions = undefined
+	runtimeApiKeyCalls = []
+	modelFindCalls = []
 	promptCalls = 0
 	unsubscribeCalls = 0
 	sessionListeners = []
@@ -124,16 +131,15 @@ describe("PiQueryAgent", () => {
 	test("rejects a concurrent first query while the Pi session is being created", async () => {
 		const { PiQueryAgent } = await import("./pi-query-agent.ts")
 		const agent = new PiQueryAgent({
-			sessionManager: createStubSessionManager(),
-			modelProvider: "mock",
-			modelId: "mock-model",
+			userId: "user-1",
+			toolbox: createStubToolbox(),
+			apiKey: "test-api-key",
 			cwd: "/tmp/freya-pi-query-agent-test",
 			systemPrompt: "test",
 		})
 
 		const firstEvents = collectEvents(
 			agent.ask({
-				userId: "user-1",
 				message: "first",
 			}),
 		)
@@ -142,7 +148,6 @@ describe("PiQueryAgent", () => {
 
 		const secondEvents = await collectEvents(
 			agent.ask({
-				userId: "user-1",
 				message: "second",
 			}),
 		)
@@ -154,6 +159,8 @@ describe("PiQueryAgent", () => {
 			},
 		])
 		expect(createAgentSessionCalls).toBe(1)
+		expect(runtimeApiKeyCalls).toEqual([{ provider: "openrouter", apiKey: "test-api-key" }])
+		expect(modelFindCalls).toEqual([{ provider: "openrouter", modelId: "z-ai/glm-4.7-flash" }])
 		expect(promptCalls).toBe(0)
 
 		releaseSessionCreation()
@@ -175,9 +182,8 @@ describe("PiQueryAgent", () => {
 	test("surfaces Pi message_end provider errors instead of done", async () => {
 		const { PiQueryAgent } = await import("./pi-query-agent.ts")
 		const agent = new PiQueryAgent({
-			sessionManager: createStubSessionManager(),
-			modelProvider: "mock",
-			modelId: "mock-model",
+			userId: "user-1",
+			toolbox: createStubToolbox(),
 			cwd: "/tmp/freya-pi-query-agent-test",
 			systemPrompt: "test",
 		})
@@ -195,7 +201,6 @@ describe("PiQueryAgent", () => {
 
 		const events = collectEvents(
 			agent.ask({
-				userId: "user-1",
 				message: "hello",
 			}),
 		)
@@ -214,9 +219,8 @@ describe("PiQueryAgent", () => {
 	test("surfaces Pi agent_end provider errors instead of done", async () => {
 		const { PiQueryAgent } = await import("./pi-query-agent.ts")
 		const agent = new PiQueryAgent({
-			sessionManager: createStubSessionManager(),
-			modelProvider: "mock",
-			modelId: "mock-model",
+			userId: "user-1",
+			toolbox: createStubToolbox(),
 			cwd: "/tmp/freya-pi-query-agent-test",
 			systemPrompt: "test",
 		})
@@ -236,7 +240,6 @@ describe("PiQueryAgent", () => {
 
 		const events = collectEvents(
 			agent.ask({
-				userId: "user-1",
 				message: "hello",
 			}),
 		)
@@ -261,12 +264,30 @@ async function collectEvents(events: AsyncIterable<QueryAgentEvent>): Promise<Qu
 	return result
 }
 
-function createStubSessionManager(): UserSessionManager {
+function createStubToolbox(): QueryAgentToolbox {
 	return {
-		async getOrCreate(): Promise<never> {
+		async listSources(): Promise<never> {
 			throw new Error("not used")
 		},
-	} as unknown as UserSessionManager
+		async getContext(): Promise<never> {
+			throw new Error("not used")
+		},
+		async getFeedItem(): Promise<never> {
+			throw new Error("not used")
+		},
+		async queryContext(): Promise<never> {
+			throw new Error("not used")
+		},
+		async listContext(): Promise<never> {
+			throw new Error("not used")
+		},
+		async getSourceData(): Promise<never> {
+			throw new Error("not used")
+		},
+		async executeAction(): Promise<never> {
+			throw new Error("not used")
+		},
+	}
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

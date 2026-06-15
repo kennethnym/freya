@@ -9,7 +9,7 @@ import {
 } from "@earendil-works/pi-coding-agent"
 import { tmpdir } from "node:os"
 
-import type { UserSessionManager } from "../session/index.ts"
+import type { QueryAgentToolbox } from "./query-agent-toolbox.ts"
 import type { QueryAgent, QueryAgentAsk, QueryAgentEvent } from "./query-agent.ts"
 
 import { InMemoryResourceLoader } from "./in-memory-resource-loader.ts"
@@ -22,36 +22,37 @@ type PiAgentMessage = PiMessageEndEvent["message"]
 type PiAgentEndEvent = Extract<AgentSessionEvent, { type: "agent_end" }>
 
 export interface PiQueryAgentConfig {
-	sessionManager: UserSessionManager
-	modelProvider: string
-	modelId: string
+	userId: string
+	toolbox: QueryAgentToolbox
 	apiKey?: string
 	cwd?: string
 	systemPrompt?: string
 }
 
+const MODEL_PROVIDER = "openrouter"
+const MODEL_ID = "z-ai/glm-4.7-flash"
+
 export class PiQueryAgent implements QueryAgent {
-	private readonly sessionManager: UserSessionManager
+	private readonly userId: string
+	private readonly toolbox: QueryAgentToolbox
 	private readonly cwd: string
 	private readonly systemPrompt: string
-	private readonly modelProvider: string
-	private readonly modelId: string
 	private readonly apiKey: string | undefined
-	private readonly sessions = new Map<string, PiSession>()
-	private readonly pendingSessions = new Map<string, Promise<PiSession>>()
-	private readonly activeRuns = new Map<string, symbol>()
+	private session: PiSession | null = null
+	private pendingSession: Promise<PiSession> | null = null
+	private activeRun: symbol | null = null
+	private disposed = false
 
 	constructor(config: PiQueryAgentConfig) {
-		this.sessionManager = config.sessionManager
-		this.modelProvider = config.modelProvider
-		this.modelId = config.modelId
+		this.userId = config.userId
+		this.toolbox = config.toolbox
 		this.apiKey = config.apiKey
 		this.cwd = config.cwd ?? tmpdir()
 		this.systemPrompt = config.systemPrompt ?? defaultSystemPrompt
 	}
 
 	async *ask(input: QueryAgentAsk): AsyncIterable<QueryAgentEvent> {
-		if (this.activeRuns.has(input.userId)) {
+		if (this.activeRun) {
 			yield {
 				type: "error",
 				message: "A query is already running for this user",
@@ -59,14 +60,14 @@ export class PiQueryAgent implements QueryAgent {
 			return
 		}
 
-		const run = Symbol(input.userId)
-		this.activeRuns.set(input.userId, run)
+		const run = Symbol(this.userId)
+		this.activeRun = run
 
 		let session: PiSession
 		try {
-			session = await this.getOrCreateSession(input.userId)
+			session = await this.getOrCreateSession()
 		} catch (err) {
-			this.clearActiveRun(input.userId, run)
+			this.clearActiveRun(run)
 			yield {
 				type: "error",
 				message: `Failed to create query session: ${errorMessage(err)}`,
@@ -117,7 +118,7 @@ export class PiQueryAgent implements QueryAgent {
 			})
 			.finally(() => {
 				unsubscribe()
-				this.clearActiveRun(input.userId, run)
+				this.clearActiveRun(run)
 				close()
 			})
 
@@ -134,62 +135,62 @@ export class PiQueryAgent implements QueryAgent {
 		}
 	}
 
-	disposeUser(userId: string): void {
-		const session = this.sessions.get(userId)
-		session?.dispose()
-		this.sessions.delete(userId)
-		this.pendingSessions.delete(userId)
-		this.activeRuns.delete(userId)
-	}
-
 	dispose(): void {
-		for (const session of this.sessions.values()) {
-			session.dispose()
-		}
-		this.sessions.clear()
-		this.pendingSessions.clear()
-		this.activeRuns.clear()
+		this.disposed = true
+		this.session?.dispose()
+		this.session = null
+		this.pendingSession = null
+		this.activeRun = null
 	}
 
-	private clearActiveRun(userId: string, run: symbol): void {
-		if (this.activeRuns.get(userId) === run) {
-			this.activeRuns.delete(userId)
+	private clearActiveRun(run: symbol): void {
+		if (this.activeRun === run) {
+			this.activeRun = null
 		}
 	}
 
-	private async getOrCreateSession(userId: string): Promise<PiSession> {
-		const existing = this.sessions.get(userId)
-		if (existing) return existing
+	private async getOrCreateSession(): Promise<PiSession> {
+		if (this.disposed) {
+			throw new Error("Query agent is disposed")
+		}
 
-		const pending = this.pendingSessions.get(userId)
+		if (this.session) return this.session
+
+		const pending = this.pendingSession
 		if (pending) return pending
 
-		const promise = this.createSession(userId)
-		this.pendingSessions.set(userId, promise)
+		const promise = this.createSession()
+		this.pendingSession = promise
 
 		try {
 			const session = await promise
-			this.sessions.set(userId, session)
+			if (this.disposed) {
+				session.dispose()
+				throw new Error("Query agent is disposed")
+			}
+			this.session = session
 			return session
 		} finally {
-			this.pendingSessions.delete(userId)
+			if (this.pendingSession === promise) {
+				this.pendingSession = null
+			}
 		}
 	}
 
-	private async createSession(userId: string): Promise<PiSession> {
+	private async createSession(): Promise<PiSession> {
 		const settingsManager = SettingsManager.inMemory({
 			compaction: { enabled: true },
 			retry: { enabled: true, maxRetries: 2 },
 		})
 		const authStorage = AuthStorage.inMemory()
 		if (this.apiKey) {
-			authStorage.setRuntimeApiKey(this.modelProvider, this.apiKey)
+			authStorage.setRuntimeApiKey(MODEL_PROVIDER, this.apiKey)
 		}
 
 		const modelRegistry = ModelRegistry.inMemory(authStorage)
-		const model = modelRegistry.find(this.modelProvider, this.modelId)
+		const model = modelRegistry.find(MODEL_PROVIDER, MODEL_ID)
 		if (!model) {
-			throw new Error(`Pi model not found: ${this.modelProvider}/${this.modelId}`)
+			throw new Error(`Pi model not found: ${MODEL_PROVIDER}/${MODEL_ID}`)
 		}
 
 		const { session } = await createAgentSession({
@@ -202,8 +203,7 @@ export class PiQueryAgent implements QueryAgent {
 			sessionManager: SessionManager.inMemory(this.cwd),
 			noTools: "builtin",
 			customTools: createFreyaAgentTools({
-				userId,
-				sessionManager: this.sessionManager,
+				toolbox: this.toolbox,
 			}),
 			tools: [...FREYA_AGENT_TOOL_NAMES],
 		})
