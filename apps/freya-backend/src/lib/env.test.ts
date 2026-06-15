@@ -11,7 +11,6 @@ describe("ensureEnv", () => {
 			EXA_API_KEY: " exa-key ",
 			GOOGLE_MAPS_API_KEY: " google-maps-key ",
 			OPENROUTER_API_KEY: " openrouter-key ",
-			OPENROUTER_MODEL: " model-name ",
 			TFL_API_KEY: " tfl-key ",
 			WEATHERKIT_KEY_ID: " weather-key-id ",
 			WEATHERKIT_PRIVATE_KEY: " weather-private-key ",
@@ -26,7 +25,6 @@ describe("ensureEnv", () => {
 			exaApiKey: "exa-key",
 			googleMapsApiKey: "google-maps-key",
 			openrouterApiKey: "openrouter-key",
-			openrouterModel: "model-name",
 			tflApiKey: "tfl-key",
 			weatherkitKeyId: "weather-key-id",
 			weatherkitPrivateKey: "weather-private-key",
@@ -51,25 +49,6 @@ describe("ensureEnv", () => {
 				WEATHERKIT_TEAM_ID: "weather-team-id",
 			}),
 		).toThrow("Missing required environment variables: GOOGLE_MAPS_API_KEY")
-	})
-
-	test("allows openrouter model to be omitted", () => {
-		const env = ensureEnv({
-			BETTER_AUTH_SECRET: "auth-secret",
-			CREDENTIAL_ENCRYPTION_KEY: "credential-key",
-			DATABASE_URL: "postgres://example",
-			EXA_API_KEY: "exa-key",
-			GOOGLE_MAPS_API_KEY: "google-maps-key",
-			OPENROUTER_API_KEY: "openrouter-key",
-			TFL_API_KEY: "tfl-key",
-			WEATHERKIT_KEY_ID: "weather-key-id",
-			WEATHERKIT_PRIVATE_KEY: "weather-private-key",
-			WEATHERKIT_SERVICE_ID: "weather-service-id",
-			WEATHERKIT_TEAM_ID: "weather-team-id",
-		})
-
-		expect(env.googleMapsApiKey).toBe("google-maps-key")
-		expect(env.openrouterModel).toBeUndefined()
 	})
 
 	test("throws with all missing required env names", () => {

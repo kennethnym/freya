@@ -14,13 +14,14 @@ import {
 	SourceNotFoundError,
 } from "../sources/errors.ts"
 import { sources } from "../sources/user-sources.ts"
-import { UserSession } from "./user-session.ts"
+import { UserSession, type UserSessionAgentConfig } from "./user-session.ts"
 
 export interface UserSessionManagerConfig {
 	db: Database
 	providers: FeedSourceProvider[]
 	feedEnhancer?: FeedEnhancer | null
 	credentialEncryptor?: CredentialEncryptor | null
+	queryAgent?: UserSessionAgentConfig
 }
 
 export class UserSessionManager {
@@ -30,6 +31,7 @@ export class UserSessionManager {
 	private readonly providers = new Map<string, FeedSourceProvider>()
 	private readonly feedEnhancer: FeedEnhancer | null
 	private readonly encryptor: CredentialEncryptor | null
+	private readonly queryAgentConfig: UserSessionAgentConfig | undefined
 
 	constructor(config: UserSessionManagerConfig) {
 		this.db = config.db
@@ -38,6 +40,7 @@ export class UserSessionManager {
 		}
 		this.feedEnhancer = config.feedEnhancer ?? null
 		this.encryptor = config.credentialEncryptor ?? null
+		this.queryAgentConfig = config.queryAgent
 	}
 
 	getProvider(sourceId: string): FeedSourceProvider | undefined {
@@ -97,6 +100,14 @@ export class UserSessionManager {
 		}
 		// Cancel any in-flight creation so getOrCreate won't store the session
 		this.pending.delete(userId)
+	}
+
+	dispose(): void {
+		for (const session of this.sessions.values()) {
+			session.destroy()
+		}
+		this.sessions.clear()
+		this.pending.clear()
 	}
 
 	/**
@@ -362,7 +373,7 @@ export class UserSessionManager {
 		}
 
 		if (promises.length === 0) {
-			return new UserSession(userId, [], this.feedEnhancer)
+			return new UserSession(userId, [], this.feedEnhancer, this.queryAgentConfig)
 		}
 
 		const results = await Promise.allSettled(promises)
@@ -386,7 +397,7 @@ export class UserSessionManager {
 			console.error("[UserSessionManager] Feed source provider failed:", error)
 		}
 
-		return new UserSession(userId, feedSources, this.feedEnhancer)
+		return new UserSession(userId, feedSources, this.feedEnhancer, this.queryAgentConfig)
 	}
 
 	/**

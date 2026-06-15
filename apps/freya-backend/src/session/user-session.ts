@@ -6,11 +6,24 @@ import {
 	type FeedSource,
 } from "@freya/core"
 
+import type { QueryAgentToolbox } from "../agent/query-agent-toolbox.ts"
+import type { QueryAgent } from "../agent/query-agent.ts"
 import type { FeedEnhancer } from "../enhancement/enhance-feed.ts"
+
+import { PiQueryAgent } from "../agent/pi-query-agent.ts"
+import { UserSessionQueryAgentToolbox } from "../agent/user-session-query-agent-toolbox.ts"
+
+export interface UserSessionAgentConfig {
+	apiKey?: string
+	cwd?: string
+	systemPrompt?: string
+}
 
 export class UserSession {
 	readonly userId: string
 	readonly engine: FeedEngine
+	readonly toolbox: QueryAgentToolbox
+	readonly agent: QueryAgent
 	private sources = new Map<string, FeedSource>()
 	private readonly enhancer: FeedEnhancer | null
 	private enhancedItems: FeedItem[] | null = null
@@ -19,7 +32,12 @@ export class UserSession {
 	private enhancingPromise: Promise<void> | null = null
 	private unsubscribe: (() => void) | null = null
 
-	constructor(userId: string, sources: FeedSource[], enhancer?: FeedEnhancer | null) {
+	constructor(
+		userId: string,
+		sources: FeedSource[],
+		enhancer?: FeedEnhancer | null,
+		agentConfig?: UserSessionAgentConfig,
+	) {
 		this.userId = userId
 		this.engine = new FeedEngine()
 		this.enhancer = enhancer ?? null
@@ -34,6 +52,15 @@ export class UserSession {
 				this.runEnhancement(result)
 			})
 		}
+
+		this.toolbox = new UserSessionQueryAgentToolbox(this)
+		this.agent = new PiQueryAgent({
+			userId: this.userId,
+			toolbox: this.toolbox,
+			apiKey: agentConfig?.apiKey,
+			cwd: agentConfig?.cwd,
+			systemPrompt: agentConfig?.systemPrompt,
+		})
 
 		this.engine.start()
 	}
@@ -174,6 +201,7 @@ export class UserSession {
 	}
 
 	destroy(): void {
+		this.agent.dispose()
 		this.unsubscribe?.()
 		this.unsubscribe = null
 		this.engine.stop()

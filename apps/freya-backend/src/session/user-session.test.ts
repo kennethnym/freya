@@ -58,6 +58,15 @@ describe("UserSession", () => {
 		expect(session.getSource("test")).toBeUndefined()
 	})
 
+	test("destroy disposes query agent", () => {
+		const session = new UserSession("test-user", [createStubSource("test")])
+		const disposeSpy = spyOn(session.agent, "dispose")
+
+		session.destroy()
+
+		expect(disposeSpy).toHaveBeenCalled()
+	})
+
 	test("engine.executeAction routes to correct source", async () => {
 		const location = new LocationSource()
 		const session = new UserSession("test-user", [location])

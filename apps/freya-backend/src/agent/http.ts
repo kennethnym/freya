@@ -4,14 +4,14 @@ import { type } from "arktype"
 import { createMiddleware } from "hono/factory"
 
 import type { AuthSessionMiddleware } from "../auth/session-middleware.ts"
+import type { UserSessionManager } from "../session/index.ts"
 import type { QueryDebugTools } from "./debug-tools.ts"
-import type { QueryAgent } from "./query-agent.ts"
 
 import { collectQueryAgentResponse, QueryAgentError } from "./query-agent.ts"
 
 type Env = {
 	Variables: {
-		queryAgent: QueryAgent
+		sessionManager: UserSessionManager
 	}
 }
 
@@ -22,7 +22,7 @@ type DebugEnv = {
 }
 
 interface AgentHttpHandlersDeps {
-	queryAgent: QueryAgent
+	sessionManager: UserSessionManager
 	authSessionMiddleware: AuthSessionMiddleware
 }
 
@@ -39,10 +39,10 @@ const AgentAskRequestBody = type({
 
 export function registerAgentHttpHandlers(
 	app: Hono,
-	{ queryAgent, authSessionMiddleware }: AgentHttpHandlersDeps,
+	{ sessionManager, authSessionMiddleware }: AgentHttpHandlersDeps,
 ) {
 	const inject = createMiddleware<Env>(async (c, next) => {
-		c.set("queryAgent", queryAgent)
+		c.set("sessionManager", sessionManager)
 		await next()
 	})
 
@@ -76,11 +76,11 @@ async function handleAgentAsk(c: Context<Env>) {
 	}
 
 	const user = c.get("user")!
-	const queryAgent = c.get("queryAgent")
+	const sessionManager = c.get("sessionManager")
 
 	try {
-		const response = await collectQueryAgentResponse(queryAgent, {
-			userId: user.id,
+		const session = await sessionManager.getOrCreate(user.id)
+		const response = await collectQueryAgentResponse(session.agent, {
 			message: parsed.message,
 		})
 		return c.json(response)
