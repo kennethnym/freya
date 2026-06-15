@@ -40,7 +40,7 @@ const POLICY = `# Privacy Policy
 
 **Last updated:** March 5, 2026
 
-This Privacy Policy describes how **Freya** ("we", "us", or "our") collects, uses, and protects your personal information when you visit **https://ael.is** or interact with our services.
+This Privacy Policy describes how **Freya** ("we", "us", or "our") collects, uses, and protects your personal information when you visit **https://freya.chat** or interact with our services.
 
 If you do not agree with this Privacy Policy, please do not use the website.
 

@@ -37,13 +37,13 @@ export function meta({}: Route.MetaArgs) {
 		},
 		{ property: "og:title", content: PAGE_TITLE },
 		{ property: "og:description", content: PAGE_DESCRIPTION },
-		{ property: "og:image", content: "https://ael.is/social-media-preview.jpg" },
-		{ property: "og:url", content: "https://ael.is" },
+		{ property: "og:image", content: "https://freya.chat/social-media-preview.jpg" },
+		{ property: "og:url", content: "https://freya.chat" },
 		{ property: "og:type", content: "website" },
 		{ name: "twitter:card", content: "summary_large_image" },
 		{ name: "twitter:title", content: PAGE_TITLE },
 		{ name: "twitter:description", content: PAGE_DESCRIPTION },
-		{ name: "twitter:image", content: "https://ael.is/social-media-preview.jpg" },
+		{ name: "twitter:image", content: "https://freya.chat/social-media-preview.jpg" },
 	]
 }
 
@@ -84,7 +84,7 @@ export async function action({ request }: Route.ActionArgs) {
 	await new Promise((resolve) => setTimeout(resolve, 1000))
 
 	const emailRes = await resend.emails.send({
-		from: "Freya <no-reply@ael.is>",
+		from: "Freya <no-reply@freya.chat>",
 		to: email,
 		template: {
 			id: "waitlist-confirmation",
@@ -380,7 +380,6 @@ function SystemMessageBubble({
 				isAnimating={isStreaming}
 				linkSafety={{ enabled: false }}
 				components={{
-					// @ts-expect-error
 					a: ({ className, ...props }) => <a className={`underline ${className}`} {...props} />,
 				}}
 			>
