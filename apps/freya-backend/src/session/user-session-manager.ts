@@ -8,6 +8,7 @@ import type { FeedEnhancer } from "../enhancement/enhance-feed.ts"
 import type { CredentialEncryptor } from "../lib/crypto.ts"
 import type { FeedSourceProvider } from "./feed-source-provider.ts"
 
+import { conversations } from "../conversations/storage.ts"
 import {
 	CredentialStorageUnavailableError,
 	InvalidSourceConfigError,
@@ -362,6 +363,7 @@ export class UserSessionManager {
 
 	private async createSession(userId: string): Promise<UserSession> {
 		const enabledRows = await sources(this.db, userId).enabled()
+		const agentConfig = this.queryAgentConfigForUser(userId)
 
 		const promises: Promise<FeedSource>[] = []
 		for (const row of enabledRows) {
@@ -373,7 +375,7 @@ export class UserSessionManager {
 		}
 
 		if (promises.length === 0) {
-			return new UserSession(userId, [], this.feedEnhancer, this.queryAgentConfig)
+			return this.initializedSession(userId, [], agentConfig)
 		}
 
 		const results = await Promise.allSettled(promises)
@@ -397,7 +399,29 @@ export class UserSessionManager {
 			console.error("[UserSessionManager] Feed source provider failed:", error)
 		}
 
-		return new UserSession(userId, feedSources, this.feedEnhancer, this.queryAgentConfig)
+		return this.initializedSession(userId, feedSources, agentConfig)
+	}
+
+	private queryAgentConfigForUser(userId: string): UserSessionAgentConfig {
+		return {
+			...(this.queryAgentConfig ?? {}),
+			conversationStorage: conversations(this.db, userId),
+		}
+	}
+
+	private async initializedSession(
+		userId: string,
+		sources: FeedSource[],
+		agentConfig: UserSessionAgentConfig,
+	): Promise<UserSession> {
+		const session = new UserSession(userId, sources, this.feedEnhancer, agentConfig)
+		try {
+			await session.initialize()
+			return session
+		} catch (err) {
+			session.destroy()
+			throw err
+		}
 	}
 
 	/**

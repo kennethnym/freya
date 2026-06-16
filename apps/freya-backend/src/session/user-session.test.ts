@@ -3,6 +3,13 @@ import type { ActionDefinition, ContextEntry, FeedItem, FeedSource } from "@frey
 import { LocationSource } from "@freya/source-location"
 import { describe, expect, spyOn, test } from "bun:test"
 
+import type {
+	ConversationStorage,
+	ConversationStorageEntry,
+} from "../agent/conversation-recording-query-agent.ts"
+import type { AppendConversationEntryInput } from "../conversations/storage.ts"
+
+import { ConversationEntryKind } from "../conversations/types.ts"
 import { UserSession } from "./user-session.ts"
 
 function createStubSource(id: string, items: FeedItem[] = []): FeedSource {
@@ -20,6 +27,40 @@ function createStubSource(id: string, items: FeedItem[] = []): FeedSource {
 		async fetchItems() {
 			return items
 		},
+	}
+}
+
+class FakeConversationStorage implements ConversationStorage {
+	readonly calls: string[] = []
+	private readonly entries: ConversationStorageEntry[]
+
+	constructor(entries: ConversationStorageEntry[] = []) {
+		this.entries = entries
+	}
+
+	async getOrCreateConversation(): Promise<{ id: string }> {
+		this.calls.push("getOrCreateConversation")
+		return { id: "conversation-1" }
+	}
+
+	async appendEntry(
+		_conversationId: string,
+		input: AppendConversationEntryInput,
+	): Promise<ConversationStorageEntry> {
+		this.calls.push("appendEntry")
+		return {
+			id: "entry-appended",
+			sequence: 1,
+			kind: input.kind,
+			payload: input.payload,
+			metadata: input.metadata ?? {},
+			createdAt: new Date("2026-06-15T00:00:00.000Z"),
+		}
+	}
+
+	async listEntries(_conversationId: string): Promise<ConversationStorageEntry[]> {
+		this.calls.push("listEntries")
+		return this.entries
 	}
 }
 
@@ -65,6 +106,32 @@ describe("UserSession", () => {
 		session.destroy()
 
 		expect(disposeSpy).toHaveBeenCalled()
+	})
+
+	test("initialize loads conversation entries before exposing stored agent", async () => {
+		const storage = new FakeConversationStorage([
+			{
+				id: "entry-1",
+				sequence: 1,
+				kind: ConversationEntryKind.UserMessage,
+				payload: {
+					role: "user",
+					parts: [{ type: "text", text: "stored hello" }],
+				},
+				metadata: {},
+				createdAt: new Date("2026-06-15T00:00:00.000Z"),
+			},
+		])
+		const session = new UserSession("test-user", [createStubSource("test")], null, {
+			conversationStorage: storage,
+		})
+
+		expect(() => session.agent).toThrow("UserSession has not been initialized")
+
+		await session.initialize()
+
+		expect(storage.calls).toEqual(["getOrCreateConversation", "listEntries"])
+		expect(session.agent).toBeDefined()
 	})
 
 	test("engine.executeAction routes to correct source", async () => {
