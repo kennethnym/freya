@@ -10,22 +10,30 @@ import type { QueryAgentToolbox } from "../agent/query-agent-toolbox.ts"
 import type { QueryAgent } from "../agent/query-agent.ts"
 import type { FeedEnhancer } from "../enhancement/enhance-feed.ts"
 
-import { PiQueryAgent } from "../agent/pi-query-agent.ts"
+import {
+	ConversationRecordingQueryAgent,
+	type ConversationStorage,
+} from "../agent/conversation-recording-query-agent.ts"
+import { PiQueryAgent, PI_MODEL_ID, PI_MODEL_PROVIDER } from "../agent/pi-query-agent.ts"
 import { UserSessionQueryAgentToolbox } from "../agent/user-session-query-agent-toolbox.ts"
 
 export interface UserSessionAgentConfig {
 	apiKey?: string
 	cwd?: string
 	systemPrompt?: string
+	conversationStorage?: ConversationStorage
 }
 
 export class UserSession {
 	readonly userId: string
 	readonly engine: FeedEngine
 	readonly toolbox: QueryAgentToolbox
-	readonly agent: QueryAgent
 	private sources = new Map<string, FeedSource>()
 	private readonly enhancer: FeedEnhancer | null
+	private readonly agentConfig: UserSessionAgentConfig | undefined
+	private queryAgent: QueryAgent | null = null
+	private initializePromise: Promise<void> | null = null
+	private initialized = false
 	private enhancedItems: FeedItem[] | null = null
 	/** The FeedResult that enhancedItems was derived from. */
 	private enhancedSource: FeedResult | null = null
@@ -41,6 +49,7 @@ export class UserSession {
 		this.userId = userId
 		this.engine = new FeedEngine()
 		this.enhancer = enhancer ?? null
+		this.agentConfig = agentConfig
 		for (const source of sources) {
 			this.sources.set(source.id, source)
 			this.engine.register(source)
@@ -54,15 +63,41 @@ export class UserSession {
 		}
 
 		this.toolbox = new UserSessionQueryAgentToolbox(this)
-		this.agent = new PiQueryAgent({
-			userId: this.userId,
-			toolbox: this.toolbox,
-			apiKey: agentConfig?.apiKey,
-			cwd: agentConfig?.cwd,
-			systemPrompt: agentConfig?.systemPrompt,
-		})
+		if (!agentConfig?.conversationStorage) {
+			this.queryAgent = new PiQueryAgent({
+				toolbox: this.toolbox,
+				apiKey: this.agentConfig?.apiKey,
+				cwd: this.agentConfig?.cwd,
+				systemPrompt: this.agentConfig?.systemPrompt,
+			})
+			this.initialized = true
+		}
 
 		this.engine.start()
+	}
+
+	get agent(): QueryAgent {
+		if (!this.queryAgent) {
+			throw new Error("UserSession has not been initialized")
+		}
+		return this.queryAgent
+	}
+
+	async initialize(): Promise<void> {
+		if (this.initialized) return
+		if (this.initializePromise) return this.initializePromise
+
+		const promise = this.initializeAgent()
+		this.initializePromise = promise
+
+		try {
+			await promise
+			this.initialized = true
+		} finally {
+			if (this.initializePromise === promise) {
+				this.initializePromise = null
+			}
+		}
 	}
 
 	/**
@@ -201,13 +236,46 @@ export class UserSession {
 	}
 
 	destroy(): void {
-		this.agent.dispose()
+		this.queryAgent?.dispose()
+		this.queryAgent = null
 		this.unsubscribe?.()
 		this.unsubscribe = null
 		this.engine.stop()
 		this.sources.clear()
 		this.invalidateEnhancement()
 		this.enhancingPromise = null
+	}
+
+	private async initializeAgent(): Promise<void> {
+		if (this.queryAgent) return
+
+		const conversationStorage = this.agentConfig?.conversationStorage
+		if (!conversationStorage) {
+			this.queryAgent = new PiQueryAgent({
+				toolbox: this.toolbox,
+				apiKey: this.agentConfig?.apiKey,
+				cwd: this.agentConfig?.cwd,
+				systemPrompt: this.agentConfig?.systemPrompt,
+			})
+			return
+		}
+
+		const conversation = await conversationStorage.getOrCreateConversation()
+		const entries = await conversationStorage.listEntries(conversation.id)
+
+		this.queryAgent = new ConversationRecordingQueryAgent({
+			agent: new PiQueryAgent({
+				toolbox: this.toolbox,
+				apiKey: this.agentConfig?.apiKey,
+				cwd: this.agentConfig?.cwd,
+				systemPrompt: this.agentConfig?.systemPrompt,
+				initialEntries: entries,
+			}),
+			storage: conversationStorage,
+			defaultConversationId: conversation.id,
+			modelProvider: PI_MODEL_PROVIDER,
+			modelId: PI_MODEL_ID,
+		})
 	}
 
 	private invalidateEnhancement(): void {

@@ -85,6 +85,20 @@ mock.module("../sources/user-sources.ts", () => ({
 	}),
 }))
 
+mock.module("../conversations/storage.ts", () => ({
+	conversations: (_db: Database, userId: string) => ({
+		async getOrCreateConversation() {
+			return { id: `conversation-${userId}` }
+		},
+		async listEntries() {
+			return []
+		},
+		async appendEntry() {
+			return { id: "entry-1", sequence: 1 }
+		},
+	}),
+}))
+
 const fakeDb = {} as Database
 
 describe("GET /api/feed", () => {

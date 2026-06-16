@@ -3,7 +3,13 @@ import { Hono } from "hono"
 
 import type { UserSessionManager } from "../session/index.ts"
 import type { QueryDebugTools, QueryDebugToolDefinition } from "./debug-tools.ts"
-import type { QueryAgent, QueryAgentAsk, QueryAgentEvent } from "./query-agent.ts"
+import type {
+	QueryAgent,
+	QueryAgentAsk,
+	QueryAgentEventListener,
+	QueryAgentStreamEvent,
+	QueryAgentEvent,
+} from "./query-agent.ts"
 
 import { mockAuthSessionMiddleware } from "../auth/session-middleware.ts"
 import { registerAgentHttpHandlers, registerDebugAgentHttpHandlers } from "./http.ts"
@@ -12,17 +18,24 @@ const MockUserId = "k7Gx2mPqRvNwYs9TdLfA4bHcJeUo1iZn"
 
 class FakeQueryAgent implements QueryAgent {
 	readonly inputs: QueryAgentAsk[] = []
-	private readonly events: QueryAgentEvent[]
+	private readonly events: QueryAgentStreamEvent[]
 
-	constructor(events: QueryAgentEvent[]) {
+	constructor(events: QueryAgentStreamEvent[]) {
 		this.events = events
 	}
 
-	async *ask(input: QueryAgentAsk): AsyncIterable<QueryAgentEvent> {
+	async *ask(input: QueryAgentAsk): AsyncIterable<QueryAgentStreamEvent> {
 		this.inputs.push(input)
 		for (const event of this.events) {
 			yield event
 		}
+	}
+
+	addEventListener<T extends QueryAgentEvent>(
+		_type: T,
+		_listener: QueryAgentEventListener<T>,
+	): () => void {
+		return () => {}
 	}
 
 	dispose(): void {}
@@ -108,6 +121,27 @@ describe("POST /api/agent", () => {
 			message: string
 		}
 		expect(body.message).toBe("You should leave at 8:30.")
+	})
+
+	test("passes conversation id to the query agent", async () => {
+		const agent = new FakeQueryAgent([
+			{ type: "conversation", conversationId: "conversation-1" },
+			{ type: "done" },
+		])
+		const app = buildTestApp(agent, "user-1")
+
+		const res = await app.request("/api/agent", {
+			method: "POST",
+			body: JSON.stringify({
+				message: "Continue this chat.",
+				conversationId: "conversation-1",
+			}),
+		})
+
+		expect(res.status).toBe(200)
+		expect(agent.inputs[0]?.conversationId).toBe("conversation-1")
+		const body = (await res.json()) as { conversationId?: string }
+		expect(body.conversationId).toBe("conversation-1")
 	})
 
 	test("returns 400 for invalid body", async () => {

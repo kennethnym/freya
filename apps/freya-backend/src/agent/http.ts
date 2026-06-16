@@ -35,6 +35,7 @@ interface AgentDebugHttpHandlersDeps {
 const AgentAskRequestBody = type({
 	"+": "reject",
 	message: "string",
+	"conversationId?": "string",
 })
 
 export function registerAgentHttpHandlers(
@@ -82,6 +83,7 @@ async function handleAgentAsk(c: Context<Env>) {
 		const session = await sessionManager.getOrCreate(user.id)
 		const response = await collectQueryAgentResponse(session.agent, {
 			message: parsed.message,
+			conversationId: parsed.conversationId,
 		})
 		return c.json(response)
 	} catch (err) {

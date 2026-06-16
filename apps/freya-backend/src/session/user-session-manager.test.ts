@@ -4,9 +4,12 @@ import { LocationSource } from "@freya/source-location"
 import { WeatherSource } from "@freya/source-weatherkit"
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 
+import type { ConversationStorageEntry } from "../agent/conversation-recording-query-agent.ts"
+import type { AppendConversationEntryInput } from "../conversations/storage.ts"
 import type { Database } from "../db/index.ts"
 import type { FeedSourceProvider } from "./feed-source-provider.ts"
 
+import { ConversationEntryKind } from "../conversations/types.ts"
 import { CredentialEncryptor } from "../lib/crypto.ts"
 import {
 	CredentialStorageUnavailableError,
@@ -21,6 +24,8 @@ import { UserSessionManager } from "./user-session-manager.ts"
  * Key = userId (or "*" for a default), value = array of enabled sourceIds.
  */
 const enabledByUser = new Map<string, string[]>()
+const conversationEntriesByUser = new Map<string, ConversationStorageEntry[]>()
+const mockConversationCalls: Array<{ type: "getOrCreate" | "listEntries"; userId: string }> = []
 
 /** Set which sourceIds are enabled for all users. */
 function setEnabledSources(sourceIds: string[]) {
@@ -35,6 +40,10 @@ function setEnabledSourcesForUser(userId: string, sourceIds: string[]) {
 
 function getEnabledSourceIds(userId: string): string[] {
 	return enabledByUser.get(userId) ?? enabledByUser.get("*") ?? []
+}
+
+function setConversationEntriesForUser(userId: string, entries: ConversationStorageEntry[]) {
+	conversationEntriesByUser.set(userId, entries)
 }
 
 /**
@@ -111,6 +120,35 @@ mock.module("../sources/user-sources.ts", () => ({
 	}),
 }))
 
+mock.module("../conversations/storage.ts", () => ({
+	conversations: (_db: Database, userId: string) => ({
+		async getOrCreateConversation(): Promise<{ id: string }> {
+			mockConversationCalls.push({ type: "getOrCreate", userId })
+			return { id: `conversation-${userId}` }
+		},
+		async listEntries(_conversationId: string): Promise<ConversationStorageEntry[]> {
+			mockConversationCalls.push({ type: "listEntries", userId })
+			return conversationEntriesByUser.get(userId) ?? []
+		},
+		async appendEntry(
+			_conversationId: string,
+			input: AppendConversationEntryInput,
+		): Promise<ConversationStorageEntry> {
+			const entries = conversationEntriesByUser.get(userId) ?? []
+			const row: ConversationStorageEntry = {
+				id: `entry-${entries.length + 1}`,
+				sequence: entries.length + 1,
+				kind: input.kind,
+				payload: input.payload,
+				metadata: input.metadata ?? {},
+				createdAt: new Date("2026-06-15T00:00:00.000Z"),
+			}
+			conversationEntriesByUser.set(userId, [...entries, row])
+			return row
+		},
+	}),
+}))
+
 const fakeDb = {
 	transaction: <T>(fn: (tx: unknown) => Promise<T>) => fn(fakeDb),
 } as unknown as Database
@@ -160,6 +198,8 @@ const weatherProvider: FeedSourceProvider = {
 
 beforeEach(() => {
 	enabledByUser.clear()
+	conversationEntriesByUser.clear()
+	mockConversationCalls.length = 0
 	mockFindResult = undefined
 	mockUpdateCredentialsCalls.length = 0
 	mockUpdateCredentialsError = null
@@ -174,6 +214,31 @@ describe("UserSessionManager", () => {
 
 		expect(session).toBeDefined()
 		expect(session.engine).toBeDefined()
+	})
+
+	test("getOrCreate eagerly loads conversation entries for the user session", async () => {
+		setEnabledSources([])
+		setConversationEntriesForUser("user-1", [
+			{
+				id: "entry-1",
+				sequence: 1,
+				kind: ConversationEntryKind.UserMessage,
+				payload: {
+					role: "user",
+					parts: [{ type: "text", text: "stored hello" }],
+				},
+				metadata: {},
+				createdAt: new Date("2026-06-15T00:00:00.000Z"),
+			},
+		])
+		const manager = new UserSessionManager({ db: fakeDb, providers: [] })
+
+		await manager.getOrCreate("user-1")
+
+		expect(mockConversationCalls).toEqual([
+			{ type: "getOrCreate", userId: "user-1" },
+			{ type: "listEntries", userId: "user-1" },
+		])
 	})
 
 	test("getOrCreate returns same session for same user", async () => {

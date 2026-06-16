@@ -1,6 +1,9 @@
+import { sql } from "drizzle-orm"
 import {
 	boolean,
+	check,
 	customType,
+	integer,
 	index,
 	jsonb,
 	pgTable,
@@ -9,6 +12,14 @@ import {
 	unique,
 	uuid,
 } from "drizzle-orm/pg-core"
+
+import {
+	ConversationEntryVisibility,
+	type ConversationEntryKind,
+	type ConversationEntryMetadata,
+	type ConversationEntryPayload,
+	type ConversationEntryVisibility as ConversationEntryVisibilityType,
+} from "../conversations/types.ts"
 
 // ---------------------------------------------------------------------------
 // Better Auth core tables
@@ -58,6 +69,81 @@ export const userSources = pgTable(
 	(t) => [
 		unique("user_sources_user_id_source_id_unique").on(t.userId, t.sourceId),
 		index("user_sources_user_id_enabled_idx").on(t.userId, t.enabled),
+	],
+)
+
+// ---------------------------------------------------------------------------
+// FREYA — conversations
+// ---------------------------------------------------------------------------
+
+export const conversations = pgTable(
+	"conversations",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		createdAt: timestamp("created_at").notNull().defaultNow(),
+		updatedAt: timestamp("updated_at")
+			.notNull()
+			.defaultNow()
+			.$onUpdate(() => new Date()),
+	},
+	(t) => [index("conversations_user_id_updated_at_idx").on(t.userId, t.updatedAt)],
+)
+
+export const files = pgTable(
+	"files",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		storageKey: text("storage_key").notNull(),
+		originalName: text("original_name"),
+		mimeType: text("mime_type").notNull(),
+		sizeBytes: integer("size_bytes").notNull(),
+		metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
+		createdAt: timestamp("created_at").notNull().defaultNow(),
+	},
+	(t) => [
+		unique("files_storage_key_unique").on(t.storageKey),
+		index("files_user_id_created_at_idx").on(t.userId, t.createdAt),
+	],
+)
+
+export const conversationEntries = pgTable(
+	"conversation_entries",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		conversationId: uuid("conversation_id")
+			.notNull()
+			.references(() => conversations.id, { onDelete: "cascade" }),
+		sequence: integer("sequence").notNull(),
+		kind: text("kind").$type<ConversationEntryKind>().notNull(),
+		visibility: text("visibility")
+			.$type<ConversationEntryVisibilityType>()
+			.notNull()
+			.default(ConversationEntryVisibility.Internal),
+		fileId: uuid("file_id").references(() => files.id, { onDelete: "restrict" }),
+		payload: jsonb("payload").$type<ConversationEntryPayload>().notNull(),
+		metadata: jsonb("metadata").$type<ConversationEntryMetadata>().notNull().default({}),
+		createdAt: timestamp("created_at").notNull().defaultNow(),
+	},
+	(t) => [
+		unique("conversation_entries_conversation_id_sequence_unique").on(t.conversationId, t.sequence),
+		index("conversation_entries_conversation_id_sequence_idx").on(t.conversationId, t.sequence),
+		index("conversation_entries_conversation_id_visibility_sequence_idx").on(
+			t.conversationId,
+			t.visibility,
+			t.sequence,
+		),
+		index("conversation_entries_kind_idx").on(t.kind),
+		index("conversation_entries_file_id_idx").on(t.fileId),
+		check(
+			"conversation_entries_attachment_file_id_check",
+			sql`(${t.kind} = 'attachment' and ${t.fileId} is not null) or (${t.kind} <> 'attachment' and ${t.fileId} is null)`,
+		),
 	],
 )
 
