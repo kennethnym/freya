@@ -1,15 +1,16 @@
 import { Hono } from "hono"
 import { cors } from "hono/cors"
+import { createMiddleware } from "hono/factory"
 
 import { registerAdminHttpHandlers } from "./admin/http.ts"
 import { createQueryDebugTools } from "./agent/debug-tools.ts"
 import { registerAgentHttpHandlers, registerDebugAgentHttpHandlers } from "./agent/http.ts"
+import { agentWebSocket, registerAgentWebSocketHandlers } from "./agent/ws.ts"
 import { createRequireAdmin } from "./auth/admin-middleware.ts"
 import { registerAuthHandlers } from "./auth/http.ts"
 import { createAuth } from "./auth/index.ts"
 import { createRequireSession } from "./auth/session-middleware.ts"
 import { CalDavSourceProvider } from "./caldav/provider.ts"
-import { registerConversationsHttpHandlers } from "./conversations/http.ts"
 import { createDatabase } from "./db/index.ts"
 import { registerFeedHttpHandlers } from "./engine/http.ts"
 import { createFeedEnhancer } from "./enhancement/enhance-feed.ts"
@@ -82,6 +83,15 @@ function main() {
 		return allowedOrigins.includes(origin) ? origin : undefined
 	}
 
+	const agentWebSocketCorsMiddleware = createMiddleware(async (c, next) => {
+		const origin = c.req.header("origin")
+		if (origin && resolveOrigin(origin) === undefined) {
+			return c.text("Forbidden", 403)
+		}
+
+		await next()
+	})
+
 	app.use(
 		"/api/auth/*",
 		cors({
@@ -109,7 +119,6 @@ function main() {
 
 	registerAuthHandlers(app, auth)
 
-	registerConversationsHttpHandlers(app, { db, authSessionMiddleware })
 	registerFeedHttpHandlers(app, {
 		sessionManager,
 		authSessionMiddleware,
@@ -129,6 +138,12 @@ function main() {
 	}
 	registerAdminHttpHandlers(app, { sessionManager, adminMiddleware, db })
 
+	registerAgentWebSocketHandlers(app, {
+		sessionManager,
+		authSessionMiddleware,
+		corsMiddleware: agentWebSocketCorsMiddleware,
+	})
+
 	process.on("SIGTERM", async () => {
 		sessionManager.dispose()
 		await closeDb()
@@ -144,4 +159,5 @@ export default {
 	port: 3000,
 	hostname: "0.0.0.0",
 	fetch: app.fetch,
+	websocket: agentWebSocket,
 }

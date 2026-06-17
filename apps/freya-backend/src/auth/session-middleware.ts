@@ -54,16 +54,6 @@ export function createRequireSession(auth: Auth): AuthSessionMiddleware {
 }
 
 /**
- * Creates a function to get session from headers. Useful for WebSocket upgrade validation.
- */
-export function createGetSessionFromHeaders(auth: Auth) {
-	return async (headers: Headers): Promise<{ user: AuthUser; session: AuthSession } | null> => {
-		const session = await auth.api.getSession({ headers })
-		return session
-	}
-}
-
-/**
  * Dev/test middleware that injects a fake user and session.
  * Pass userId to simulate an authenticated request, or omit to get 401.
  */

@@ -55,6 +55,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@earendil-works/pi-coding-agent": "^0.79.1",
+        "@freya/agent-protocol": "workspace:*",
         "@freya/core": "workspace:*",
         "@freya/source-caldav": "workspace:*",
         "@freya/source-google-calendar": "workspace:*",
@@ -64,6 +65,7 @@
         "@freya/source-tfl": "workspace:*",
         "@freya/source-weatherkit": "workspace:*",
         "@freya/source-web-search": "workspace:*",
+        "@nym.sh/jrpc": "^0.1.0",
         "@openrouter/sdk": "^0.9.11",
         "arktype": "^2.1.29",
         "better-auth": "^1",
@@ -152,6 +154,10 @@
         "vite": "^7.1.7",
         "vite-tsconfig-paths": "^5.1.4",
       },
+    },
+    "packages/freya-agent-protocol": {
+      "name": "@freya/agent-protocol",
+      "version": "0.0.0",
     },
     "packages/freya-components": {
       "name": "@freya/components",
@@ -749,6 +755,8 @@
 
     "@formatjs/intl-localematcher": ["@formatjs/intl-localematcher@0.6.2", "", { "dependencies": { "tslib": "^2.8.0" } }, "sha512-XOMO2Hupl0wdd172Y06h6kLpBz6Dv+J4okPLl4LPtzbr8f66WbIoy4ev98EBuZ6ZK4h5ydTN6XneT4QVpD7cdA=="],
 
+    "@freya/agent-protocol": ["@freya/agent-protocol@workspace:packages/freya-agent-protocol"],
+
     "@freya/agent-test-cli": ["@freya/agent-test-cli@workspace:apps/agent-test-cli"],
 
     "@freya/backend": ["@freya/backend@workspace:apps/freya-backend"],
@@ -900,6 +908,8 @@
     "@nodelib/fs.walk": ["@nodelib/fs.walk@1.2.8", "", { "dependencies": { "@nodelib/fs.scandir": "2.1.5", "fastq": "^1.6.0" } }, "sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg=="],
 
     "@nolyfill/is-core-module": ["@nolyfill/is-core-module@1.0.39", "", {}, "sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA=="],
+
+    "@nym.sh/jrpc": ["@nym.sh/jrpc@0.1.0", "", {}, "sha512-qH+vqKojPrX4RkW67U2R4J98uWHxZOwYxX2J5GLZcfm/yjklCcN5zTfDNLfgAa9jAoOFVscC3DFWhvdZOmN3fA=="],
 
     "@nym.sh/jrx": ["@nym.sh/jrx@0.2.0", "", { "peerDependencies": { "@json-render/core": ">=0.10.0" } }, "sha512-jd7Z1Q6T21366MtSUnwCFiu6Yl1AdNc9s5m6HxeUg265P+0enZCiyyxOuHsFwvpUcSEs/2DVBsqfMptdca44lA=="],
 

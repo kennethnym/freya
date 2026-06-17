@@ -16,6 +16,7 @@
 	},
 	"dependencies": {
 		"@earendil-works/pi-coding-agent": "^0.79.1",
+		"@freya/agent-protocol": "workspace:*",
 		"@freya/core": "workspace:*",
 		"@freya/source-caldav": "workspace:*",
 		"@freya/source-google-calendar": "workspace:*",
@@ -25,6 +26,7 @@
 		"@freya/source-tfl": "workspace:*",
 		"@freya/source-weatherkit": "workspace:*",
 		"@freya/source-web-search": "workspace:*",
+		"@nym.sh/jrpc": "^0.1.0",
 		"@openrouter/sdk": "^0.9.11",
 		"arktype": "^2.1.29",
 		"better-auth": "^1",
