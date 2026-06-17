@@ -101,6 +101,14 @@ export function conversations(db: Database, userId: string) {
 			return insertConversation(db, userId)
 		},
 
+		async listConversations(): Promise<ConversationRow[]> {
+			return db
+				.select()
+				.from(conversationsTable)
+				.where(eq(conversationsTable.userId, userId))
+				.orderBy(desc(conversationsTable.updatedAt), desc(conversationsTable.createdAt))
+		},
+
 		async getOrCreateConversation(): Promise<ConversationRow> {
 			return db.transaction(async (tx) => {
 				await requireUserForUpdate(tx, userId)
