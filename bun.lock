@@ -49,6 +49,10 @@
     "apps/agent-test-cli": {
       "name": "@freya/agent-test-cli",
       "version": "0.0.0",
+      "dependencies": {
+        "@freya/agent-protocol": "workspace:*",
+        "@nym.sh/jrpc": "^0.1.0",
+      },
     },
     "apps/freya-backend": {
       "name": "@freya/backend",

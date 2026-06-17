@@ -7,5 +7,9 @@
 		"format": "oxfmt --write .",
 		"start": "bun run src/agent-test-cli.ts",
 		"typecheck": "bun tsc --noEmit"
+	},
+	"dependencies": {
+		"@freya/agent-protocol": "workspace:*",
+		"@nym.sh/jrpc": "^0.1.0"
 	}
 }
