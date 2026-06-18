@@ -1,5 +1,6 @@
 import type { Context, Hono } from "hono"
 
+import { ConversationEntryVisibility } from "@freya/core"
 import { type } from "arktype"
 import { createMiddleware } from "hono/factory"
 
@@ -9,20 +10,22 @@ import type { ConversationRow } from "./storage.ts"
 
 import { ConversationNotFoundError } from "./errors.ts"
 import { conversations } from "./storage.ts"
-import { ConversationEntryVisibility } from "./types.ts"
 
+/** Hono environment populated by the conversations route middleware. */
 type Env = {
 	Variables: {
 		db: Database
 	}
 }
 
+/** Serialized conversation summary returned by the list endpoint. */
 interface ConversationSummaryResponse {
 	id: string
 	createdAt: string
 	updatedAt: string
 }
 
+/** Dependencies required to register conversation HTTP handlers. */
 interface ConversationsHttpHandlersDeps {
 	db: Database
 	authSessionMiddleware: AuthSessionMiddleware

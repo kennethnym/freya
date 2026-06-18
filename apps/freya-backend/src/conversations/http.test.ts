@@ -1,3 +1,4 @@
+import { ConversationEntryKind, ConversationEntryVisibility } from "@freya/core"
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 import { Hono } from "hono"
 
@@ -11,7 +12,6 @@ import type {
 import { mockAuthSessionMiddleware } from "../auth/session-middleware.ts"
 import { ConversationNotFoundError } from "./errors.ts"
 import { registerConversationsHttpHandlers } from "./http.ts"
-import { ConversationEntryKind, ConversationEntryVisibility } from "./types.ts"
 
 const MockUserId = "k7Gx2mPqRvNwYs9TdLfA4bHcJeUo1iZn"
 const ConversationId = "11111111-1111-4111-8111-111111111111"

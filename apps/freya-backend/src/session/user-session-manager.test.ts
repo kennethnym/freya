@@ -1,5 +1,6 @@
 import type { ActionDefinition, ContextEntry, FeedItem, FeedSource } from "@freya/core"
 
+import { ConversationEntryKind } from "@freya/core"
 import { LocationSource } from "@freya/source-location"
 import { WeatherSource } from "@freya/source-weatherkit"
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
@@ -9,7 +10,6 @@ import type { AppendConversationEntryInput } from "../conversations/storage.ts"
 import type { Database } from "../db/index.ts"
 import type { FeedSourceProvider } from "./feed-source-provider.ts"
 
-import { ConversationEntryKind } from "../conversations/types.ts"
 import { CredentialEncryptor } from "../lib/crypto.ts"
 import {
 	CredentialStorageUnavailableError,

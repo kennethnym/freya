@@ -1,9 +1,9 @@
+import { ConversationEntryKind } from "@freya/core"
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 
 import type { QueryAgentToolbox } from "./query-agent-toolbox.ts"
 import type { QueryAgentStreamEvent } from "./query-agent.ts"
 
-import { ConversationEntryKind } from "../conversations/types.ts"
 import { QueryAgentEvent } from "./query-agent.ts"
 
 interface FakePiSession {

@@ -1,12 +1,13 @@
+import type { ConversationEntryMetadata } from "@freya/core"
+
+import { ConversationEntryKind } from "@freya/core"
 import { randomUUID } from "node:crypto"
 
 import type {
 	AppendConversationEntryInput,
 	ConversationEntryRow,
 } from "../conversations/storage.ts"
-import type { ConversationEntryMetadata } from "../conversations/types.ts"
 
-import { ConversationEntryKind } from "../conversations/types.ts"
 import {
 	createQueryAgentEventListeners,
 	QueryAgentEvent,
@@ -19,6 +20,7 @@ import {
 	type QueryAgentStreamEvent,
 } from "./query-agent.ts"
 
+/** Storage operations used to persist and replay query-agent conversation entries. */
 export interface ConversationStorage {
 	getOrCreateConversation(): Promise<{ id: string }>
 	appendEntry(
@@ -28,11 +30,13 @@ export interface ConversationStorage {
 	listEntries(conversationId: string): Promise<ConversationStorageEntry[]>
 }
 
+/** Minimal persisted entry shape needed by recording and replay agents. */
 export type ConversationStorageEntry = Pick<
 	ConversationEntryRow,
 	"id" | "sequence" | "kind" | "payload" | "metadata" | "createdAt"
 >
 
+/** Configuration for wrapping a QueryAgent with conversation recording. */
 export interface ConversationRecordingQueryAgentConfig {
 	agent: QueryAgent
 	storage: ConversationStorage

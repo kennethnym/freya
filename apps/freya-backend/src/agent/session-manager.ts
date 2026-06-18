@@ -1,18 +1,21 @@
 import { SessionManager } from "@earendil-works/pi-coding-agent"
-import { tmpdir } from "node:os"
-
-import type { ConversationStorageEntry } from "./conversation-recording-query-agent.ts"
-
 import {
 	AssistantMessagePayload,
 	ContextSummaryPayload,
 	ConversationEntryKind,
 	UserMessagePayload,
-} from "../conversations/types.ts"
+} from "@freya/core"
+import { tmpdir } from "node:os"
 
+import type { ConversationStorageEntry } from "./conversation-recording-query-agent.ts"
+
+/** Message shape accepted by Pi's SessionManager.appendMessage API. */
 type PiMessage = Parameters<SessionManager["appendMessage"]>[0]
+
+/** Assistant message variant required when replaying stored assistant entries. */
 type PiAssistantMessage = Extract<PiMessage, { role: "assistant" }>
 
+/** Inputs required to rebuild a Pi session manager from stored conversation entries. */
 export interface CreateSessionManagerInput {
 	cwd?: string
 	entries: ConversationStorageEntry[]

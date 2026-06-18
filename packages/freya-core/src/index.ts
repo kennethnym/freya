@@ -6,6 +6,25 @@ export { Context, contextKey, serializeKey } from "./context"
 export type { ActionDefinition } from "./action"
 export { UnknownActionError } from "./action"
 
+// Conversation
+export type { ConversationEntryPayload } from "./conversation"
+export {
+	AssistantMessagePayload,
+	AttachmentPayload,
+	AttachmentType,
+	ContextSummary,
+	ContextSummaryPayload,
+	ConversationEntryKind,
+	ConversationEntryMetadata,
+	ConversationEntryVisibility,
+	GenericObjectPayload,
+	JsonMessagePart,
+	MessagePart,
+	ModelRunMetadata,
+	TextMessagePart,
+	UserMessagePayload,
+} from "./conversation"
+
 // Feed
 export type { FeedItem, FeedItemRenderer, FeedItemSignals, RenderedFeedItem, Slot } from "./feed"
 export { TimeRelevance } from "./feed"

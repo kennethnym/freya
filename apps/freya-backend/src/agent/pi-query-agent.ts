@@ -33,13 +33,25 @@ import {
 import { createSessionManager } from "./session-manager.ts"
 import { createFreyaAgentTools, FREYA_AGENT_TOOL_NAMES } from "./tools.ts"
 
+/** Active Pi SDK session instance returned by createAgentSession. */
 type PiSession = Awaited<ReturnType<typeof createAgentSession>>["session"]
+
+/** Pi event emitted when a message finishes. */
 type PiMessageEndEvent = Extract<AgentSessionEvent, { type: "message_end" }>
+
+/** Message payload carried by Pi's message-end event. */
 type PiAgentMessage = PiMessageEndEvent["message"]
+
+/** Pi event emitted when an agent run finishes. */
 type PiAgentEndEvent = Extract<AgentSessionEvent, { type: "agent_end" }>
+
+/** Session manager created for Pi conversation replay. */
 type PiSessionManager = ReturnType<typeof createSessionManager>
+
+/** Message shape accepted by the replay session manager. */
 type PiSessionMessage = Parameters<PiSessionManager["appendMessage"]>[0]
 
+/** Configuration for the Pi-backed query agent. */
 export interface PiQueryAgentConfig {
 	toolbox: QueryAgentToolbox
 	apiKey?: string
