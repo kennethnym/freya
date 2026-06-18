@@ -244,6 +244,7 @@
           commonPackages = with pkgs; [
             bun
             git
+            gh
             gnumake
             nixfmt
             nodejs
