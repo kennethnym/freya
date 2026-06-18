@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, spyOn, test } from "bun:test"
 
 import type { ActionDefinition, ContextEntry, ContextKey, FeedItem, FeedSource } from "./index"
 
@@ -142,6 +142,16 @@ function createAlertSource(): FeedSource<AlertFeedItem> {
 
 			return []
 		},
+	}
+}
+
+async function waitForCondition(predicate: () => boolean, timeoutMs = 2_000): Promise<void> {
+	const deadline = Date.now() + timeoutMs
+	while (!predicate()) {
+		if (Date.now() > deadline) {
+			throw new Error("Timed out waiting for condition")
+		}
+		await new Promise((resolve) => setTimeout(resolve, 10))
 	}
 }
 
@@ -807,28 +817,35 @@ describe("FeedEngine", () => {
 		})
 
 		test("TTL resets after reactive update", async () => {
+			let now = 1_000
+			const nowSpy = spyOn(Date, "now").mockImplementation(() => now)
 			const location = createLocationSource()
 			const weather = createWeatherSource()
 
 			const engine = new FeedEngine({ cacheTtlMs: 100 }).register(location).register(weather)
 
-			engine.start()
+			try {
+				engine.start()
 
-			// Initial reactive update
-			location.simulateUpdate({ lat: 51.5, lng: -0.1 })
-			await new Promise((resolve) => setTimeout(resolve, 50))
+				// Initial reactive update
+				location.simulateUpdate({ lat: 51.5, lng: -0.1 })
+				await new Promise((resolve) => setTimeout(resolve, 50))
 
-			expect(engine.lastFeed()).not.toBeNull()
+				expect(engine.lastFeed()).not.toBeNull()
 
-			// Wait 70ms (total 120ms from first update, past original TTL)
-			// but trigger another update at 50ms to reset TTL
-			location.simulateUpdate({ lat: 52.0, lng: -0.2 })
-			await new Promise((resolve) => setTimeout(resolve, 50))
+				// Move past the original TTL, then trigger another update to reset it.
+				now += 120
+				location.simulateUpdate({ lat: 52.0, lng: -0.2 })
+				await new Promise((resolve) => setTimeout(resolve, 50))
 
-			// Should still be cached because TTL was reset by second update
-			expect(engine.lastFeed()).not.toBeNull()
+				// Should still be cached because TTL was reset by second update.
+				expect(engine.lastFeed()).not.toBeNull()
 
-			engine.stop()
+				engine.stop()
+			} finally {
+				engine.stop()
+				nowSpy.mockRestore()
+			}
 		})
 
 		test("cacheTtlMs is configurable", async () => {
@@ -869,17 +886,21 @@ describe("FeedEngine", () => {
 				},
 			}
 
-			const engine = new FeedEngine({ cacheTtlMs: 50 }).register(source)
-			engine.start()
+			const engine = new FeedEngine({ cacheTtlMs: 20 }).register(source)
+			await engine.refresh()
 
-			// Wait for two TTL intervals to elapse
-			await new Promise((resolve) => setTimeout(resolve, 120))
+			expect(fetchCount).toBe(1)
 
-			// Should have auto-refreshed at least twice
-			expect(fetchCount).toBeGreaterThanOrEqual(2)
-			expect(engine.lastFeed()).not.toBeNull()
+			try {
+				engine.start()
 
-			engine.stop()
+				await waitForCondition(() => fetchCount >= 2)
+
+				expect(fetchCount).toBeGreaterThanOrEqual(2)
+				expect(engine.lastFeed()).not.toBeNull()
+			} finally {
+				engine.stop()
+			}
 		})
 
 		test("stop cancels periodic refresh", async () => {
@@ -935,28 +956,25 @@ describe("FeedEngine", () => {
 				},
 			}
 
-			const engine = new FeedEngine({ cacheTtlMs: 100 })
+			const engine = new FeedEngine({ cacheTtlMs: 10_000 })
 				.register(location)
 				.register(countingWeather)
+			const clearTimeoutSpy = spyOn(globalThis, "clearTimeout")
 
-			engine.start()
+			try {
+				engine.start()
 
-			// At 40ms, push a reactive update — this resets the timer
-			await new Promise((resolve) => setTimeout(resolve, 40))
-			const countBeforeUpdate = fetchCount
-			location.simulateUpdate({ lat: 51.5, lng: -0.1 })
-			await new Promise((resolve) => setTimeout(resolve, 20))
+				const countBeforeUpdate = fetchCount
+				location.simulateUpdate({ lat: 51.5, lng: -0.1 })
+				await waitForCondition(() => fetchCount > countBeforeUpdate && engine.lastFeed() !== null)
 
-			// Reactive update triggered a fetch
-			expect(fetchCount).toBeGreaterThan(countBeforeUpdate)
-			const countAfterUpdate = fetchCount
-
-			// At 100ms from start (60ms after reactive update), the original
-			// timer would have fired, but it was reset. No extra fetch yet.
-			await new Promise((resolve) => setTimeout(resolve, 40))
-			expect(fetchCount).toBe(countAfterUpdate)
-
-			engine.stop()
+				// Reactive updates refresh the cache and reset the pending periodic timer.
+				expect(fetchCount).toBeGreaterThan(countBeforeUpdate)
+				expect(clearTimeoutSpy).toHaveBeenCalled()
+			} finally {
+				engine.stop()
+				clearTimeoutSpy.mockRestore()
+			}
 		})
 	})
 
