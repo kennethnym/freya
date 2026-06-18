@@ -243,6 +243,7 @@
           bunScriptCommands = lib.attrValues (mkBunScriptCommands pkgs shellScripts);
           commonPackages = with pkgs; [
             bun
+            eas-cli
             git
             gh
             gnumake
