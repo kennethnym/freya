@@ -39,4 +39,13 @@ Use Bun exclusively. Do not use npm or yarn.
 
 - Branch: `feat/<task>`, `fix/<task>`, `ci/<task>`, etc.
 - Commits: conventional commit format, title <= 50 chars
-- Signing: If `GPG_PRIVATE_KEY_PASSPHRASE` env var is available, use it to sign commits with `git commit -S`
+
+## Nix
+
+Use the Nix dev shell for project commands by default.
+
+- Run repo tooling through `nix develop -c`, e.g. `nix develop -c bun test`.
+- Use Bun exclusively inside the Nix shell.
+- Do not use host `bun`, `node`, `tsc`, or package binaries for project tasks unless explicitly checking host behavior.
+- Simple inspection commands like `rg`, `sed`, `ls`, and `git status` may run outside Nix.
+- While `flake.nix` is untracked, use `nix develop path:. -c <command>`.
