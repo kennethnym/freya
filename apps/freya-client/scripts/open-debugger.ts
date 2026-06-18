@@ -4,7 +4,6 @@
 import { $ } from "bun"
 
 const PROXY_PORT = process.env.PROXY_PORT || "8080"
-const METRO_PORT = process.env.METRO_PORT || "8081"
 const tsIp = (await $`tailscale ip -4`.text()).trim()
 const base = `http://${tsIp}:${PROXY_PORT}`
 
@@ -37,9 +36,7 @@ if (!target) {
 	process.exit(1)
 }
 
-const wsUrl = target.webSocketDebuggerUrl
-	.replace(/^ws:\/\//, "")
-	.replace(`127.0.0.1:${METRO_PORT}`, `${tsIp}:${PROXY_PORT}`)
+const wsUrl = getProxyWebSocketPath(target.webSocketDebuggerUrl)
 
 const url = `${base}/debugger-frontend/rn_fusebox.html?ws=${encodeURIComponent(wsUrl)}&sources.hide_add_folder=true&unstable_enableNetworkPanel=true`
 
@@ -69,6 +66,11 @@ function isDebugTarget(value: unknown): value is DebugTarget {
 
 	const prefersFuseboxFrontend = capabilities.prefersFuseboxFrontend
 	return prefersFuseboxFrontend === undefined || typeof prefersFuseboxFrontend === "boolean"
+}
+
+function getProxyWebSocketPath(webSocketDebuggerUrl: string) {
+	const url = new URL(webSocketDebuggerUrl)
+	return `${tsIp}:${PROXY_PORT}${url.pathname}${url.search}`
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

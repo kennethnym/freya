@@ -8,14 +8,16 @@ import type { ServerWebSocket } from "bun"
 
 const PROXY_PORT = parseInt(process.env.PROXY_PORT || "8080", 10)
 const PROXY_HOST = process.env.PROXY_HOST || "0.0.0.0"
+const METRO_HOST = process.env.METRO_HOST || "localhost"
 const METRO_PORT = parseInt(process.env.METRO_PORT || "8081", 10)
-const METRO_BASE = `http://127.0.0.1:${METRO_PORT}`
+const METRO_BASE = `http://${METRO_HOST}:${METRO_PORT}`
+const METRO_WS_BASE = `ws://${METRO_HOST}:${METRO_PORT}`
 
 function forwardHeaders(headers: Headers): Headers {
 	const result = new Headers(headers)
 	result.delete("origin")
 	result.delete("referer")
-	result.set("host", `127.0.0.1:${METRO_PORT}`)
+	result.set("host", `${METRO_HOST}:${METRO_PORT}`)
 	return result
 }
 
@@ -40,7 +42,7 @@ Bun.serve<WsData>({
 
 		// WebSocket upgrade — bridge to Metro's ws endpoint
 		if (req.headers.get("upgrade")?.toLowerCase() === "websocket") {
-			const wsUrl = `ws://127.0.0.1:${METRO_PORT}${url.pathname}${url.search}`
+			const wsUrl = `${METRO_WS_BASE}${url.pathname}${url.search}`
 			const upstream = new WebSocket(wsUrl)
 
 			// Wait for upstream to connect before upgrading the client
@@ -65,12 +67,12 @@ Bun.serve<WsData>({
 		// HTTP proxy
 		const upstream = `${METRO_BASE}${url.pathname}${url.search}`
 		const body = req.body ? await req.arrayBuffer() : undefined
-		const res = await fetch(upstream, {
-			method: req.method,
-			headers: forwardHeaders(req.headers),
-			body,
-			redirect: "manual",
-		})
+		const res = await fetchUpstream(upstream, req.method, forwardHeaders(req.headers), body)
+		if (res == null) {
+			return new Response(`Metro is not reachable on ${METRO_HOST}. Restart the Expo dev server.`, {
+				status: 502,
+			})
+		}
 
 		return new Response(res.body, {
 			status: res.status,
@@ -121,9 +123,7 @@ async function printDebuggerUrl() {
 	const target = targets.find((t) => t.reactNative?.capabilities?.prefersFuseboxFrontend)
 	if (!target) return
 
-	const wsPath = target.webSocketDebuggerUrl
-		.replace(/^ws:\/\//, "")
-		.replace(`127.0.0.1:${METRO_PORT}`, `${tsIp}:${PROXY_PORT}`)
+	const wsPath = getProxyWebSocketPath(target.webSocketDebuggerUrl)
 
 	console.log(
 		`\n  React Native DevTools:\n  ${base}/debugger-frontend/rn_fusebox.html?ws=${encodeURIComponent(wsPath)}&sources.hide_add_folder=true&unstable_enableNetworkPanel=true\n`,
@@ -131,8 +131,27 @@ async function printDebuggerUrl() {
 }
 
 console.log(
-	`[proxy] listening on ${PROXY_HOST}:${PROXY_PORT}, forwarding to 127.0.0.1:${METRO_PORT}`,
+	`[proxy] listening on ${PROXY_HOST}:${PROXY_PORT}, forwarding to ${METRO_HOST}:${METRO_PORT}`,
 )
+
+async function fetchUpstream(
+	upstream: string,
+	method: string,
+	headers: Headers,
+	body: ArrayBuffer | undefined,
+) {
+	try {
+		return await fetch(upstream, {
+			method,
+			headers,
+			body,
+			redirect: "manual",
+		})
+	} catch {
+		console.error(`[proxy] ${method} ${upstream} failed; Metro is not reachable`)
+		return null
+	}
+}
 
 function isDebugTarget(value: unknown): value is DebugTarget {
 	if (!isRecord(value) || typeof value.webSocketDebuggerUrl !== "string") return false
@@ -147,6 +166,11 @@ function isDebugTarget(value: unknown): value is DebugTarget {
 
 	const prefersFuseboxFrontend = capabilities.prefersFuseboxFrontend
 	return prefersFuseboxFrontend === undefined || typeof prefersFuseboxFrontend === "boolean"
+}
+
+function getProxyWebSocketPath(webSocketDebuggerUrl: string) {
+	const url = new URL(webSocketDebuggerUrl)
+	return `${tsIp}:${PROXY_PORT}${url.pathname}${url.search}`
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

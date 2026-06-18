@@ -1,13 +1,12 @@
 {
 	"expo": {
 		"name": "Freya",
-		"slug": "freya-client",
+		"slug": "freya",
 		"version": "1.0.0",
 		"orientation": "portrait",
 		"icon": "./assets/images/icon.png",
 		"scheme": "freya",
 		"userInterfaceStyle": "automatic",
-		"newArchEnabled": true,
 		"ios": {
 			"infoPlist": {
 				"NSAppTransportSecurity": {
@@ -24,7 +23,6 @@
 				"backgroundImage": "./assets/images/android-icon-background.png",
 				"monochromeImage": "./assets/images/android-icon-monochrome.png"
 			},
-			"edgeToEdgeEnabled": true,
 			"predictiveBackGestureEnabled": false,
 			"package": "sh.nym.freya"
 		},
@@ -54,55 +52,82 @@
 							{
 								"fontFamily": "Inter",
 								"fontDefinitions": [
-									{ "path": "./assets/fonts/Inter_100Thin.ttf", "weight": 100 },
+									{
+										"path": "./assets/fonts/Inter_100Thin.ttf",
+										"weight": 100
+									},
 									{
 										"path": "./assets/fonts/Inter_100Thin_Italic.ttf",
 										"weight": 100,
 										"style": "italic"
 									},
-									{ "path": "./assets/fonts/Inter_200ExtraLight.ttf", "weight": 200 },
+									{
+										"path": "./assets/fonts/Inter_200ExtraLight.ttf",
+										"weight": 200
+									},
 									{
 										"path": "./assets/fonts/Inter_200ExtraLight_Italic.ttf",
 										"weight": 200,
 										"style": "italic"
 									},
-									{ "path": "./assets/fonts/Inter_300Light.ttf", "weight": 300 },
+									{
+										"path": "./assets/fonts/Inter_300Light.ttf",
+										"weight": 300
+									},
 									{
 										"path": "./assets/fonts/Inter_300Light_Italic.ttf",
 										"weight": 300,
 										"style": "italic"
 									},
-									{ "path": "./assets/fonts/Inter_400Regular.ttf", "weight": 400 },
+									{
+										"path": "./assets/fonts/Inter_400Regular.ttf",
+										"weight": 400
+									},
 									{
 										"path": "./assets/fonts/Inter_400Regular_Italic.ttf",
 										"weight": 400,
 										"style": "italic"
 									},
-									{ "path": "./assets/fonts/Inter_500Medium.ttf", "weight": 500 },
+									{
+										"path": "./assets/fonts/Inter_500Medium.ttf",
+										"weight": 500
+									},
 									{
 										"path": "./assets/fonts/Inter_500Medium_Italic.ttf",
 										"weight": 500,
 										"style": "italic"
 									},
-									{ "path": "./assets/fonts/Inter_600SemiBold.ttf", "weight": 600 },
+									{
+										"path": "./assets/fonts/Inter_600SemiBold.ttf",
+										"weight": 600
+									},
 									{
 										"path": "./assets/fonts/Inter_600SemiBold_Italic.ttf",
 										"weight": 600,
 										"style": "italic"
 									},
-									{ "path": "./assets/fonts/Inter_700Bold.ttf", "weight": 700 },
+									{
+										"path": "./assets/fonts/Inter_700Bold.ttf",
+										"weight": 700
+									},
 									{
 										"path": "./assets/fonts/Inter_700Bold_Italic.ttf",
 										"weight": 700,
 										"style": "italic"
 									},
-									{ "path": "./assets/fonts/Inter_800ExtraBold.ttf", "weight": 800 },
+									{
+										"path": "./assets/fonts/Inter_800ExtraBold.ttf",
+										"weight": 800
+									},
 									{
 										"path": "./assets/fonts/Inter_800ExtraBold_Italic.ttf",
 										"weight": 800,
 										"style": "italic"
 									},
-									{ "path": "./assets/fonts/Inter_900Black.ttf", "weight": 900 },
+									{
+										"path": "./assets/fonts/Inter_900Black.ttf",
+										"weight": 900
+									},
 									{
 										"path": "./assets/fonts/Inter_900Black_Italic.ttf",
 										"weight": 900,
@@ -113,49 +138,73 @@
 							{
 								"fontFamily": "Source Serif 4",
 								"fontDefinitions": [
-									{ "path": "./assets/fonts/SourceSerif4_200ExtraLight.ttf", "weight": 200 },
+									{
+										"path": "./assets/fonts/SourceSerif4_200ExtraLight.ttf",
+										"weight": 200
+									},
 									{
 										"path": "./assets/fonts/SourceSerif4_200ExtraLight_Italic.ttf",
 										"weight": 200,
 										"style": "italic"
 									},
-									{ "path": "./assets/fonts/SourceSerif4_300Light.ttf", "weight": 300 },
+									{
+										"path": "./assets/fonts/SourceSerif4_300Light.ttf",
+										"weight": 300
+									},
 									{
 										"path": "./assets/fonts/SourceSerif4_300Light_Italic.ttf",
 										"weight": 300,
 										"style": "italic"
 									},
-									{ "path": "./assets/fonts/SourceSerif4_400Regular.ttf", "weight": 400 },
+									{
+										"path": "./assets/fonts/SourceSerif4_400Regular.ttf",
+										"weight": 400
+									},
 									{
 										"path": "./assets/fonts/SourceSerif4_400Regular_Italic.ttf",
 										"weight": 400,
 										"style": "italic"
 									},
-									{ "path": "./assets/fonts/SourceSerif4_500Medium.ttf", "weight": 500 },
+									{
+										"path": "./assets/fonts/SourceSerif4_500Medium.ttf",
+										"weight": 500
+									},
 									{
 										"path": "./assets/fonts/SourceSerif4_500Medium_Italic.ttf",
 										"weight": 500,
 										"style": "italic"
 									},
-									{ "path": "./assets/fonts/SourceSerif4_600SemiBold.ttf", "weight": 600 },
+									{
+										"path": "./assets/fonts/SourceSerif4_600SemiBold.ttf",
+										"weight": 600
+									},
 									{
 										"path": "./assets/fonts/SourceSerif4_600SemiBold_Italic.ttf",
 										"weight": 600,
 										"style": "italic"
 									},
-									{ "path": "./assets/fonts/SourceSerif4_700Bold.ttf", "weight": 700 },
+									{
+										"path": "./assets/fonts/SourceSerif4_700Bold.ttf",
+										"weight": 700
+									},
 									{
 										"path": "./assets/fonts/SourceSerif4_700Bold_Italic.ttf",
 										"weight": 700,
 										"style": "italic"
 									},
-									{ "path": "./assets/fonts/SourceSerif4_800ExtraBold.ttf", "weight": 800 },
+									{
+										"path": "./assets/fonts/SourceSerif4_800ExtraBold.ttf",
+										"weight": 800
+									},
 									{
 										"path": "./assets/fonts/SourceSerif4_800ExtraBold_Italic.ttf",
 										"weight": 800,
 										"style": "italic"
 									},
-									{ "path": "./assets/fonts/SourceSerif4_900Black.ttf", "weight": 900 },
+									{
+										"path": "./assets/fonts/SourceSerif4_900Black.ttf",
+										"weight": 900
+									},
 									{
 										"path": "./assets/fonts/SourceSerif4_900Black_Italic.ttf",
 										"weight": 900,
@@ -204,7 +253,9 @@
 						]
 					}
 				}
-			]
+			],
+			"expo-web-browser",
+			"expo-image"
 		],
 		"experiments": {
 			"typedRoutes": true,
@@ -213,7 +264,7 @@
 		"extra": {
 			"router": {},
 			"eas": {
-				"projectId": "61092d23-36aa-418e-929d-ea40dc912e8f"
+				"projectId": "c54ea4e5-27da-4066-b081-db8005ecf70a"
 			}
 		}
 	}
