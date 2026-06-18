@@ -19,6 +19,7 @@ import {
 	files,
 	user,
 } from "../db/schema.ts"
+import { ConversationNotFoundError } from "./errors.ts"
 import {
 	ConversationEntryMetadata as ConversationEntryMetadataSchema,
 	AssistantMessagePayload as AssistantMessagePayloadSchema,
@@ -96,7 +97,7 @@ export interface ListConversationEntriesParams {
 }
 
 export function conversations(db: Database, userId: string) {
-	return {
+	const storage = {
 		async createConversation(): Promise<ConversationRow> {
 			return insertConversation(db, userId)
 		},
@@ -107,6 +108,18 @@ export function conversations(db: Database, userId: string) {
 				.from(conversationsTable)
 				.where(eq(conversationsTable.userId, userId))
 				.orderBy(desc(conversationsTable.updatedAt), desc(conversationsTable.createdAt))
+		},
+
+		async getConversation(conversationId: string): Promise<ConversationRow | null> {
+			const rows = await db
+				.select()
+				.from(conversationsTable)
+				.where(
+					and(eq(conversationsTable.id, conversationId), eq(conversationsTable.userId, userId)),
+				)
+				.limit(1)
+
+			return rows[0] ?? null
 		},
 
 		async getOrCreateConversation(): Promise<ConversationRow> {
@@ -141,7 +154,9 @@ export function conversations(db: Database, userId: string) {
 			}
 
 			const rows = await db.transaction(async (tx) => {
-				await requireConversationForUpdate(tx, userId, conversationId)
+				if (!(await findConversationForUpdate(tx, userId, conversationId))) {
+					throw new ConversationNotFoundError(conversationId, userId)
+				}
 				const sequence = await nextSequence(tx, conversationId)
 
 				const rows = await tx
@@ -175,7 +190,9 @@ export function conversations(db: Database, userId: string) {
 			const metadata = ConversationEntryMetadataSchema.assert(input.metadata ?? {})
 
 			return db.transaction(async (tx) => {
-				await requireConversationForUpdate(tx, userId, conversationId)
+				if (!(await findConversationForUpdate(tx, userId, conversationId))) {
+					throw new ConversationNotFoundError(conversationId, userId)
+				}
 
 				const file = await insertFile(tx, userId, input.file)
 				const sequence = await nextSequence(tx, conversationId)
@@ -204,7 +221,9 @@ export function conversations(db: Database, userId: string) {
 			conversationId: string,
 			params: ListConversationEntriesParams = {},
 		): Promise<ConversationEntryRow[]> {
-			await requireConversation(db, userId, conversationId)
+			if (!(await storage.getConversation(conversationId))) {
+				throw new ConversationNotFoundError(conversationId, userId)
+			}
 
 			if (params.visibility) {
 				return db
@@ -226,6 +245,8 @@ export function conversations(db: Database, userId: string) {
 				.orderBy(asc(conversationEntries.sequence))
 		},
 	}
+
+	return storage
 }
 
 function payloadForKind(
@@ -259,25 +280,11 @@ async function requireUserForUpdate(db: Database, userId: string): Promise<void>
 	requireRow(rows, `User not found: ${userId}`)
 }
 
-async function requireConversation(
+async function findConversationForUpdate(
 	db: Database,
 	userId: string,
 	conversationId: string,
-): Promise<ConversationRow> {
-	const rows = await db
-		.select()
-		.from(conversationsTable)
-		.where(and(eq(conversationsTable.id, conversationId), eq(conversationsTable.userId, userId)))
-		.limit(1)
-
-	return requireRow(rows, `Conversation not found: ${conversationId}`)
-}
-
-async function requireConversationForUpdate(
-	db: Database,
-	userId: string,
-	conversationId: string,
-): Promise<ConversationRow> {
+): Promise<ConversationRow | null> {
 	const rows = await db
 		.select()
 		.from(conversationsTable)
@@ -285,7 +292,7 @@ async function requireConversationForUpdate(
 		.limit(1)
 		.for("update")
 
-	return requireRow(rows, `Conversation not found: ${conversationId}`)
+	return rows[0] ?? null
 }
 
 async function latestConversation(db: Database, userId: string): Promise<ConversationRow | null> {
