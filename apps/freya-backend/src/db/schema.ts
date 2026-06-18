@@ -1,3 +1,10 @@
+import {
+	ConversationEntryVisibility,
+	type ConversationEntryKind,
+	type ConversationEntryMetadata,
+	type ConversationEntryPayload,
+	type ConversationEntryVisibility as ConversationEntryVisibilityType,
+} from "@freya/core"
 import { sql } from "drizzle-orm"
 import {
 	boolean,
@@ -12,14 +19,6 @@ import {
 	unique,
 	uuid,
 } from "drizzle-orm/pg-core"
-
-import {
-	ConversationEntryVisibility,
-	type ConversationEntryKind,
-	type ConversationEntryMetadata,
-	type ConversationEntryPayload,
-	type ConversationEntryVisibility as ConversationEntryVisibilityType,
-} from "../conversations/types.ts"
 
 // ---------------------------------------------------------------------------
 // Better Auth core tables

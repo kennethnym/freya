@@ -7,7 +7,7 @@ import {
 	ConversationEntryMetadata,
 	GenericObjectPayload,
 	UserMessagePayload,
-} from "./types.ts"
+} from "./conversation"
 
 describe("conversation entry schemas", () => {
 	test("parses valid user message payloads", () => {

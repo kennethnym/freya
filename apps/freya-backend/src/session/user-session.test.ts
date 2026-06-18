@@ -1,5 +1,6 @@
 import type { ActionDefinition, ContextEntry, FeedItem, FeedSource } from "@freya/core"
 
+import { ConversationEntryKind } from "@freya/core"
 import { LocationSource } from "@freya/source-location"
 import { describe, expect, spyOn, test } from "bun:test"
 
@@ -9,7 +10,6 @@ import type {
 } from "../agent/conversation-recording-query-agent.ts"
 import type { AppendConversationEntryInput } from "../conversations/storage.ts"
 
-import { ConversationEntryKind } from "../conversations/types.ts"
 import { UserSession } from "./user-session.ts"
 
 function createStubSource(id: string, items: FeedItem[] = []): FeedSource {

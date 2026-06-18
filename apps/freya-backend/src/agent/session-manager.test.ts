@@ -1,8 +1,8 @@
+import { ConversationEntryKind } from "@freya/core"
 import { describe, expect, test } from "bun:test"
 
 import type { ConversationStorageEntry } from "./conversation-recording-query-agent.ts"
 
-import { ConversationEntryKind } from "../conversations/types.ts"
 import { createSessionManager } from "./session-manager.ts"
 
 describe("createSessionManager", () => {

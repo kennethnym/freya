@@ -172,6 +172,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@standard-schema/spec": "^1.1.0",
+        "arktype": "^2.1.29",
       },
       "peerDependencies": {
         "@json-render/core": "*",

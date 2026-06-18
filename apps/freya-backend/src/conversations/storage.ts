@@ -1,17 +1,18 @@
+import {
+	AssistantMessagePayload,
+	AttachmentPayload,
+	ConversationEntryKind,
+	ConversationEntryVisibility,
+	ContextSummaryPayload,
+	ConversationEntryMetadata,
+	GenericObjectPayload,
+	UserMessagePayload,
+	type ConversationEntryPayload,
+} from "@freya/core"
+import { type } from "arktype"
 import { and, asc, desc, eq } from "drizzle-orm"
 
 import type { Database } from "../db/index.ts"
-import type {
-	AssistantMessagePayload,
-	AttachmentPayload,
-	ContextSummaryPayload,
-	ConversationEntryKind as ConversationEntryKindType,
-	ConversationEntryMetadata,
-	ConversationEntryPayload,
-	ConversationEntryVisibility as ConversationEntryVisibilityType,
-	GenericObjectPayload,
-	UserMessagePayload,
-} from "./types.ts"
 
 import {
 	conversationEntries,
@@ -20,23 +21,20 @@ import {
 	user,
 } from "../db/schema.ts"
 import { ConversationNotFoundError } from "./errors.ts"
-import {
-	ConversationEntryMetadata as ConversationEntryMetadataSchema,
-	AssistantMessagePayload as AssistantMessagePayloadSchema,
-	AttachmentPayload as AttachmentPayloadSchema,
-	ConversationEntryKind,
-	ConversationEntryKindInput,
-	ConversationEntryVisibility,
-	ConversationEntryVisibilityInput,
-	ContextSummaryPayload as ContextSummaryPayloadSchema,
-	GenericObjectPayload as GenericObjectPayloadSchema,
-	UserMessagePayload as UserMessagePayloadSchema,
-} from "./types.ts"
 
+const conversationEntryKind = type.enumerated(...Object.values(ConversationEntryKind))
+const conversationEntryVisibility = type.enumerated(...Object.values(ConversationEntryVisibility))
+
+/** Database row shape for a conversation owned by a user. */
 export type ConversationRow = typeof conversationsTable.$inferSelect
+
+/** Database row shape for an entry in a conversation timeline. */
 export type ConversationEntryRow = typeof conversationEntries.$inferSelect
+
+/** Database row shape for an uploaded file referenced by conversations. */
 export type FileRow = typeof files.$inferSelect
 
+/** Input required to create a stored file record. */
 export interface CreateFileInput {
 	storageKey: string
 	originalName?: string
@@ -45,23 +43,27 @@ export interface CreateFileInput {
 	metadata?: Record<string, unknown>
 }
 
+/** Input for creating a file and appending its attachment entry together. */
 export interface AppendAttachmentEntryInput {
 	file: CreateFileInput
 	payload: AttachmentPayload
-	visibility?: ConversationEntryVisibilityType
+	visibility?: ConversationEntryVisibility
 	metadata?: ConversationEntryMetadata
 }
 
+/** Result returned after a file-backed attachment entry is appended. */
 export interface AppendAttachmentEntryResult {
 	file: FileRow
 	entry: ConversationEntryRow
 }
 
+/** Common fields accepted when appending any conversation entry. */
 interface AppendConversationEntryBase {
-	visibility?: ConversationEntryVisibilityType
+	visibility?: ConversationEntryVisibility
 	metadata?: ConversationEntryMetadata
 }
 
+/** Discriminated input for appending any supported entry kind to a conversation. */
 export type AppendConversationEntryInput =
 	| (AppendConversationEntryBase & {
 			kind: typeof ConversationEntryKind.UserMessage
@@ -92,8 +94,9 @@ export type AppendConversationEntryInput =
 			fileId?: never
 	  })
 
+/** Filters accepted when listing conversation entries. */
 export interface ListConversationEntriesParams {
-	visibility?: ConversationEntryVisibilityType
+	visibility?: ConversationEntryVisibility
 }
 
 export function conversations(db: Database, userId: string) {
@@ -140,12 +143,12 @@ export function conversations(db: Database, userId: string) {
 			conversationId: string,
 			input: AppendConversationEntryInput,
 		): Promise<ConversationEntryRow> {
-			const kind = ConversationEntryKindInput.assert(input.kind)
-			const visibility = ConversationEntryVisibilityInput.assert(
+			const kind = conversationEntryKind.assert(input.kind)
+			const visibility = conversationEntryVisibility.assert(
 				input.visibility ?? defaultVisibilityForKind(kind),
 			)
 			const payload = payloadForKind(kind, input.payload)
-			const metadata = ConversationEntryMetadataSchema.assert(input.metadata ?? {})
+			const metadata = ConversationEntryMetadata.assert(input.metadata ?? {})
 			let fileId: string | null = null
 
 			if (input.kind === ConversationEntryKind.Attachment) {
@@ -183,11 +186,11 @@ export function conversations(db: Database, userId: string) {
 			conversationId: string,
 			input: AppendAttachmentEntryInput,
 		): Promise<AppendAttachmentEntryResult> {
-			const payload = AttachmentPayloadSchema.assert(input.payload)
-			const visibility = ConversationEntryVisibilityInput.assert(
+			const payload = AttachmentPayload.assert(input.payload)
+			const visibility = conversationEntryVisibility.assert(
 				input.visibility ?? defaultVisibilityForKind(ConversationEntryKind.Attachment),
 			)
-			const metadata = ConversationEntryMetadataSchema.assert(input.metadata ?? {})
+			const metadata = ConversationEntryMetadata.assert(input.metadata ?? {})
 
 			return db.transaction(async (tx) => {
 				if (!(await findConversationForUpdate(tx, userId, conversationId))) {
@@ -250,22 +253,22 @@ export function conversations(db: Database, userId: string) {
 }
 
 function payloadForKind(
-	kind: ConversationEntryKindType,
+	kind: ConversationEntryKind,
 	payload: AppendConversationEntryInput["payload"],
 ): ConversationEntryPayload {
 	switch (kind) {
 		case ConversationEntryKind.UserMessage:
-			return UserMessagePayloadSchema.assert(payload)
+			return UserMessagePayload.assert(payload)
 		case ConversationEntryKind.AssistantMessage:
-			return AssistantMessagePayloadSchema.assert(payload)
+			return AssistantMessagePayload.assert(payload)
 		case ConversationEntryKind.Attachment:
-			return AttachmentPayloadSchema.assert(payload)
+			return AttachmentPayload.assert(payload)
 		case ConversationEntryKind.ContextSummary:
-			return ContextSummaryPayloadSchema.assert(payload)
+			return ContextSummaryPayload.assert(payload)
 		case ConversationEntryKind.ToolCall:
 		case ConversationEntryKind.ToolResult:
 		case ConversationEntryKind.SystemNote:
-			return GenericObjectPayloadSchema.assert(payload)
+			return GenericObjectPayload.assert(payload)
 	}
 }
 
@@ -371,9 +374,7 @@ function requireRow<T>(rows: T[], message = "Expected database row"): T {
 	return row
 }
 
-function defaultVisibilityForKind(
-	kind: ConversationEntryKindType,
-): ConversationEntryVisibilityType {
+function defaultVisibilityForKind(kind: ConversationEntryKind): ConversationEntryVisibility {
 	switch (kind) {
 		case ConversationEntryKind.UserMessage:
 		case ConversationEntryKind.AssistantMessage:
