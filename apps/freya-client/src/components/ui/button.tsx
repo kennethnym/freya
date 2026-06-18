@@ -1,5 +1,5 @@
 import Feather from "@expo/vector-icons/Feather"
-import { type PressableProps, Pressable, View } from "react-native"
+import { type PressableProps, Pressable, type StyleProp, View, type ViewStyle } from "react-native"
 import tw from "twrnc"
 
 import { SansSerifText } from "./sans-serif-text"
@@ -14,9 +14,10 @@ function ButtonIcon({ name }: ButtonIconProps) {
 	return <Feather name={name} size={18} color={tw.color("text-stone-100 dark:text-stone-200")} />
 }
 
-type ButtonProps = Omit<PressableProps, "children"> & {
+type ButtonProps = Omit<PressableProps, "children" | "style"> & {
 	label: string
 	leadingIcon?: React.ReactNode
+	style?: StyleProp<ViewStyle>
 	trailingIcon?: React.ReactNode
 }
 

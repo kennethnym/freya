@@ -45,7 +45,7 @@
       # node_modules is content-addressed. If bun.lock or package manifests
       # change, Nix will report the new hash to put here.
       nodeModulesHashes = {
-        x86_64-linux = "sha256-apVZaFGf9OKpil1WdcQ1CJODsIdjLWlBBZErHg5mjZA=";
+        x86_64-linux = "sha256-8uhlaQAFfCgGdUlrz8sqhtIkC/WfdasbTCi3p/NkU/w=";
       };
       checkSystems = lib.attrNames nodeModulesHashes;
 
@@ -53,7 +53,9 @@
       # so source-only edits do not force Bun to reinstall.
       dependencySource = lib.fileset.toSource {
         root = ./.;
-        fileset = lib.fileset.fileFilter (file: file.name == "bun.lock" || file.name == "package.json") ./.;
+        fileset = lib.fileset.fileFilter (
+          file: file.name == "bun.lock" || file.name == "package.json" || file.name == "bunfig.toml"
+        ) ./.;
       };
 
       # Checks run against a clean source tree, even when using `path:.`.
