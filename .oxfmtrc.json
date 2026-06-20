@@ -1,12 +1,12 @@
 {
-	"$schema": "./node_modules/oxfmt/configuration_schema.json",
-	"useTabs": true,
-	"semi": false,
-	"trailingComma": "all",
-	"experimentalSortImports": {
-		"order": "asc",
-		"ignoreCase": true,
-		"newlinesBetween": true
-	},
-	"ignorePatterns": [".claude", ".ona", "drizzle", "fixtures"]
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "useTabs": true,
+  "semi": false,
+  "trailingComma": "all",
+  "experimentalSortImports": {
+    "order": "asc",
+    "ignoreCase": true,
+    "newlinesBetween": true
+  },
+  "ignorePatterns": [".claude", ".ona", "drizzle", "fixtures"]
 }

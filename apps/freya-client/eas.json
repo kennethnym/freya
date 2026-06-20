@@ -6,12 +6,16 @@
 	"build": {
 		"development": {
 			"developmentClient": true,
-			"distribution": "internal"
+			"distribution": "internal",
+			"ios": {
+				"image": "sdk-56"
+			}
 		},
 		"development-simulator": {
 			"extends": "development",
 			"ios": {
-				"simulator": "true"
+				"image": "sdk-56",
+				"simulator": true
 			}
 		},
 		"preview": {

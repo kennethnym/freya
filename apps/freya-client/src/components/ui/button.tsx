@@ -15,7 +15,7 @@ function ButtonIcon({ name }: ButtonIconProps) {
 }
 
 type ButtonProps = Omit<PressableProps, "children" | "style"> & {
-	label: string
+	label?: string
 	leadingIcon?: React.ReactNode
 	style?: StyleProp<ViewStyle>
 	trailingIcon?: React.ReactNode
@@ -24,14 +24,17 @@ type ButtonProps = Omit<PressableProps, "children" | "style"> & {
 export function Button({ style, label, leadingIcon, trailingIcon, ...props }: ButtonProps) {
 	const hasIcons = leadingIcon != null || trailingIcon != null
 
-	const textElement = (
+	const textElement = label ? (
 		<SansSerifText style={tw`text-stone-100 dark:text-stone-200 font-medium`}>
 			{label}
 		</SansSerifText>
-	)
+	) : null
 
 	return (
-		<Pressable style={[tw`rounded-full bg-teal-600 px-4 py-3 w-fit`, style]} {...props}>
+		<Pressable
+			style={[tw`rounded-full bg-teal-600 px-4 py-3 w-fit flex items-center justify-center`, style]}
+			{...props}
+		>
 			{hasIcons ? (
 				<View style={tw`flex-row items-center gap-1.5`}>
 					{leadingIcon}

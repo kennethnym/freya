@@ -152,6 +152,14 @@ export const GenericObjectPayload = type("Record<string, unknown>")
 /** Fallback payload shape for tool calls, tool results, and system notes. */
 export type GenericObjectPayload = typeof GenericObjectPayload.infer
 
+export const ConversationEntryPayload = type.or(
+	UserMessagePayload,
+	AssistantMessagePayload,
+	AttachmentPayload,
+	ContextSummaryPayload,
+	GenericObjectPayload,
+)
+
 /** Union of payload shapes that can be stored on a conversation entry. */
 export type ConversationEntryPayload =
 	| UserMessagePayload
