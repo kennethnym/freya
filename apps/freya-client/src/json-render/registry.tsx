@@ -17,20 +17,13 @@ export const { registry } = defineRegistry(catalog, {
 		View: ({ props, children }) => (
 			<View style={props.style ? tw`${props.style}` : undefined}>{children}</View>
 		),
-		Button: ({ props, emit }) => (
-			<Button
-				label={props.label}
-				leadingIcon={
-					props.leadingIcon ? <Button.Icon name={props.leadingIcon as ButtonIconName} /> : undefined
-				}
-				trailingIcon={
-					props.trailingIcon ? (
-						<Button.Icon name={props.trailingIcon as ButtonIconName} />
-					) : undefined
-				}
-				onPress={() => emit("press")}
-			/>
+		Button: ({ props, children, emit }) => (
+			<Button intent={props.intent ?? undefined} onPress={() => emit("press")}>
+				{children}
+			</Button>
 		),
+		ButtonIcon: ({ props }) => <Button.Icon name={props.name as ButtonIconName} />,
+		ButtonLabel: ({ props }) => <Button.Label>{props.text}</Button.Label>,
 		FeedCard: ({ props, children }) => (
 			<FeedCard style={props.style ? tw`${props.style}` : undefined}>{children}</FeedCard>
 		),

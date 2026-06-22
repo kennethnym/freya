@@ -27,9 +27,12 @@ export class ApiClient {
 			(prevInit, middleware) => middleware(url, prevInit),
 			init,
 		)
-		return fetch(this.baseUrl ? new URL(url.toString(), this.baseUrl) : url, finalInit).then(
-			(res) => Promise.all([Promise.resolve(res), res.json()]),
-		)
+		return fetch(this.baseUrl ? this.baseUrl + url : url, finalInit)
+			.then((res) => Promise.all([Promise.resolve(res), res.json()]))
+			.catch((err) => {
+				console.log(`request error: ${url}`, err)
+				throw err
+			})
 	}
 }
 

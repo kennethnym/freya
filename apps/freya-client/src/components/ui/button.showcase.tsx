@@ -8,25 +8,28 @@ function ButtonShowcase() {
 	return (
 		<View style={tw`gap-6`}>
 			<Section title="Default">
-				<Button style={tw`self-start`} label="Press me" />
+				<Button style={tw`self-start`}>
+					<Button.Label>Press me</Button.Label>
+				</Button>
 			</Section>
 			<Section title="Leading icon">
-				<Button style={tw`self-start`} label="Add item" leadingIcon={<Button.Icon name="plus" />} />
+				<Button style={tw`self-start`}>
+					<Button.Icon name="plus" />
+					<Button.Label>Add item</Button.Label>
+				</Button>
 			</Section>
 			<Section title="Trailing icon">
-				<Button
-					style={tw`self-start`}
-					label="Next"
-					trailingIcon={<Button.Icon name="arrow-right" />}
-				/>
+				<Button style={tw`self-start`}>
+					<Button.Label>Next</Button.Label>
+					<Button.Icon name="arrow-right" />
+				</Button>
 			</Section>
 			<Section title="Both icons">
-				<Button
-					style={tw`self-start`}
-					label="Download"
-					leadingIcon={<Button.Icon name="download" />}
-					trailingIcon={<Button.Icon name="chevron-down" />}
-				/>
+				<Button style={tw`self-start`}>
+					<Button.Icon name="download" />
+					<Button.Label>Download</Button.Label>
+					<Button.Icon name="chevron-down" />
+				</Button>
 			</Section>
 		</View>
 	)

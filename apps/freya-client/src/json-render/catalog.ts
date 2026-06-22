@@ -15,15 +15,29 @@ export const catalog = defineCatalog(schema, {
 		},
 		Button: {
 			props: z.object({
-				label: z.string(),
-				leadingIcon: z.string().nullable(),
-				trailingIcon: z.string().nullable(),
+				intent: z.enum(["primary", "secondary"]).nullable(),
 			}),
 			events: ["press"],
-			slots: [],
+			slots: ["default"],
 			description:
-				"Pressable button with a label and optional Feather icons. Icon values are Feather icon names (e.g. 'plus', 'arrow-right'). Bind on.press to trigger an action.",
-			example: { label: "Add item", leadingIcon: "plus", trailingIcon: null },
+				"Pressable button. Add ButtonLabel and optional ButtonIcon children in the default slot. Bind on.press to trigger an action.",
+			example: { intent: "primary" },
+		},
+		ButtonIcon: {
+			props: z.object({
+				name: z.string(),
+			}),
+			slots: [],
+			description: "Feather icon for use inside a Button.",
+			example: { name: "plus" },
+		},
+		ButtonLabel: {
+			props: z.object({
+				text: z.string(),
+			}),
+			slots: [],
+			description: "Text label for use inside a Button.",
+			example: { text: "Add item" },
 		},
 		FeedCard: {
 			props: z.object({

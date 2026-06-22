@@ -1,0 +1,23 @@
+diff --git a/out/shared/disjoint.js b/out/shared/disjoint.js
+index 9fb94ad4f257b95225536eb5fdf20eaf6193b7a6..377af13b28807b1943f14240c1e889c3b16efe94 100644
+--- a/out/shared/disjoint.js
++++ b/out/shared/disjoint.js
+@@ -48,11 +48,17 @@ export class Disjoint extends Array {
+         return result;
+     }
+     withPrefixKey(key, kind) {
+-        return this.map(entry => ({
++        const result = this.map(entry => ({
+             ...entry,
+             path: [key, ...entry.path],
+             optional: entry.optional || kind === "optional"
+         }));
++        // Workaround for Static Hermes, which doesn't preserve the Disjoint Array subclass here.
++        // Mirrors the existing invert() guard added for https://github.com/arktypeio/arktype/issues/1027
++        // and covers the same failure mode reported in https://github.com/arktypeio/arktype/issues/1415.
++        if (!(result instanceof Disjoint))
++            return new Disjoint(...result);
++        return result;
+     }
+     toNeverIfDisjoint() {
+         return $ark.intrinsic.never;

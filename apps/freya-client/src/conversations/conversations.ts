@@ -5,6 +5,12 @@ import {
 } from "@freya/core"
 import { type } from "arktype"
 
+export const Conversation = type({
+	id: "string.uuid",
+	createdAt: "string.date.iso",
+	updatedAt: "string.date.iso",
+})
+
 export const ConversationEntry = type({
 	id: "string.uuid",
 	sequence: "number",

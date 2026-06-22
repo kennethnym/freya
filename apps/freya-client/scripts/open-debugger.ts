@@ -29,7 +29,7 @@ if (!Array.isArray(parsedTargets)) {
 }
 
 const targets = parsedTargets.filter(isDebugTarget)
-const target = targets.find((t) => t.reactNative?.capabilities?.prefersFuseboxFrontend)
+const target = targets.find(prefersFuseboxFrontend) ?? targets[0]
 
 if (!target) {
 	console.error("No debug target found. Is the app connected?")
@@ -66,6 +66,10 @@ function isDebugTarget(value: unknown): value is DebugTarget {
 
 	const prefersFuseboxFrontend = capabilities.prefersFuseboxFrontend
 	return prefersFuseboxFrontend === undefined || typeof prefersFuseboxFrontend === "boolean"
+}
+
+function prefersFuseboxFrontend(target: DebugTarget) {
+	return target.reactNative?.capabilities?.prefersFuseboxFrontend === true
 }
 
 function getProxyWebSocketPath(webSocketDebuggerUrl: string) {

@@ -23,6 +23,8 @@ function forwardHeaders(headers: Headers): Headers {
 
 interface WsData {
 	upstream: WebSocket
+	upstreamUrl: string
+	path: string
 	isDevice: boolean
 }
 
@@ -42,8 +44,10 @@ Bun.serve<WsData>({
 
 		// WebSocket upgrade — bridge to Metro's ws endpoint
 		if (req.headers.get("upgrade")?.toLowerCase() === "websocket") {
-			const wsUrl = `${METRO_WS_BASE}${url.pathname}${url.search}`
-			const upstream = new WebSocket(wsUrl)
+			const path = `${url.pathname}${url.search}`
+			const wsUrl = `${METRO_WS_BASE}${path}`
+			console.log(`[proxy] ws connecting ${path}`)
+			const upstream = connectUpstreamWebSocket(wsUrl, getWebSocketHeaders(req, url))
 
 			// Wait for upstream to connect before upgrading the client
 			try {
@@ -56,7 +60,7 @@ Bun.serve<WsData>({
 			}
 
 			const isDevice = url.pathname.startsWith("/inspector/device")
-			const ok = server.upgrade(req, { data: { upstream, isDevice } })
+			const ok = server.upgrade(req, { data: { upstream, upstreamUrl: wsUrl, path, isDevice } })
 			if (!ok) {
 				upstream.close()
 				return new Response("WebSocket upgrade failed", { status: 500 })
@@ -83,19 +87,28 @@ Bun.serve<WsData>({
 
 	websocket: {
 		message(ws: ServerWebSocket<WsData>, msg) {
-			ws.data.upstream.send(msg)
+			sendUpstream(ws.data.upstream, msg)
 		},
 		open(ws: ServerWebSocket<WsData>) {
 			const { upstream } = ws.data
+			console.log(`[proxy] ws open ${ws.data.path}`)
 			upstream.addEventListener("message", (ev) => {
 				if (typeof ev.data === "string") {
 					ws.send(ev.data)
 				} else if (ev.data instanceof ArrayBuffer) {
 					ws.sendBinary(new Uint8Array(ev.data))
+				} else if (ev.data instanceof Blob) {
+					ev.data.arrayBuffer().then((buffer) => ws.sendBinary(new Uint8Array(buffer)))
 				}
 			})
-			upstream.addEventListener("close", () => ws.close())
-			upstream.addEventListener("error", () => ws.close())
+			upstream.addEventListener("close", (ev) => {
+				console.log(`[proxy] upstream close ${ws.data.path} code=${ev.code} reason=${ev.reason}`)
+				ws.close(ev.code, ev.reason)
+			})
+			upstream.addEventListener("error", () => {
+				console.error(`[proxy] upstream error ${ws.data.upstreamUrl}`)
+				ws.close()
+			})
 
 			// Print debugger URL shortly after a device connects,
 			// giving Metro time to register the target.
@@ -104,6 +117,7 @@ Bun.serve<WsData>({
 			}
 		},
 		close(ws: ServerWebSocket<WsData>) {
+			console.log(`[proxy] client close ${ws.data.path}`)
 			ws.data.upstream.close()
 		},
 	},
@@ -120,7 +134,7 @@ async function printDebuggerUrl() {
 	if (!Array.isArray(parsedTargets)) return
 
 	const targets = parsedTargets.filter(isDebugTarget)
-	const target = targets.find((t) => t.reactNative?.capabilities?.prefersFuseboxFrontend)
+	const target = targets.find(prefersFuseboxFrontend) ?? targets[0]
 	if (!target) return
 
 	const wsPath = getProxyWebSocketPath(target.webSocketDebuggerUrl)
@@ -153,6 +167,29 @@ async function fetchUpstream(
 	}
 }
 
+function sendUpstream(upstream: WebSocket, msg: string | Buffer) {
+	if (typeof msg === "string") {
+		upstream.send(msg)
+		return
+	}
+
+	upstream.send(new Uint8Array(msg))
+}
+
+function getWebSocketHeaders(req: Request, url: URL) {
+	return {
+		Origin: req.headers.get("origin") ?? url.origin,
+	}
+}
+
+function connectUpstreamWebSocket(url: string, headers: Record<string, string>) {
+	const BunWebSocket = WebSocket as unknown as {
+		new (url: string, options: { headers: Record<string, string> }): WebSocket
+	}
+
+	return new BunWebSocket(url, { headers })
+}
+
 function isDebugTarget(value: unknown): value is DebugTarget {
 	if (!isRecord(value) || typeof value.webSocketDebuggerUrl !== "string") return false
 
@@ -166,6 +203,10 @@ function isDebugTarget(value: unknown): value is DebugTarget {
 
 	const prefersFuseboxFrontend = capabilities.prefersFuseboxFrontend
 	return prefersFuseboxFrontend === undefined || typeof prefersFuseboxFrontend === "boolean"
+}
+
+function prefersFuseboxFrontend(target: DebugTarget) {
+	return target.reactNative?.capabilities?.prefersFuseboxFrontend === true
 }
 
 function getProxyWebSocketPath(webSocketDebuggerUrl: string) {

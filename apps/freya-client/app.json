@@ -255,7 +255,8 @@
 				}
 			],
 			"expo-web-browser",
-			"expo-image"
+			"expo-image",
+			"expo-secure-store"
 		],
 		"experiments": {
 			"typedRoutes": true,

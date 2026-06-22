@@ -3,9 +3,13 @@ import { type } from "arktype"
 
 import { useApiClient } from "@/api/client"
 
-import { ConversationEntry } from "./conversations"
+import { Conversation, ConversationEntry } from "./conversations"
 
-const ConversationQueryResponse = type({
+const ListConversationsResponse = type({
+	conversations: Conversation.array(),
+})
+
+const ConversationEntriesResponse = type({
 	entries: ConversationEntry.array(),
 })
 
@@ -16,14 +20,16 @@ export function useListConversationsQuery() {
 		queryFn: async () =>
 			api
 				.request("/conversations", { method: "GET" })
-				.then(([, json]) => ConversationQueryResponse.assert(json)),
+				.then(([, json]) => ListConversationsResponse.assert(json)),
 	})
 }
 
 export function useDefaultConversationQuery() {
 	return queryOptions({
 		...useListConversationsQuery(),
-		select: (data) => (data.entries.length === 0 ? null : data.entries[0]),
+		select: (data) => {
+			return data.conversations.length === 0 ? null : data.conversations[0]
+		},
 	})
 }
 
@@ -35,7 +41,7 @@ export function useListConversationEntriesQuery(id?: string) {
 			? async () =>
 					api
 						.request(`/conversations/${id}/entries`, { method: "GET" })
-						.then(([, json]) => ConversationQueryResponse.assert(json).entries)
+						.then(([, json]) => ConversationEntriesResponse.assert(json).entries)
 			: skipToken,
 	})
 }

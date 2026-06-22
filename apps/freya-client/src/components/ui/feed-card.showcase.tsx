@@ -19,7 +19,9 @@ function FeedCardShowcase() {
 				<FeedCard style={tw`p-4 gap-2`}>
 					<SerifText style={tw`text-xl`}>Title</SerifText>
 					<SansSerifText>Body text inside a feed card.</SansSerifText>
-					<Button style={tw`self-start mt-2`} label="Action" />
+					<Button style={tw`self-start mt-2`}>
+						<Button.Label>Action</Button.Label>
+					</Button>
 				</FeedCard>
 			</Section>
 		</View>
