@@ -53,9 +53,10 @@
       # so source-only edits do not force Bun to reinstall.
       dependencySource = lib.fileset.toSource {
         root = ./.;
-        fileset = lib.fileset.fileFilter (
-          file: file.name == "bun.lock" || file.name == "package.json" || file.name == "bunfig.toml"
-        ) ./.;
+        fileset = lib.fileset.fileFilter
+          (
+            file: file.name == "bun.lock" || file.name == "package.json" || file.name == "bunfig.toml"
+          ) ./.;
       };
 
       # Checks run against a clean source tree, even when using `path:.`.
@@ -92,10 +93,12 @@
         lib.mapAttrs mkBunScript scripts;
       mkBunApps =
         commands:
-        lib.mapAttrs (name: command: {
-          type = "app";
-          program = "${command}/bin/${name}";
-        }) commands;
+        lib.mapAttrs
+          (name: command: {
+            type = "app";
+            program = "${command}/bin/${name}";
+          })
+          commands;
       mkBunNodeModules =
         system: pkgs:
         pkgs.stdenvNoCC.mkDerivation {
@@ -255,6 +258,7 @@
             pkg-config
             postgresql
             python3
+            typescript-go
             watchman
           ];
           linuxPackages = with pkgs; [
