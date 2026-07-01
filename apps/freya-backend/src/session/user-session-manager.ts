@@ -8,7 +8,7 @@ import type { FeedEnhancer } from "../enhancement/enhance-feed.ts"
 import type { CredentialEncryptor } from "../lib/crypto.ts"
 import type { FeedSourceProvider } from "./feed-source-provider.ts"
 
-import { conversations } from "../conversations/storage.ts"
+import { conversations } from "../conversations/db-storage.ts"
 import {
 	CredentialStorageUnavailableError,
 	InvalidSourceConfigError,

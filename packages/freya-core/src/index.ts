@@ -23,6 +23,8 @@ export {
 	ModelRunMetadata,
 	TextMessagePart,
 	UserMessagePayload,
+	ToolCallPayload,
+	ToolResultPayload,
 } from "./conversation"
 
 // Feed

@@ -2,6 +2,7 @@ export interface QueryAgentAsk {
 	message: string
 	conversationId?: string
 	userMessageEntry?: QueryAgentConversationEntryRef
+	signal?: AbortSignal
 }
 
 export type QueryAgentStreamEvent =

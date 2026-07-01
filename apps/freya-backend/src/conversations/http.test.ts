@@ -25,7 +25,7 @@ const listEntriesCalls: Array<{
 	params: ListConversationEntriesParams
 }> = []
 
-mock.module("./storage.ts", () => ({
+mock.module("./db-storage.ts", () => ({
 	conversations: (_db: Database, userId: string) => ({
 		async listConversations(): Promise<ConversationRow[]> {
 			return conversationRowsByUser.get(userId) ?? []

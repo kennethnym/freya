@@ -10,6 +10,6 @@
 	},
 	"dependencies": {
 		"@freya/agent-protocol": "workspace:*",
-		"@nym.sh/jrpc": "^0.1.0"
+		"@nym.sh/jrpc": "1.1.0"
 	}
 }

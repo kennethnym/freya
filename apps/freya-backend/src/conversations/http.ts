@@ -8,8 +8,8 @@ import type { AuthSessionMiddleware } from "../auth/session-middleware.ts"
 import type { Database } from "../db/index.ts"
 import type { ConversationRow } from "./storage.ts"
 
+import { conversations } from "./db-storage.ts"
 import { ConversationNotFoundError } from "./errors.ts"
-import { conversations } from "./storage.ts"
 
 /** Hono environment populated by the conversations route middleware. */
 type Env = {

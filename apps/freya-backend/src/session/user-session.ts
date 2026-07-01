@@ -263,18 +263,12 @@ export class UserSession {
 		const conversation = await conversationStorage.getOrCreateConversation()
 		const entries = await conversationStorage.listEntries(conversation.id)
 
-		this.queryAgent = new ConversationRecordingQueryAgent({
-			agent: new PiQueryAgent({
-				toolbox: this.toolbox,
-				apiKey: this.agentConfig?.apiKey,
-				cwd: this.agentConfig?.cwd,
-				systemPrompt: this.agentConfig?.systemPrompt,
-				initialEntries: entries,
-			}),
-			storage: conversationStorage,
-			defaultConversationId: conversation.id,
-			modelProvider: PI_MODEL_PROVIDER,
-			modelId: PI_MODEL_ID,
+		this.queryAgent = new PiQueryAgent({
+			toolbox: this.toolbox,
+			apiKey: this.agentConfig?.apiKey,
+			cwd: this.agentConfig?.cwd,
+			systemPrompt: this.agentConfig?.systemPrompt,
+			initialEntries: entries,
 		})
 	}
 

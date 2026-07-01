@@ -120,7 +120,7 @@ mock.module("../sources/user-sources.ts", () => ({
 	}),
 }))
 
-mock.module("../conversations/storage.ts", () => ({
+mock.module("../conversations/db-storage.ts", () => ({
 	conversations: (_db: Database, userId: string) => ({
 		async getOrCreateConversation(): Promise<{ id: string }> {
 			mockConversationCalls.push({ type: "getOrCreate", userId })

@@ -146,6 +146,19 @@ export const ConversationEntryMetadata = type({
 /** Metadata bag attached to a conversation entry. */
 export type ConversationEntryMetadata = typeof ConversationEntryMetadata.infer
 
+export const ToolCallPayload = type({
+	toolName: "string",
+})
+
+export type ToolCallPayload = typeof ToolCallPayload.infer
+
+export const ToolResultPayload = type({
+	toolName: "string",
+	ok: "boolean",
+})
+
+export type ToolResultPayload = typeof ToolResultPayload.infer
+
 /** Generic object payload used by operational entries. */
 export const GenericObjectPayload = type("Record<string, unknown>")
 
@@ -158,4 +171,6 @@ export type ConversationEntryPayload =
 	| AssistantMessagePayload
 	| AttachmentPayload
 	| ContextSummaryPayload
+	| ToolCallPayload
+	| ToolResultPayload
 	| GenericObjectPayload

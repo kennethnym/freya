@@ -1,8 +1,3 @@
-export interface SendMessageResult {
-	message: string
-	conversationId: string
-}
-
 export type AgentEvent =
 	| { type: "conversation_started"; conversationId: string }
 	| { type: "message_created"; text: string }
@@ -11,8 +6,11 @@ export type AgentEvent =
 	| { type: "message_finished" }
 	| { type: "message_failed"; error: string }
 
+export type UserEvent = { type: "typing" }
+
 export interface AgentServerApi {
-	sendMessage(message: string): Promise<SendMessageResult>
+	sendMessage(message: string): Promise<boolean>
+	notify(event: UserEvent): void
 	ping(): "pong"
 }
 

@@ -51,7 +51,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@freya/agent-protocol": "workspace:*",
-        "@nym.sh/jrpc": "^0.1.0",
+        "@nym.sh/jrpc": "1.1.0",
       },
     },
     "apps/freya-backend": {
@@ -69,7 +69,7 @@
         "@freya/source-tfl": "workspace:*",
         "@freya/source-weatherkit": "workspace:*",
         "@freya/source-web-search": "workspace:*",
-        "@nym.sh/jrpc": "^0.1.0",
+        "@nym.sh/jrpc": "1.1.0",
         "@openrouter/sdk": "^0.9.11",
         "arktype": "^2.1.29",
         "better-auth": "^1",
@@ -838,7 +838,7 @@
 
     "@nolyfill/is-core-module": ["@nolyfill/is-core-module@1.0.39", "", {}, "sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA=="],
 
-    "@nym.sh/jrpc": ["@nym.sh/jrpc@0.1.0", "", {}, "sha512-qH+vqKojPrX4RkW67U2R4J98uWHxZOwYxX2J5GLZcfm/yjklCcN5zTfDNLfgAa9jAoOFVscC3DFWhvdZOmN3fA=="],
+    "@nym.sh/jrpc": ["@nym.sh/jrpc@1.1.0", "", {}, "sha512-212SYMB37GdL8enaRTTqG/LNa5bJ7eYth6jfQfECuedQCuaju0bOMUzCN6hvY5KkrxdYuqVKmr2Uz+ZZTjPlaQ=="],
 
     "@nym.sh/jrx": ["@nym.sh/jrx@0.2.0", "", { "peerDependencies": { "@json-render/core": ">=0.10.0" } }, "sha512-jd7Z1Q6T21366MtSUnwCFiu6Yl1AdNc9s5m6HxeUg265P+0enZCiyyxOuHsFwvpUcSEs/2DVBsqfMptdca44lA=="],
 
