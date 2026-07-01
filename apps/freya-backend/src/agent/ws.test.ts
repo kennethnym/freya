@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test"
 import { Hono } from "hono"
 
-import type { UserSessionManager } from "../session/index.ts"
+import type { ConversationStorage } from "../conversations/storage.ts"
+import type { NotificationCentral } from "../notification/notification-central.ts"
 
+import type { AgentService } from "./service.ts"
 import { registerAgentWebSocketHandlers } from "./ws.ts"
 
 describe("agent websocket handler", () => {
@@ -11,7 +13,9 @@ describe("agent websocket handler", () => {
 		const app = new Hono()
 
 		registerAgentWebSocketHandlers(app, {
-			sessionManager: {} as UserSessionManager,
+			agentService: {} as AgentService,
+			storage: {} as ConversationStorage,
+			notificationCentral: {} as NotificationCentral,
 			corsMiddleware: async (c, next) => {
 				const origin = c.req.header("origin")
 				if (origin && origin !== "https://app.freya.test") {
@@ -44,7 +48,9 @@ describe("agent websocket handler", () => {
 		const app = new Hono()
 
 		registerAgentWebSocketHandlers(app, {
-			sessionManager: {} as UserSessionManager,
+			agentService: {} as AgentService,
+			storage: {} as ConversationStorage,
+			notificationCentral: {} as NotificationCentral,
 			corsMiddleware: async (_c, next) => {
 				await next()
 			},

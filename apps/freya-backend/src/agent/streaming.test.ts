@@ -9,7 +9,6 @@ import type {
 	QueryAgentEventListener,
 	QueryAgentStreamEvent,
 } from "./query-agent.ts"
-import type { AgentResponseStreamItem } from "./streaming.ts"
 
 import { streamAgentResponse } from "./streaming.ts"
 
@@ -47,17 +46,13 @@ describe("streamAgentResponse", () => {
 			{ type: "done" },
 		])
 
-		const { events, result } = await collectStreamAgentResponse(
+		const events = await collectStreamAgentResponse(
 			streamAgentResponse({
 				agent,
 				input: { message: "hello" },
 			}),
 		)
 
-		expect(result).toEqual({
-			conversationId: "conversation-1",
-			message: "First message\nSecond message\nThird message",
-		})
 		expect(events).toEqual([
 			{ type: "conversation_started", conversationId: "conversation-1" },
 			{ type: "message_created", text: "First message" },
@@ -74,17 +69,13 @@ describe("streamAgentResponse", () => {
 			{ type: "done" },
 		])
 
-		const { events, result } = await collectStreamAgentResponse(
+		const events = await collectStreamAgentResponse(
 			streamAgentResponse({
 				agent,
 				input: { message: "hello" },
 			}),
 		)
 
-		expect(result).toEqual({
-			conversationId: "conversation-1",
-			message: "  const value = 1  \n\n  return value",
-		})
 		expect(events).toEqual([
 			{ type: "conversation_started", conversationId: "conversation-1" },
 			{ type: "message_created", text: "  const value = 1  " },
@@ -122,28 +113,12 @@ describe("streamAgentResponse", () => {
 })
 
 async function collectStreamAgentResponse(
-	stream: AsyncIterable<AgentResponseStreamItem>,
+	stream: AsyncIterable<AgentEvent>,
 	events: AgentEvent[] = [],
-): Promise<{
-	events: AgentEvent[]
-	result: { message: string; conversationId: string }
-}> {
-	let result: { message: string; conversationId: string } | null = null
-
-	for await (const item of stream) {
-		switch (item.type) {
-			case "event":
-				events.push(item.event)
-				break
-			case "result":
-				result = item.result
-				break
-		}
+): Promise<AgentEvent[]> {
+	for await (const event of stream) {
+		events.push(event)
 	}
 
-	if (!result) {
-		throw new Error("Expected stream result")
-	}
-
-	return { events, result }
+	return events
 }

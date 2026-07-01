@@ -135,8 +135,9 @@ describe("schema sync", () => {
 
 			// JSON Schema structure matches
 			const jsonSchema = enhancementResultJsonSchema
+			const payloadKeys = Object.keys(payload).sort() as Array<(typeof jsonSchema.required)[number]>
 			expect(Object.keys(jsonSchema.properties).sort()).toEqual(Object.keys(payload).sort())
-			expect([...jsonSchema.required].sort()).toEqual(Object.keys(payload).sort())
+			expect([...jsonSchema.required].sort()).toEqual(payloadKeys)
 
 			// syntheticItems item schema has the right required fields
 			const itemSchema = jsonSchema.properties.syntheticItems.items

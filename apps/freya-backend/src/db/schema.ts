@@ -48,6 +48,15 @@ const bytea = customType<{ data: Buffer }>({
 	},
 })
 
+export const ConversationResponseStateStatus = {
+	Pending: "pending",
+	Running: "running",
+	Failed: "failed",
+} as const
+
+export type ConversationResponseStateStatus =
+	(typeof ConversationResponseStateStatus)[keyof typeof ConversationResponseStateStatus]
+
 export const userSources = pgTable(
 	"user_sources",
 	{
@@ -142,6 +151,38 @@ export const conversationEntries = pgTable(
 		check(
 			"conversation_entries_attachment_file_id_check",
 			sql`(${t.kind} = 'attachment' and ${t.fileId} is not null) or (${t.kind} <> 'attachment' and ${t.fileId} is null)`,
+		),
+	],
+)
+
+export const conversationResponseState = pgTable(
+	"conversation_response_state",
+	{
+		conversationId: uuid("conversation_id")
+			.primaryKey()
+			.references(() => conversations.id, { onDelete: "cascade" }),
+		status: text("status")
+			.$type<ConversationResponseStateStatus>()
+			.notNull()
+			.default(ConversationResponseStateStatus.Pending),
+		pendingSinceEntryId: uuid("pending_since_entry_id")
+			.notNull()
+			.references(() => conversationEntries.id, { onDelete: "cascade" }),
+		maxWaitUntil: timestamp("max_wait_until").notNull(),
+		runningSince: timestamp("running_since"),
+		createdAt: timestamp("created_at").notNull().defaultNow(),
+		updatedAt: timestamp("updated_at")
+			.notNull()
+			.defaultNow()
+			.$onUpdate(() => new Date()),
+	},
+	(t) => [
+		index("conversation_response_state_status_max_wait_until_idx").on(t.status, t.maxWaitUntil),
+		index("conversation_response_state_running_since_idx").on(t.runningSince),
+		index("conversation_response_state_pending_since_entry_id_idx").on(t.pendingSinceEntryId),
+		check(
+			"conversation_response_state_status_check",
+			sql`${t.status} in ('pending', 'running', 'failed')`,
 		),
 	],
 )
