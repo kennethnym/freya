@@ -146,6 +146,19 @@ export const ConversationEntryMetadata = type({
 /** Metadata bag attached to a conversation entry. */
 export type ConversationEntryMetadata = typeof ConversationEntryMetadata.infer
 
+export const ToolCallPayload = type({
+	toolName: "string",
+})
+
+export type ToolCallPayload = typeof ToolCallPayload.infer
+
+export const ToolResultPayload = type({
+	toolName: "string",
+	ok: "boolean",
+})
+
+export type ToolResultPayload = typeof ToolResultPayload.infer
+
 /** Generic object payload used by operational entries. */
 export const GenericObjectPayload = type("Record<string, unknown>")
 
@@ -157,6 +170,8 @@ export const ConversationEntryPayload = type.or(
 	AssistantMessagePayload,
 	AttachmentPayload,
 	ContextSummaryPayload,
+	ToolCallPayload,
+	ToolResultPayload,
 	GenericObjectPayload,
 )
 
@@ -166,4 +181,118 @@ export type ConversationEntryPayload =
 	| AssistantMessagePayload
 	| AttachmentPayload
 	| ContextSummaryPayload
+	| ToolCallPayload
+	| ToolResultPayload
 	| GenericObjectPayload
+
+export const Conversation = type({
+	"+": "reject",
+	id: "string.uuid",
+	createdAt: "string.date.iso",
+	updatedAt: "string.date.iso",
+})
+
+export type Conversation = typeof Conversation.infer
+
+export const UserMessageConversationEntry = type({
+	"+": "reject",
+	id: "string.uuid",
+	conversationId: "string.uuid",
+	sequence: "number.integer >= 1",
+	kind: "'user_message'",
+	visibility: type.enumerated(...Object.values(ConversationEntryVisibility)),
+	fileId: "null",
+	payload: UserMessagePayload,
+	metadata: ConversationEntryMetadata,
+	createdAt: "string.date.iso",
+})
+
+export const AssistantMessageConversationEntry = type({
+	"+": "reject",
+	id: "string.uuid",
+	conversationId: "string.uuid",
+	sequence: "number.integer >= 1",
+	kind: "'assistant_message'",
+	visibility: type.enumerated(...Object.values(ConversationEntryVisibility)),
+	fileId: "null",
+	payload: AssistantMessagePayload,
+	metadata: ConversationEntryMetadata,
+	createdAt: "string.date.iso",
+})
+
+export const AttachmentConversationEntry = type({
+	"+": "reject",
+	id: "string.uuid",
+	conversationId: "string.uuid",
+	sequence: "number.integer >= 1",
+	kind: "'attachment'",
+	visibility: type.enumerated(...Object.values(ConversationEntryVisibility)),
+	fileId: "string.uuid",
+	payload: AttachmentPayload,
+	metadata: ConversationEntryMetadata,
+	createdAt: "string.date.iso",
+})
+
+export const ToolCallConversationEntry = type({
+	"+": "reject",
+	id: "string.uuid",
+	conversationId: "string.uuid",
+	sequence: "number.integer >= 1",
+	kind: "'tool_call'",
+	visibility: type.enumerated(...Object.values(ConversationEntryVisibility)),
+	fileId: "null",
+	payload: ToolCallPayload,
+	metadata: ConversationEntryMetadata,
+	createdAt: "string.date.iso",
+})
+
+export const ToolResultConversationEntry = type({
+	"+": "reject",
+	id: "string.uuid",
+	conversationId: "string.uuid",
+	sequence: "number.integer >= 1",
+	kind: "'tool_result'",
+	visibility: type.enumerated(...Object.values(ConversationEntryVisibility)),
+	fileId: "null",
+	payload: ToolResultPayload,
+	metadata: ConversationEntryMetadata,
+	createdAt: "string.date.iso",
+})
+
+export const ContextSummaryConversationEntry = type({
+	"+": "reject",
+	id: "string.uuid",
+	conversationId: "string.uuid",
+	sequence: "number.integer >= 1",
+	kind: "'context_summary'",
+	visibility: type.enumerated(...Object.values(ConversationEntryVisibility)),
+	fileId: "null",
+	payload: ContextSummaryPayload,
+	metadata: ConversationEntryMetadata,
+	createdAt: "string.date.iso",
+})
+
+export const SystemNoteConversationEntry = type({
+	"+": "reject",
+	id: "string.uuid",
+	conversationId: "string.uuid",
+	sequence: "number.integer >= 1",
+	kind: "'system_note'",
+	visibility: type.enumerated(...Object.values(ConversationEntryVisibility)),
+	fileId: "null",
+	payload: GenericObjectPayload,
+	metadata: ConversationEntryMetadata,
+	createdAt: "string.date.iso",
+})
+
+export const ConversationEntry = type.or(
+	UserMessageConversationEntry,
+	AssistantMessageConversationEntry,
+	AttachmentConversationEntry,
+	ToolCallConversationEntry,
+	ToolResultConversationEntry,
+	ContextSummaryConversationEntry,
+	SystemNoteConversationEntry,
+)
+
+export type ConversationEntry = typeof ConversationEntry.infer
