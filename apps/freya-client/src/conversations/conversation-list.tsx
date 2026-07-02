@@ -1,4 +1,4 @@
-import { AssistantMessagePayload, ConversationEntry, UserMessagePayload } from "@freya/core"
+import { AssistantMessagePayload, UserMessagePayload } from "@freya/core"
 import { FlashList } from "@shopify/flash-list"
 import { useQuery } from "@tanstack/react-query"
 import { View, ViewStyle } from "react-native"
@@ -6,6 +6,7 @@ import tw from "twrnc"
 
 import { SansSerifText } from "@/components/ui/sans-serif-text"
 
+import { ConversationEntry } from "./conversations"
 import { useListConversationEntriesQuery, useDefaultConversationQuery } from "./queries"
 
 type ConversationListProps = Omit<

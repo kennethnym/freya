@@ -9,15 +9,10 @@ export { UnknownActionError } from "./action";
 // Conversation
 export {
   AssistantMessagePayload,
-  AssistantMessageConversationEntry,
   AttachmentPayload,
-  AttachmentConversationEntry,
   AttachmentType,
-  ContextSummaryConversationEntry,
   ContextSummary,
   ContextSummaryPayload,
-  Conversation,
-  ConversationEntry,
   ConversationEntryKind,
   ConversationEntryMetadata,
   ConversationEntryVisibility,
@@ -25,15 +20,9 @@ export {
   JsonMessagePart,
   MessagePart,
   ModelRunMetadata,
-  SystemNoteConversationEntry,
   TextMessagePart,
-  ToolCallConversationEntry,
-  ToolCallPayload,
-  ToolResultConversationEntry,
-  ToolResultPayload,
   UserMessagePayload,
   ConversationEntryPayload,
-  UserMessageConversationEntry,
 } from "./conversation";
 
 // Feed

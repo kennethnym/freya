@@ -1,16 +1,15 @@
-import { Conversation, ConversationEntry } from "@freya/core"
 import { queryOptions, skipToken } from "@tanstack/react-query"
 import { type } from "arktype"
 
 import { useApiClient } from "@/api/client"
 
+import { Conversation, ConversationEntry } from "./conversations"
+
 const ListConversationsResponse = type({
-	"+": "reject",
 	conversations: Conversation.array(),
 })
 
 const ConversationEntriesResponse = type({
-	"+": "reject",
 	entries: ConversationEntry.array(),
 })
 
