@@ -1,11 +1,10 @@
-import type { AgentEvent } from "@freya/agent-protocol"
-
+import { AgentEventKind } from "@freya/agent-protocol"
 import {
 	AssistantMessagePayload,
 	ConversationEntryKind,
-	UserMessagePayload,
 	ToolCallPayload,
 	ToolResultPayload,
+	UserMessagePayload,
 } from "@freya/core"
 import { type } from "arktype"
 
@@ -16,7 +15,11 @@ import type { NotificationCentral } from "../notification/notification-central"
 import type { UserSessionManager } from "../session"
 
 import { ConversationResponseStateStatus } from "../db/schema"
-import { streamAgentResponse } from "./streaming"
+import {
+	AgentResponseStreamEventKind,
+	streamAgentResponse,
+	type AgentResponseStreamEvent,
+} from "./streaming"
 
 export interface AgentResponseJobPayload {
 	conversationId: string
@@ -81,17 +84,17 @@ export class AgentResponseJobExecutor implements JobExecutor<AgentResponseJobPay
 		try {
 			for await (const event of streamAgentResponse({
 				agent: session.agent,
-				input: { message, signal: job.signal },
+				input: {
+					message,
+					conversationId: conversation.id,
+					signal: job.signal,
+				},
 			})) {
 				if (job.signal.aborted) {
 					break
 				}
 
-				await this.recordAgentEvent(event, conversation.id)
-				await this.notificationCentral.notifyUser(conversation.userId, {
-					kind: "agent",
-					payload: event,
-				})
+				await this.handleStreamEvent(event, conversation.id, conversation.userId)
 			}
 
 			// if job is aborted, stop everything immediately, including clean up.
@@ -110,34 +113,93 @@ export class AgentResponseJobExecutor implements JobExecutor<AgentResponseJobPay
 		}
 	}
 
-	private async recordAgentEvent(event: AgentEvent, conversationId: string) {
-		switch (event.type) {
-			case "message_created":
-				await this.conversationStorage.appendEntry(conversationId, {
+	private async handleStreamEvent(
+		event: AgentResponseStreamEvent,
+		conversationId: string,
+		userId: string,
+	): Promise<void> {
+		switch (event.kind) {
+			case AgentResponseStreamEventKind.ConversationStarted:
+				await this.notificationCentral.notifyUser(userId, {
+					kind: "agent",
+					payload: {
+						kind: AgentEventKind.ConversationStarted,
+						conversationId: event.conversationId,
+					},
+				})
+				break
+
+			case AgentResponseStreamEventKind.AssistantMessage: {
+				const entry = await this.conversationStorage.appendEntry(conversationId, {
 					kind: ConversationEntryKind.AssistantMessage,
 					payload: {
 						role: "assistant",
 						parts: [{ type: "text", text: event.text }],
 					} satisfies AssistantMessagePayload,
 				})
+				await this.notificationCentral.notifyUser(userId, {
+					kind: "agent",
+					payload: {
+						kind: AgentEventKind.ConversationEntryCreated,
+						entry,
+					},
+				})
 				break
+			}
 
-			case "tool_started":
-				await this.conversationStorage.appendEntry(conversationId, {
+			case AgentResponseStreamEventKind.ToolStarted: {
+				const entry = await this.conversationStorage.appendEntry(conversationId, {
 					kind: ConversationEntryKind.ToolCall,
 					payload: {
 						toolName: event.toolName,
 					} satisfies ToolCallPayload,
 				})
+				await this.notificationCentral.notifyUser(userId, {
+					kind: "agent",
+					payload: {
+						kind: AgentEventKind.ConversationEntryCreated,
+						entry,
+					},
+				})
 				break
+			}
 
-			case "tool_finished":
-				await this.conversationStorage.appendEntry(conversationId, {
+			case AgentResponseStreamEventKind.ToolFinished: {
+				const entry = await this.conversationStorage.appendEntry(conversationId, {
 					kind: ConversationEntryKind.ToolResult,
 					payload: {
 						toolName: event.toolName,
 						ok: event.ok,
 					} satisfies ToolResultPayload,
+				})
+				await this.notificationCentral.notifyUser(userId, {
+					kind: "agent",
+					payload: {
+						kind: AgentEventKind.ConversationEntryCreated,
+						entry,
+					},
+				})
+				break
+			}
+
+			case AgentResponseStreamEventKind.ResponseFinished:
+				await this.notificationCentral.notifyUser(userId, {
+					kind: "agent",
+					payload: {
+						kind: AgentEventKind.ResponseFinished,
+						conversationId,
+					},
+				})
+				break
+
+			case AgentResponseStreamEventKind.ResponseFailed:
+				await this.notificationCentral.notifyUser(userId, {
+					kind: "agent",
+					payload: {
+						kind: AgentEventKind.ResponseFailed,
+						conversationId,
+						error: event.error,
+					},
 				})
 				break
 		}

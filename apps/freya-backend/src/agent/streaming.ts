@@ -1,8 +1,42 @@
-import type { AgentEvent } from "@freya/agent-protocol"
-
 import type { QueryAgent, QueryAgentAsk } from "./query-agent.ts"
 
-export type AgentResponseStreamItem = { type: "event"; event: AgentEvent }
+export const AgentResponseStreamEventKind = {
+	ConversationStarted: "conversation_started",
+	AssistantMessage: "assistant_message",
+	ToolStarted: "tool_started",
+	ToolFinished: "tool_finished",
+	ResponseFinished: "response_finished",
+	ResponseFailed: "response_failed",
+} as const
+
+export type AgentResponseStreamEventKind =
+	(typeof AgentResponseStreamEventKind)[keyof typeof AgentResponseStreamEventKind]
+
+export type AgentResponseStreamEvent =
+	| {
+			kind: typeof AgentResponseStreamEventKind.ConversationStarted
+			conversationId: string
+	  }
+	| {
+			kind: typeof AgentResponseStreamEventKind.AssistantMessage
+			text: string
+	  }
+	| {
+			kind: typeof AgentResponseStreamEventKind.ToolStarted
+			toolName: string
+	  }
+	| {
+			kind: typeof AgentResponseStreamEventKind.ToolFinished
+			toolName: string
+			ok: boolean
+	  }
+	| {
+			kind: typeof AgentResponseStreamEventKind.ResponseFinished
+	  }
+	| {
+			kind: typeof AgentResponseStreamEventKind.ResponseFailed
+			error: string
+	  }
 
 export async function* streamAgentResponse({
 	agent,
@@ -10,18 +44,16 @@ export async function* streamAgentResponse({
 }: {
 	agent: QueryAgent
 	input: QueryAgentAsk
-}): AsyncGenerator<AgentEvent, void, void> {
-	let message = ""
-	let conversationId: string | null = null
+}): AsyncGenerator<AgentResponseStreamEvent, void, void> {
 	const splitter = new AgentMessageSplitter()
 
-	function messageEvent(text: string): AgentEvent | null {
+	function messageEvent(text: string): AgentResponseStreamEvent | null {
 		if (text.trim() === "") return null
 
-		return { type: "message_created", text }
+		return { kind: AgentResponseStreamEventKind.AssistantMessage, text }
 	}
 
-	function flushPendingMessage(): AgentEvent | null {
+	function flushPendingMessage(): AgentResponseStreamEvent | null {
 		const text = splitter.flush()
 		if (text === null) return null
 
@@ -35,12 +67,13 @@ export async function* streamAgentResponse({
 
 		switch (event.type) {
 			case "conversation":
-				conversationId = event.conversationId
-				yield { type: "conversation_started", conversationId }
+				yield {
+					kind: AgentResponseStreamEventKind.ConversationStarted,
+					conversationId: event.conversationId,
+				}
 				break
 
 			case "text_delta":
-				message += event.text
 				for (const line of splitter.push(event.text)) {
 					const item = messageEvent(line)
 					if (item) yield item
@@ -52,7 +85,10 @@ export async function* streamAgentResponse({
 					const item = flushPendingMessage()
 					if (item) yield item
 				}
-				yield { type: "tool_started", toolName: event.toolName }
+				yield {
+					kind: AgentResponseStreamEventKind.ToolStarted,
+					toolName: event.toolName,
+				}
 				break
 
 			case "tool_end":
@@ -61,7 +97,7 @@ export async function* streamAgentResponse({
 					if (item) yield item
 				}
 				yield {
-					type: "tool_finished",
+					kind: AgentResponseStreamEventKind.ToolFinished,
 					toolName: event.toolName,
 					ok: event.ok,
 				}
@@ -72,7 +108,10 @@ export async function* streamAgentResponse({
 					const item = flushPendingMessage()
 					if (item) yield item
 				}
-				yield { type: "message_failed", error: event.message }
+				yield {
+					kind: AgentResponseStreamEventKind.ResponseFailed,
+					error: event.message,
+				}
 				throw new Error(event.message)
 
 			case "done":
@@ -80,7 +119,7 @@ export async function* streamAgentResponse({
 					const item = flushPendingMessage()
 					if (item) yield item
 				}
-				yield { type: "message_finished" }
+				yield { kind: AgentResponseStreamEventKind.ResponseFinished }
 				return
 		}
 	}
@@ -88,7 +127,7 @@ export async function* streamAgentResponse({
 	const item = flushPendingMessage()
 	if (item) yield item
 
-	yield { type: "message_finished" }
+	yield { kind: AgentResponseStreamEventKind.ResponseFinished }
 }
 
 class AgentMessageSplitter {

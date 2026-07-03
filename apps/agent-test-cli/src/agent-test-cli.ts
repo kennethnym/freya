@@ -1,13 +1,16 @@
-import type {
-	AgentClientApi,
-	AgentEvent,
-	AgentServerApi,
-} from "@freya/agent-protocol"
 import type { JrpcChannel, JrpcMessage, JsonRpcMessage } from "@nym.sh/jrpc"
 
+import {
+	AgentEventKind,
+	type AgentClientApi,
+	type AgentConversationEntryCreatedEvent,
+	type AgentEvent,
+	type AgentServerApi,
+} from "@freya/agent-protocol"
 import { JsonRpcClient, JsonRpcServer } from "@nym.sh/jrpc"
 
 type JsonObject = Record<string, unknown>
+type MessagePart = { type: "text"; text: string } | { type: "json"; value: unknown }
 type SendMessageResult = Awaited<ReturnType<AgentServerApi["sendMessage"]>>
 
 interface AuthUser {
@@ -111,22 +114,16 @@ class AgentWebSocketSession implements AgentClientApi {
 	}
 
 	notify(event: AgentEvent): void {
-		switch (event.type) {
-			case "conversation_started":
+		switch (event.kind) {
+			case AgentEventKind.ConversationStarted:
 				this.conversationId = event.conversationId
 				break
-			case "message_created":
-				this.printMessage(event.text)
+			case AgentEventKind.ConversationEntryCreated:
+				this.printConversationEntry(event.entry)
 				break
-			case "tool_started":
-				console.log(`\ntool> ${event.toolName} started`)
+			case AgentEventKind.ResponseFinished:
 				break
-			case "tool_finished":
-				console.log(`tool> ${event.toolName} ${event.ok ? "finished" : "failed"}`)
-				break
-			case "message_finished":
-				break
-			case "message_failed":
+			case AgentEventKind.ResponseFailed:
 				console.log(`\nagent! ${event.error}`)
 				break
 		}
@@ -148,6 +145,31 @@ class AgentWebSocketSession implements AgentClientApi {
 		if (text === "") return
 
 		console.log(`\nagent> ${text}`)
+	}
+
+	private printConversationEntry(entry: AgentConversationEntryCreatedEvent["entry"]): void {
+		this.conversationId = entry.conversationId
+
+		switch (entry.kind) {
+			case "assistant_message":
+				this.printMessage(messagePartsText(entry.payload.parts))
+				break
+			case "tool_call":
+				console.log(`\ntool> ${payloadString(entry.payload, "toolName", "unknown")} started`)
+				break
+			case "tool_result":
+				console.log(
+					`tool> ${payloadString(entry.payload, "toolName", "unknown")} ${
+						payloadBoolean(entry.payload, "ok") ? "finished" : "failed"
+					}`,
+				)
+				break
+			case "user_message":
+			case "attachment":
+			case "context_summary":
+			case "system_note":
+				break
+		}
 	}
 }
 
@@ -680,6 +702,28 @@ function parseJsonArgument(value: string, fallback: unknown): unknown {
 	} catch (err) {
 		throw new Error(`Invalid JSON params: ${formatError(err)}`)
 	}
+}
+
+function messagePartsText(parts: MessagePart[]): string {
+	return parts.map(messagePartText).join("\n")
+}
+
+function messagePartText(part: MessagePart): string {
+	switch (part.type) {
+		case "text":
+			return part.text
+		case "json":
+			return formatJson(part.value)
+	}
+}
+
+function payloadString(payload: Record<string, unknown>, key: string, fallback: string): string {
+	const value = payload[key]
+	return typeof value === "string" ? value : fallback
+}
+
+function payloadBoolean(payload: Record<string, unknown>, key: string): boolean {
+	return payload[key] === true
 }
 
 function formatJson(value: unknown): string {

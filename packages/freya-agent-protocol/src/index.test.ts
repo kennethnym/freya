@@ -1,8 +1,7 @@
+import { ConversationEntryKind, ConversationEntryVisibility } from "@freya/core"
 import { describe, expect, test } from "bun:test"
 
-import { ConversationEntryKind, ConversationEntryVisibility } from "@freya/core"
-
-import type { AgentEvent, AgentServerApi } from "./index"
+import { AgentEventKind, type AgentEvent, type AgentServerApi } from "./index"
 
 describe("agent protocol", () => {
 	test("defines server methods and agent events", () => {
@@ -30,9 +29,12 @@ describe("agent protocol", () => {
 				return "pong"
 			},
 		}
-		const event: AgentEvent = { type: "message_finished" }
+		const event: AgentEvent = {
+			kind: AgentEventKind.ResponseFinished,
+			conversationId: "conversation-1",
+		}
 
 		expect(server.ping()).toBe("pong")
-		expect(event.type).toBe("message_finished")
+		expect(event.kind).toBe(AgentEventKind.ResponseFinished)
 	})
 })
