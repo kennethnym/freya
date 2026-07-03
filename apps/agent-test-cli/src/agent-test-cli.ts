@@ -2,13 +2,13 @@ import type {
 	AgentClientApi,
 	AgentEvent,
 	AgentServerApi,
-	SendMessageResult,
 } from "@freya/agent-protocol"
 import type { JrpcChannel, JrpcMessage, JsonRpcMessage } from "@nym.sh/jrpc"
 
 import { JsonRpcClient, JsonRpcServer } from "@nym.sh/jrpc"
 
 type JsonObject = Record<string, unknown>
+type SendMessageResult = Awaited<ReturnType<AgentServerApi["sendMessage"]>>
 
 interface AuthUser {
 	id: string
@@ -71,7 +71,6 @@ class AgentWebSocketSession implements AgentClientApi {
 	private readonly client: JsonRpcClient<AgentServerApi>
 	private readonly server: JsonRpcServer<AgentClientApi>
 	private conversationId: string | undefined
-	private responseHadText = false
 
 	private constructor(channel: WebSocketJrpcChannel) {
 		this.channel = channel
@@ -105,16 +104,9 @@ class AgentWebSocketSession implements AgentClientApi {
 	}
 
 	async ask(message: string): Promise<void> {
-		this.responseHadText = false
-
-		const result = await this.sendMessage(message)
-		if (result.conversationId) {
-			this.conversationId = result.conversationId
-		}
-
-		if (!this.responseHadText) {
-			console.log(`\nagent> ${result.message || "(no message)"}`)
-		}
+		const entry = await this.sendMessage(message)
+		this.conversationId = entry.conversationId
+		console.log(`\nqueued> ${entry.kind} ${entry.id}`)
 		console.log("")
 	}
 
@@ -156,7 +148,6 @@ class AgentWebSocketSession implements AgentClientApi {
 		if (text === "") return
 
 		console.log(`\nagent> ${text}`)
-		this.responseHadText = true
 	}
 }
 

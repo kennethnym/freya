@@ -7,6 +7,7 @@ import {
 	ContextSummaryPayload,
 	GenericObjectPayload,
 	UserMessagePayload,
+	type ConversationEntry,
 } from "@freya/core"
 
 import {
@@ -27,7 +28,7 @@ export interface ConversationStorage {
 	appendEntry(
 		conversationId: string,
 		input: AppendConversationEntryInput,
-	): Promise<ConversationEntryRow>
+	): Promise<ConversationEntry>
 	appendAttachmentEntry(
 		conversationId: string,
 		input: AppendAttachmentEntryInput,

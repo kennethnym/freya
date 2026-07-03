@@ -1,12 +1,11 @@
 import type { UserEvent } from "@freya/agent-protocol"
 
-import { ConversationEntryKind, UserMessagePayload } from "@freya/core"
-
 import type { ConversationStorage } from "../conversations/storage"
 import type { Job, JobRegistry } from "../lib/job"
 import type { AgentResponseJobPayload } from "./job"
-import { ConversationNotFoundError } from "../conversations/errors";
-import { ConversationResponseStateStatus } from "../db/schema";
+
+import { ConversationNotFoundError } from "../conversations/errors"
+import { ConversationResponseStateStatus } from "../db/schema"
 
 interface AgentMessageSchedulerConfig {
 	storage: ConversationStorage
@@ -47,27 +46,20 @@ export class AgentWorkScheduler {
 		this.jobRegistry.addEventListener("cancelled", this.eraseJob.bind(this))
 	}
 
-	async receiveMessage(conversationId: string, message: string) {
-		await this.conversationStorage.transaction(async (storage) => {
-			const now = new Date()
+	async scheduleAgentResponse(conversationId: string) {
+		const existing = this.timers.get(conversationId)
+		if (existing) {
+			clearTimeout(existing)
+		}
 
-			const entry = await storage.appendEntry(conversationId, {
-				kind: ConversationEntryKind.UserMessage,
-				payload: {
-					role: "user",
-					parts: [{ type: "text", text: message }],
-				} satisfies UserMessagePayload,
-			})
+		this.cancelCurrentJob(conversationId)
 
-			await storage.upsertConversationResponseState(conversationId, {
-				maxWaitUntil: new Date(now.getTime() + this.timing.maxWaitTime),
-				pendingSinceEntryId: entry.id,
-				status: "pending",
-			})
-
-			return entry
-		})
-		this.scheduleAgentResponse(conversationId, this.timing.waitTime)
+		this.timers.set(
+			conversationId,
+			setTimeout(() => {
+				this.enqueueAgentResponse(conversationId)
+			}, this.timing.waitTime),
+		)
 	}
 
 	async receiveUserEvent(conversationId: string, event: UserEvent) {
@@ -92,11 +84,11 @@ export class AgentWorkScheduler {
 	}
 
 	private async delayAgentResponse(conversationId: string) {
-		this.cancelCurrentJob(conversationId);
+		this.cancelCurrentJob(conversationId)
 
 		try {
 			const ok = await this.conversationStorage.transaction(async (storage) => {
-				const state = await storage.findConversationResponseState(conversationId);
+				const state = await storage.findConversationResponseState(conversationId)
 				if (state && state.status !== ConversationResponseStateStatus.Failed) {
 					await storage.updateConversationResponseState(conversationId, {
 						status: ConversationResponseStateStatus.Pending,
@@ -109,7 +101,7 @@ export class AgentWorkScheduler {
 				return false
 			})
 			if (ok) {
-				await this.scheduleAgentResponse(conversationId, this.timing.waitTime)
+				await this.scheduleAgentResponse(conversationId)
 			}
 		} catch (error) {
 			if (error instanceof ConversationNotFoundError) {
@@ -121,22 +113,6 @@ export class AgentWorkScheduler {
 			}
 			return
 		}
-	}
-
-	private async scheduleAgentResponse(conversationId: string, delay: number) {
-		const existing = this.timers.get(conversationId)
-		if (existing) {
-			clearTimeout(existing)
-		}
-
-		this.cancelCurrentJob(conversationId)
-
-		this.timers.set(
-			conversationId,
-			setTimeout(() => {
-				this.enqueueAgentResponse(conversationId)
-			}, delay),
-		)
 	}
 
 	/**

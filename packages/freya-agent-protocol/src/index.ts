@@ -1,3 +1,5 @@
+import type { ConversationEntry } from "@freya/core"
+
 export type AgentEvent =
 	| { type: "conversation_started"; conversationId: string }
 	| { type: "message_created"; text: string }
@@ -9,7 +11,7 @@ export type AgentEvent =
 export type UserEvent = { type: "typing" }
 
 export interface AgentServerApi {
-	sendMessage(message: string): Promise<boolean>
+	sendMessage(message: string): Promise<ConversationEntry>
 	notify(event: UserEvent): void
 	ping(): "pong"
 }

@@ -1,5 +1,7 @@
 import type { UserEvent } from "@freya/agent-protocol"
 
+import { ConversationEntry, ConversationEntryKind, UserMessagePayload } from "@freya/core"
+
 import type { ConversationStorage } from "../conversations/storage"
 import type { NotificationCentral } from "../notification/notification-central"
 import type { UserSessionManager } from "../session"
@@ -9,6 +11,11 @@ import { Worker } from "../lib/worker"
 import { AgentResponseJobExecutor, type AgentResponseJobPayload } from "./job"
 import { AgentResponseReconciler } from "./reconciler"
 import { AgentWorkScheduler } from "./scheduler"
+
+const AgentResponseTiming = {
+	waitTime: 5 * 1000,
+	maxWaitTime: 5 * 1000 * 60,
+} as const
 
 interface AgentServiceConfig {
 	storage: ConversationStorage
@@ -30,8 +37,8 @@ export class AgentService {
 		this.scheduler = new AgentWorkScheduler({
 			storage,
 			jobRegistry: this.jobRegistry,
-			waitTIme: 5 * 1000,
-			maxWaitTime: 5 * 1000 * 60,
+			waitTIme: AgentResponseTiming.waitTime,
+			maxWaitTime: AgentResponseTiming.maxWaitTime,
 		})
 		this.reconciler = new AgentResponseReconciler({
 			signal,
@@ -56,8 +63,30 @@ export class AgentService {
 		this.reconciler.start()
 	}
 
-	async scheduleAgentResponse(conversationId: string, message: string) {
-		await this.scheduler.receiveMessage(conversationId, message)
+	async scheduleAgentResponse(conversationId: string, message: string): Promise<ConversationEntry> {
+		const createdEntry = await this.storage.transaction(async (storage) => {
+			const now = new Date()
+
+			const entry = await storage.appendEntry(conversationId, {
+				kind: ConversationEntryKind.UserMessage,
+				payload: {
+					role: "user",
+					parts: [{ type: "text", text: message }],
+				} satisfies UserMessagePayload,
+			})
+
+			await storage.upsertConversationResponseState(conversationId, {
+				maxWaitUntil: new Date(now.getTime() + AgentResponseTiming.maxWaitTime),
+				pendingSinceEntryId: entry.id,
+				status: "pending",
+			})
+
+			return entry
+		})
+
+		await this.scheduler.scheduleAgentResponse(conversationId)
+
+		return createdEntry
 	}
 
 	async handleUserEvent(conversationId: string, event: UserEvent) {

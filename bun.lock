@@ -158,6 +158,9 @@
     "packages/freya-agent-protocol": {
       "name": "@freya/agent-protocol",
       "version": "0.0.0",
+      "dependencies": {
+        "@freya/core": "workspace:*",
+      },
     },
     "packages/freya-components": {
       "name": "@freya/components",

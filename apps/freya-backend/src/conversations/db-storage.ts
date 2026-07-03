@@ -7,6 +7,7 @@ import {
 	ContextSummaryPayload,
 	GenericObjectPayload,
 	UserMessagePayload,
+	type ConversationEntry,
 	type ConversationEntryPayload,
 } from "@freya/core"
 import { type } from "arktype"
@@ -38,6 +39,7 @@ import {
 	user,
 } from "../db/schema.ts"
 import { ConversationNotFoundError } from "./errors.ts"
+import { conversationEntryFromRow } from "./serialization.ts"
 
 const conversationEntryKind = type.enumerated(...Object.values(ConversationEntryKind))
 const conversationEntryVisibility = type.enumerated(...Object.values(ConversationEntryVisibility))
@@ -93,8 +95,9 @@ export class DrizzleConversationStorage implements ConversationStorage {
 	async appendEntry(
 		conversationId: string,
 		input: AppendConversationEntryInput,
-	): Promise<ConversationEntryRow> {
-		return this.write((db) => appendEntryToConversation(db, null, conversationId, input))
+	): Promise<ConversationEntry> {
+		const row = await this.write((db) => appendEntryToConversation(db, null, conversationId, input))
+		return conversationEntryFromRow(row)
 	}
 
 	async appendAttachmentEntry(
@@ -377,8 +380,10 @@ export function conversations(db: Database, userId: string) {
 		appendEntry(
 			conversationId: string,
 			input: AppendConversationEntryInput,
-		): Promise<ConversationEntryRow> {
-			return db.transaction((tx) => appendEntryToConversation(tx, userId, conversationId, input))
+		): Promise<ConversationEntry> {
+			return db.transaction((tx) =>
+				appendEntryToConversation(tx, userId, conversationId, input).then(conversationEntryFromRow),
+			)
 		},
 
 		appendAttachmentEntry(

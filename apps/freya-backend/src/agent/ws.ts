@@ -1,4 +1,5 @@
 import type { AgentClientApi, AgentServerApi, UserEvent } from "@freya/agent-protocol"
+import type { ConversationEntry } from "@freya/core"
 import type { JrpcChannel, JrpcMessage, JsonRpcMessage } from "@nym.sh/jrpc"
 import type { Hono, MiddlewareHandler } from "hono"
 import type { WSContext } from "hono/ws"
@@ -119,13 +120,12 @@ class AgentRpcConnection implements AgentServerApi {
 		this.agentService.handleUserEvent(this.conversationId, event)
 	}
 
-	async sendMessage(message: string): Promise<boolean> {
+	async sendMessage(message: string): Promise<ConversationEntry> {
 		try {
-			await this.agentService.scheduleAgentResponse(this.conversationId, message)
-			return true
+			return await this.agentService.scheduleAgentResponse(this.conversationId, message)
 		} catch (error) {
-			console.log("[agent rpc connection] error when scheduling agent response", error)
-			return false
+			console.error("[agent rpc connection] error when scheduling agent response", error)
+			throw error
 		}
 	}
 
