@@ -1,5 +1,3 @@
-import type { AgentEvent } from "@freya/agent-protocol"
-
 import { describe, expect, test } from "bun:test"
 
 import type {
@@ -9,9 +7,12 @@ import type {
 	QueryAgentEventListener,
 	QueryAgentStreamEvent,
 } from "./query-agent.ts"
-import type { AgentResponseStreamItem } from "./streaming.ts"
 
-import { streamAgentResponse } from "./streaming.ts"
+import {
+	AgentResponseStreamEventKind,
+	streamAgentResponse,
+	type AgentResponseStreamEvent,
+} from "./streaming.ts"
 
 class FakeQueryAgent implements QueryAgent {
 	readonly inputs: QueryAgentAsk[] = []
@@ -47,23 +48,22 @@ describe("streamAgentResponse", () => {
 			{ type: "done" },
 		])
 
-		const { events, result } = await collectStreamAgentResponse(
+		const events = await collectStreamAgentResponse(
 			streamAgentResponse({
 				agent,
 				input: { message: "hello" },
 			}),
 		)
 
-		expect(result).toEqual({
-			conversationId: "conversation-1",
-			message: "First message\nSecond message\nThird message",
-		})
 		expect(events).toEqual([
-			{ type: "conversation_started", conversationId: "conversation-1" },
-			{ type: "message_created", text: "First message" },
-			{ type: "message_created", text: "Second message" },
-			{ type: "message_created", text: "Third message" },
-			{ type: "message_finished" },
+			{
+				kind: AgentResponseStreamEventKind.ConversationStarted,
+				conversationId: "conversation-1",
+			},
+			{ kind: AgentResponseStreamEventKind.AssistantMessage, text: "First message" },
+			{ kind: AgentResponseStreamEventKind.AssistantMessage, text: "Second message" },
+			{ kind: AgentResponseStreamEventKind.AssistantMessage, text: "Third message" },
+			{ kind: AgentResponseStreamEventKind.ResponseFinished },
 		])
 	})
 
@@ -74,22 +74,21 @@ describe("streamAgentResponse", () => {
 			{ type: "done" },
 		])
 
-		const { events, result } = await collectStreamAgentResponse(
+		const events = await collectStreamAgentResponse(
 			streamAgentResponse({
 				agent,
 				input: { message: "hello" },
 			}),
 		)
 
-		expect(result).toEqual({
-			conversationId: "conversation-1",
-			message: "  const value = 1  \n\n  return value",
-		})
 		expect(events).toEqual([
-			{ type: "conversation_started", conversationId: "conversation-1" },
-			{ type: "message_created", text: "  const value = 1  " },
-			{ type: "message_created", text: "  return value" },
-			{ type: "message_finished" },
+			{
+				kind: AgentResponseStreamEventKind.ConversationStarted,
+				conversationId: "conversation-1",
+			},
+			{ kind: AgentResponseStreamEventKind.AssistantMessage, text: "  const value = 1  " },
+			{ kind: AgentResponseStreamEventKind.AssistantMessage, text: "  return value" },
+			{ kind: AgentResponseStreamEventKind.ResponseFinished },
 		])
 	})
 
@@ -106,44 +105,38 @@ describe("streamAgentResponse", () => {
 			agent,
 			input: { message: "hello" },
 		})
-		const events: AgentEvent[] = []
+		const events: AgentResponseStreamEvent[] = []
 
 		await expect(collectStreamAgentResponse(stream, events)).rejects.toThrow("model unavailable")
 
 		expect(events).toEqual([
-			{ type: "conversation_started", conversationId: "conversation-1" },
-			{ type: "message_created", text: "I'll check" },
-			{ type: "tool_started", toolName: "calendar" },
-			{ type: "tool_finished", toolName: "calendar", ok: false },
-			{ type: "message_created", text: "That failed" },
-			{ type: "message_failed", error: "model unavailable" },
+			{
+				kind: AgentResponseStreamEventKind.ConversationStarted,
+				conversationId: "conversation-1",
+			},
+			{ kind: AgentResponseStreamEventKind.AssistantMessage, text: "I'll check" },
+			{ kind: AgentResponseStreamEventKind.ToolStarted, toolName: "calendar" },
+			{
+				kind: AgentResponseStreamEventKind.ToolFinished,
+				toolName: "calendar",
+				ok: false,
+			},
+			{ kind: AgentResponseStreamEventKind.AssistantMessage, text: "That failed" },
+			{
+				kind: AgentResponseStreamEventKind.ResponseFailed,
+				error: "model unavailable",
+			},
 		])
 	})
 })
 
 async function collectStreamAgentResponse(
-	stream: AsyncIterable<AgentResponseStreamItem>,
-	events: AgentEvent[] = [],
-): Promise<{
-	events: AgentEvent[]
-	result: { message: string; conversationId: string }
-}> {
-	let result: { message: string; conversationId: string } | null = null
-
-	for await (const item of stream) {
-		switch (item.type) {
-			case "event":
-				events.push(item.event)
-				break
-			case "result":
-				result = item.result
-				break
-		}
+	stream: AsyncIterable<AgentResponseStreamEvent>,
+	events: AgentResponseStreamEvent[] = [],
+): Promise<AgentResponseStreamEvent[]> {
+	for await (const event of stream) {
+		events.push(event)
 	}
 
-	if (!result) {
-		throw new Error("Expected stream result")
-	}
-
-	return { events, result }
+	return events
 }

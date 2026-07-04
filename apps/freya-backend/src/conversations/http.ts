@@ -1,13 +1,7 @@
 import type { Context, Hono } from "hono"
 
 import {
-	AssistantMessagePayload,
-	AttachmentPayload,
-	ConversationEntryKind,
 	ConversationEntryVisibility,
-	ContextSummaryPayload,
-	GenericObjectPayload,
-	UserMessagePayload,
 	type Conversation,
 	type ConversationEntry,
 } from "@freya/core"
@@ -16,10 +10,11 @@ import { createMiddleware } from "hono/factory"
 
 import type { AuthSessionMiddleware } from "../auth/session-middleware.ts"
 import type { Database } from "../db/index.ts"
-import type { ConversationEntryRow, ConversationRow } from "./storage.ts"
+import type { ConversationRow } from "./storage.ts"
 
+import { conversations } from "./db-storage.ts"
 import { ConversationNotFoundError } from "./errors.ts"
-import { conversations } from "./storage.ts"
+import { conversationEntryFromRow } from "./serialization.ts"
 
 /** Hono environment populated by the conversations route middleware. */
 type Env = {
@@ -86,7 +81,7 @@ async function handleListEntries(c: Context<Env>) {
 			visibility: ConversationEntryVisibility.UserVisible,
 		})
 		const response: ListConversationEntriesResponse = {
-			entries: entries.map(serializeConversationEntry),
+			entries: entries.map(conversationEntryFromRow),
 		}
 
 		return c.json(response)
@@ -104,83 +99,4 @@ function serializeConversation(row: ConversationRow): Conversation {
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt.toISOString(),
 	}
-}
-
-function serializeConversationEntry(row: ConversationEntryRow): ConversationEntry {
-	const base = {
-		id: row.id,
-		conversationId: row.conversationId,
-		sequence: row.sequence,
-		visibility: row.visibility,
-		metadata: row.metadata,
-		createdAt: row.createdAt.toISOString(),
-	}
-
-	switch (row.kind) {
-		case ConversationEntryKind.UserMessage:
-			return {
-				...base,
-				kind: row.kind,
-				fileId: nullFileId(row),
-				payload: UserMessagePayload.assert(row.payload),
-			}
-		case ConversationEntryKind.AssistantMessage:
-			return {
-				...base,
-				kind: row.kind,
-				fileId: nullFileId(row),
-				payload: AssistantMessagePayload.assert(row.payload),
-			}
-		case ConversationEntryKind.Attachment:
-			return {
-				...base,
-				kind: row.kind,
-				fileId: requireFileId(row),
-				payload: AttachmentPayload.assert(row.payload),
-			}
-		case ConversationEntryKind.ToolCall:
-			return {
-				...base,
-				kind: row.kind,
-				fileId: nullFileId(row),
-				payload: GenericObjectPayload.assert(row.payload),
-			}
-		case ConversationEntryKind.ToolResult:
-			return {
-				...base,
-				kind: row.kind,
-				fileId: nullFileId(row),
-				payload: GenericObjectPayload.assert(row.payload),
-			}
-		case ConversationEntryKind.ContextSummary:
-			return {
-				...base,
-				kind: row.kind,
-				fileId: nullFileId(row),
-				payload: ContextSummaryPayload.assert(row.payload),
-			}
-		case ConversationEntryKind.SystemNote:
-			return {
-				...base,
-				kind: row.kind,
-				fileId: nullFileId(row),
-				payload: GenericObjectPayload.assert(row.payload),
-			}
-	}
-}
-
-function requireFileId(row: ConversationEntryRow): string {
-	if (!row.fileId) {
-		throw new Error(`Conversation attachment entry "${row.id}" is missing a file id`)
-	}
-
-	return row.fileId
-}
-
-function nullFileId(row: ConversationEntryRow): null {
-	if (row.fileId !== null) {
-		throw new Error(`Conversation entry "${row.id}" unexpectedly references a file`)
-	}
-
-	return null
 }

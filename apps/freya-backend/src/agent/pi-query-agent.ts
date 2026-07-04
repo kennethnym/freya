@@ -166,6 +166,16 @@ export class PiQueryAgent implements QueryAgent {
 			this.handlePiEvent(event, pushRunEvent)
 		})
 
+		input.signal?.addEventListener(
+			"abort",
+			async () => {
+				await session.abort()
+				close()
+				unsubscribe()
+			},
+			{ once: true },
+		)
+
 		session
 			.prompt(input.message)
 			.then(() => {

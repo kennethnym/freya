@@ -26,9 +26,12 @@ export interface ConversationStorage {
 	appendEntry(
 		conversationId: string,
 		input: AppendConversationEntryInput,
-	): Promise<ConversationStorageEntry>
+	): Promise<ConversationStorageAppendEntryResult>
 	listEntries(conversationId: string): Promise<ConversationStorageEntry[]>
 }
+
+/** Minimal fields needed immediately after appending a conversation entry. */
+export type ConversationStorageAppendEntryResult = Pick<ConversationEntryRow, "id" | "sequence">
 
 /** Minimal persisted entry shape needed by recording and replay agents. */
 export type ConversationStorageEntry = Pick<

@@ -14,7 +14,6 @@ interface FeedResponse {
 	items: Array<{
 		id: string
 		type: string
-		priority: number
 		timestamp: string
 		data: Record<string, unknown>
 	}>
@@ -85,7 +84,7 @@ mock.module("../sources/user-sources.ts", () => ({
 	}),
 }))
 
-mock.module("../conversations/storage.ts", () => ({
+mock.module("../conversations/db-storage.ts", () => ({
 	conversations: (_db: Database, userId: string) => ({
 		async getOrCreateConversation() {
 			return { id: `conversation-${userId}` }
@@ -118,7 +117,6 @@ describe("GET /api/feed", () => {
 				id: "item-1",
 				sourceId: "test",
 				type: "test",
-				priority: 0.8,
 				timestamp: new Date("2025-01-01T00:00:00.000Z"),
 				data: { value: 42 },
 			},
@@ -149,7 +147,6 @@ describe("GET /api/feed", () => {
 		expect(body.items).toHaveLength(1)
 		expect(body.items[0]!.id).toBe("item-1")
 		expect(body.items[0]!.type).toBe("test")
-		expect(body.items[0]!.priority).toBe(0.8)
 		expect(body.items[0]!.timestamp).toBe("2025-01-01T00:00:00.000Z")
 		expect(body.errors).toHaveLength(0)
 	})
@@ -160,7 +157,6 @@ describe("GET /api/feed", () => {
 				id: "fresh-1",
 				sourceId: "test",
 				type: "test",
-				priority: 0.5,
 				timestamp: new Date("2025-06-01T12:00:00.000Z"),
 				data: { fresh: true },
 			},

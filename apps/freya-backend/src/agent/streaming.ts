@@ -1,10 +1,42 @@
-import type { AgentEvent, SendMessageResult } from "@freya/agent-protocol"
-
 import type { QueryAgent, QueryAgentAsk } from "./query-agent.ts"
 
-export type AgentResponseStreamItem =
-	| { type: "event"; event: AgentEvent }
-	| { type: "result"; result: SendMessageResult }
+export const AgentResponseStreamEventKind = {
+	ConversationStarted: "conversation_started",
+	AssistantMessage: "assistant_message",
+	ToolStarted: "tool_started",
+	ToolFinished: "tool_finished",
+	ResponseFinished: "response_finished",
+	ResponseFailed: "response_failed",
+} as const
+
+export type AgentResponseStreamEventKind =
+	(typeof AgentResponseStreamEventKind)[keyof typeof AgentResponseStreamEventKind]
+
+export type AgentResponseStreamEvent =
+	| {
+			kind: typeof AgentResponseStreamEventKind.ConversationStarted
+			conversationId: string
+	  }
+	| {
+			kind: typeof AgentResponseStreamEventKind.AssistantMessage
+			text: string
+	  }
+	| {
+			kind: typeof AgentResponseStreamEventKind.ToolStarted
+			toolName: string
+	  }
+	| {
+			kind: typeof AgentResponseStreamEventKind.ToolFinished
+			toolName: string
+			ok: boolean
+	  }
+	| {
+			kind: typeof AgentResponseStreamEventKind.ResponseFinished
+	  }
+	| {
+			kind: typeof AgentResponseStreamEventKind.ResponseFailed
+			error: string
+	  }
 
 export async function* streamAgentResponse({
 	agent,
@@ -12,18 +44,16 @@ export async function* streamAgentResponse({
 }: {
 	agent: QueryAgent
 	input: QueryAgentAsk
-}): AsyncGenerator<AgentResponseStreamItem, void, void> {
-	let message = ""
-	let conversationId: string | null = null
+}): AsyncGenerator<AgentResponseStreamEvent, void, void> {
 	const splitter = new AgentMessageSplitter()
 
-	function messageEvent(text: string): AgentResponseStreamItem | null {
+	function messageEvent(text: string): AgentResponseStreamEvent | null {
 		if (text.trim() === "") return null
 
-		return { type: "event", event: { type: "message_created", text } }
+		return { kind: AgentResponseStreamEventKind.AssistantMessage, text }
 	}
 
-	function flushPendingMessage(): AgentResponseStreamItem | null {
+	function flushPendingMessage(): AgentResponseStreamEvent | null {
 		const text = splitter.flush()
 		if (text === null) return null
 
@@ -31,14 +61,19 @@ export async function* streamAgentResponse({
 	}
 
 	for await (const event of agent.ask(input)) {
+		if (input.signal?.aborted) {
+			break
+		}
+
 		switch (event.type) {
 			case "conversation":
-				conversationId = event.conversationId
-				yield { type: "event", event: { type: "conversation_started", conversationId } }
+				yield {
+					kind: AgentResponseStreamEventKind.ConversationStarted,
+					conversationId: event.conversationId,
+				}
 				break
 
 			case "text_delta":
-				message += event.text
 				for (const line of splitter.push(event.text)) {
 					const item = messageEvent(line)
 					if (item) yield item
@@ -50,7 +85,10 @@ export async function* streamAgentResponse({
 					const item = flushPendingMessage()
 					if (item) yield item
 				}
-				yield { type: "event", event: { type: "tool_started", toolName: event.toolName } }
+				yield {
+					kind: AgentResponseStreamEventKind.ToolStarted,
+					toolName: event.toolName,
+				}
 				break
 
 			case "tool_end":
@@ -59,12 +97,9 @@ export async function* streamAgentResponse({
 					if (item) yield item
 				}
 				yield {
-					type: "event",
-					event: {
-						type: "tool_finished",
-						toolName: event.toolName,
-						ok: event.ok,
-					},
+					kind: AgentResponseStreamEventKind.ToolFinished,
+					toolName: event.toolName,
+					ok: event.ok,
 				}
 				break
 
@@ -73,7 +108,10 @@ export async function* streamAgentResponse({
 					const item = flushPendingMessage()
 					if (item) yield item
 				}
-				yield { type: "event", event: { type: "message_failed", error: event.message } }
+				yield {
+					kind: AgentResponseStreamEventKind.ResponseFailed,
+					error: event.message,
+				}
 				throw new Error(event.message)
 
 			case "done":
@@ -81,26 +119,15 @@ export async function* streamAgentResponse({
 					const item = flushPendingMessage()
 					if (item) yield item
 				}
-				const result = createResult(message, conversationId)
-				yield { type: "event", event: { type: "message_finished" } }
-				yield { type: "result", result }
+				yield { kind: AgentResponseStreamEventKind.ResponseFinished }
 				return
 		}
 	}
 
 	const item = flushPendingMessage()
 	if (item) yield item
-	const result = createResult(message, conversationId)
-	yield { type: "event", event: { type: "message_finished" } }
-	yield { type: "result", result }
-}
 
-function createResult(message: string, conversationId: string | null): SendMessageResult {
-	if (!conversationId) {
-		throw new Error("Agent response stream ended without a conversation id")
-	}
-
-	return { message, conversationId }
+	yield { kind: AgentResponseStreamEventKind.ResponseFinished }
 }
 
 class AgentMessageSplitter {
