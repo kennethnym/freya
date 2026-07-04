@@ -29,7 +29,9 @@ export {
 	SystemNoteConversationEntry,
 	TextMessagePart,
 	ToolCallConversationEntry,
+	ToolCallPayload,
 	ToolResultConversationEntry,
+	ToolResultPayload,
 	UserMessagePayload,
 	UserMessageConversationEntry,
 } from "./conversation"
