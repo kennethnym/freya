@@ -6,5 +6,8 @@
 	"types": "src/index.ts",
 	"scripts": {
 		"test": "bun test ./src"
+	},
+	"dependencies": {
+		"@freya/core": "workspace:*"
 	}
 }
