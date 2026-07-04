@@ -9,11 +9,16 @@ import { upgradeWebSocket, websocket } from "hono/bun"
 
 import type { AuthSessionMiddleware } from "../auth/session-middleware.ts"
 import type { ConversationStorage } from "../conversations/storage.ts"
+import type { AppLogger } from "../lib/logger.ts"
 import type {
 	NotificationCentral,
 	NotificationPayload,
 } from "../notification/notification-central.ts"
 import type { AgentService } from "./service.ts"
+
+import { logger } from "../lib/logger.ts"
+
+const agentWebSocketLogger = logger.child({ component: "agent_ws" })
 
 interface AgentWebSocketHandlerDeps {
 	agentService: AgentService
@@ -60,7 +65,10 @@ export function registerAgentWebSocketHandlers(
 				onOpen(_event, ws) {
 					channel.attach(ws)
 					void connection.start().catch((err: unknown) => {
-						console.error("[query] Agent WebSocket JSON-RPC failed:", errorMessage(err))
+						agentWebSocketLogger.error(
+							{ err, conversationId: conversation.id },
+							"agent websocket JSON-RPC failed",
+						)
 						ws.close(1011, "Agent RPC connection failed")
 					})
 				},
@@ -82,6 +90,7 @@ class AgentRpcConnection implements AgentServerApi {
 	private readonly client: JsonRpcClient<AgentClientApi>
 	private readonly server: JsonRpcServer<AgentServerApi>
 	private readonly agentService: AgentService
+	private readonly logger: AppLogger
 	private readonly notificationCentral: NotificationCentral
 	private readonly userId: string
 	private readonly conversationId: string
@@ -103,6 +112,7 @@ class AgentRpcConnection implements AgentServerApi {
 	}) {
 		this.client = new JsonRpcClient<AgentClientApi>(channel)
 		this.agentService = agentService
+		this.logger = agentWebSocketLogger.child({ conversationId })
 		this.notificationCentral = notificationCentral
 		this.userId = userId
 		this.conversationId = conversationId
@@ -117,14 +127,19 @@ class AgentRpcConnection implements AgentServerApi {
 	}
 
 	notify(event: UserEvent): void {
-		this.agentService.handleUserEvent(this.conversationId, event)
+		void this.agentService.handleUserEvent(this.conversationId, event).catch((err: unknown) => {
+			this.logger.error({ err, eventType: event.type }, "failed to handle agent user event")
+		})
 	}
 
 	async sendMessage(message: string): Promise<ConversationEntry> {
 		try {
 			return await this.agentService.scheduleAgentResponse(this.conversationId, message)
 		} catch (error) {
-			console.error("[agent rpc connection] error when scheduling agent response", error)
+			this.logger.error(
+				{ err: error, messageLength: message.length },
+				"agent rpc schedule agent response failed",
+			)
 			throw error
 		}
 	}
@@ -238,8 +253,4 @@ class HonoWebSocketJrpcChannel implements JrpcChannel {
 
 		this.queue.push(msg)
 	}
-}
-
-function errorMessage(error: unknown): string {
-	return error instanceof Error ? error.message : String(error)
 }

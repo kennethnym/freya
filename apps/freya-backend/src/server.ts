@@ -21,6 +21,7 @@ import { createLlmClient } from "./enhancement/llm-client.ts"
 import { GoogleMapsSourceProvider } from "./google-maps/provider.ts"
 import { CredentialEncryptor } from "./lib/crypto.ts"
 import { ensureEnv } from "./lib/env.ts"
+import { logger } from "./lib/logger.ts"
 import { registerLocationHttpHandlers } from "./location/http.ts"
 import { LocationSourceProvider } from "./location/provider.ts"
 import { NotificationCentral } from "./notification/notification-central.ts"
@@ -77,7 +78,10 @@ function main() {
 		},
 	})
 	if (!piApiKey) {
-		console.warn("[query] PI_API_KEY or OPENROUTER_API_KEY not set — query agent unavailable")
+		logger.warn(
+			{ component: "query_agent" },
+			"PI_API_KEY or OPENROUTER_API_KEY not set; query agent unavailable",
+		)
 	}
 
 	const notificationCentral = new NotificationCentral()
@@ -87,6 +91,7 @@ function main() {
 		storage: conversationStorage,
 		userSessionManager: sessionManager,
 		signal: abortController.signal,
+		logger,
 	})
 
 	const app = new Hono()

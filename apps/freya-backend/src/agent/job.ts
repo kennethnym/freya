@@ -10,11 +10,13 @@ import { type } from "arktype"
 
 import type { ConversationStorage } from "../conversations/storage"
 import type { Job } from "../lib/job"
+import type { AppLogger } from "../lib/logger"
 import type { JobExecutor } from "../lib/worker"
 import type { NotificationCentral } from "../notification/notification-central"
 import type { UserSessionManager } from "../session"
 
 import { ConversationResponseStateStatus } from "../db/schema"
+import { logger as rootLogger } from "../lib/logger"
 import {
 	AgentResponseStreamEventKind,
 	streamAgentResponse,
@@ -27,61 +29,93 @@ export interface AgentResponseJobPayload {
 
 interface AgentResponseWorkerConfig {
 	conversationStorage: ConversationStorage
+	logger?: AppLogger
 	userSessionManager: UserSessionManager
 	notificationCentral: NotificationCentral
 }
 
 export class AgentResponseJobExecutor implements JobExecutor<AgentResponseJobPayload> {
 	private conversationStorage: ConversationStorage
+	private logger: AppLogger
 	private userSessionManager: UserSessionManager
 	private notificationCentral: NotificationCentral
 
 	constructor({
 		conversationStorage,
+		logger,
 		userSessionManager,
 		notificationCentral,
 	}: AgentResponseWorkerConfig) {
 		this.conversationStorage = conversationStorage
+		this.logger = logger ?? rootLogger.child({ component: "agent_response_job" })
 		this.userSessionManager = userSessionManager
 		this.notificationCentral = notificationCentral
 	}
 
 	async execute(job: Job<AgentResponseJobPayload>): Promise<void> {
-		const conversation = await this.conversationStorage.findConversation(job.payload.conversationId)
+		const conversationId = job.payload.conversationId
+		const startedAt = Date.now()
+		const logger = this.logger.child({ conversationId, jobId: job.id })
+
+		logger.info("agent response job started")
+
+		const conversation = await this.conversationStorage.findConversation(conversationId)
 		if (!conversation) {
+			logger.warn("conversation not found for agent response job")
 			return
 		}
 
-		const claimed = await this.conversationStorage.claimPendingConversationResponseState(
-			job.payload.conversationId,
-		)
+		const claimed =
+			await this.conversationStorage.claimPendingConversationResponseState(conversationId)
 		if (!claimed) {
 			// conversation response state not found or already claimed
+			logger.debug("agent response state was not claimable")
 			return
 		}
-
-		const pendingEntries = await this.conversationStorage.listPendingUserConversationEntries(
-			conversation.userId,
-			conversation.id,
-		)
-		if (pendingEntries.length === 0) {
-			await this.conversationStorage.clearConversationResponseState(job.payload.conversationId)
-			return
-		}
-
-		const message = pendingEntries.reduce((acc, entry) => {
-			const payload = UserMessagePayload(entry.payload)
-			if (payload instanceof type.errors) {
-				return acc
-			}
-			return (
-				acc + "\n" + payload.parts.reduce((msg, p) => (p.type === "text" ? msg + p.text : msg), "")
-			)
-		}, "")
-
-		const session = await this.userSessionManager.getOrCreate(conversation.userId)
 
 		try {
+			const pendingEntries = await this.conversationStorage.listPendingUserConversationEntries(
+				conversation.userId,
+				conversation.id,
+			)
+			if (pendingEntries.length === 0) {
+				await this.conversationStorage.clearConversationResponseState(conversationId)
+				logger.debug("agent response state cleared with no pending user entries")
+				return
+			}
+
+			let invalidPendingEntryCount = 0
+			const message = pendingEntries.reduce((acc, entry) => {
+				const payload = UserMessagePayload(entry.payload)
+				if (payload instanceof type.errors) {
+					invalidPendingEntryCount += 1
+					return acc
+				}
+				return (
+					acc +
+					"\n" +
+					payload.parts.reduce((msg, p) => (p.type === "text" ? msg + p.text : msg), "")
+				)
+			}, "")
+
+			logger.debug(
+				{
+					invalidPendingEntryCount,
+					messageLength: message.length,
+					pendingEntryCount: pendingEntries.length,
+				},
+				"agent response pending user entries loaded",
+			)
+
+			if (invalidPendingEntryCount > 0) {
+				logger.warn(
+					{ invalidPendingEntryCount },
+					"invalid pending user entries skipped for agent response",
+				)
+			}
+
+			const session = await this.userSessionManager.getOrCreate(conversation.userId)
+
 			for await (const event of streamAgentResponse({
 				agent: session.agent,
 				input: {
@@ -94,21 +128,36 @@ export class AgentResponseJobExecutor implements JobExecutor<AgentResponseJobPay
 					break
 				}
 
-				await this.handleStreamEvent(event, conversation.id, conversation.userId)
+				await this.handleStreamEvent(event, conversation.id, conversation.userId, logger)
 			}
 
 			// if job is aborted, stop everything immediately, including clean up.
 			// the aborter is assumed responsibility on how to proceed.
 			if (!job.signal.aborted) {
-				await this.conversationStorage.clearConversationResponseState(job.payload.conversationId)
+				await this.conversationStorage.clearConversationResponseState(conversationId)
+				logger.info({ durationMs: Date.now() - startedAt }, "agent response job completed")
+			} else {
+				logger.warn({ durationMs: Date.now() - startedAt }, "agent response job aborted")
 			}
 		} catch (err) {
-			console.error("[agent job executor] error streaming agent response:", err)
-			if (!job.signal.aborted) {
+			const durationMs = Date.now() - startedAt
+			if (job.signal.aborted) {
+				logger.warn({ durationMs, err }, "agent response job aborted")
+				return
+			}
+
+			logger.error({ durationMs, err }, "agent response job failed")
+			try {
 				await this.conversationStorage.markResponseStateStatus(
-					[job.payload.conversationId],
+					[conversationId],
 					ConversationResponseStateStatus.Failed,
 				)
+				logger.warn(
+					{ status: ConversationResponseStateStatus.Failed },
+					"conversation response state marked failed",
+				)
+			} catch (markErr) {
+				logger.error({ err: markErr }, "failed to mark conversation response state failed")
 			}
 		}
 	}
@@ -117,6 +166,7 @@ export class AgentResponseJobExecutor implements JobExecutor<AgentResponseJobPay
 		event: AgentResponseStreamEvent,
 		conversationId: string,
 		userId: string,
+		logger: AppLogger,
 	): Promise<void> {
 		switch (event.kind) {
 			case AgentResponseStreamEventKind.ConversationStarted:
@@ -127,6 +177,13 @@ export class AgentResponseJobExecutor implements JobExecutor<AgentResponseJobPay
 						conversationId: event.conversationId,
 					},
 				})
+				logger.debug(
+					{
+						eventKind: event.kind,
+						upstreamConversationId: event.conversationId,
+					},
+					"agent conversation started",
+				)
 				break
 
 			case AgentResponseStreamEventKind.AssistantMessage: {
@@ -144,6 +201,14 @@ export class AgentResponseJobExecutor implements JobExecutor<AgentResponseJobPay
 						entry,
 					},
 				})
+				logger.debug(
+					{
+						entryId: entry.id,
+						eventKind: event.kind,
+						textLength: event.text.length,
+					},
+					"agent assistant message persisted",
+				)
 				break
 			}
 
@@ -161,6 +226,14 @@ export class AgentResponseJobExecutor implements JobExecutor<AgentResponseJobPay
 						entry,
 					},
 				})
+				logger.debug(
+					{
+						entryId: entry.id,
+						eventKind: event.kind,
+						toolName: event.toolName,
+					},
+					"agent tool call persisted",
+				)
 				break
 			}
 
@@ -179,6 +252,15 @@ export class AgentResponseJobExecutor implements JobExecutor<AgentResponseJobPay
 						entry,
 					},
 				})
+				logger.debug(
+					{
+						entryId: entry.id,
+						eventKind: event.kind,
+						ok: event.ok,
+						toolName: event.toolName,
+					},
+					"agent tool result persisted",
+				)
 				break
 			}
 
@@ -190,6 +272,7 @@ export class AgentResponseJobExecutor implements JobExecutor<AgentResponseJobPay
 						conversationId,
 					},
 				})
+				logger.info({ eventKind: event.kind }, "agent response finished")
 				break
 
 			case AgentResponseStreamEventKind.ResponseFailed:
@@ -201,6 +284,10 @@ export class AgentResponseJobExecutor implements JobExecutor<AgentResponseJobPay
 						error: event.error,
 					},
 				})
+				logger.warn(
+					{ agentError: event.error, eventKind: event.kind },
+					"agent response failed event received",
+				)
 				break
 		}
 	}
