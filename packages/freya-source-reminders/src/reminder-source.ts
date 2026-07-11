@@ -221,7 +221,9 @@ export class ReminderSource implements FeedSource<ReminderFeedItem> {
 			occurrences.push(...reminderOccurrences)
 		}
 
-		return occurrences.sort(compareOccurrences)
+		return occurrences.sort(function compareByDueAt(a, b) {
+			return a.dueAt.getTime() - b.dueAt.getTime()
+		})
 	}
 
 	async createReminder(input: CreateReminderInput): Promise<Reminder> {
@@ -660,8 +662,4 @@ function clamp01(value: number): number {
 
 function compareFeedItems(a: ReminderFeedItem, b: ReminderFeedItem): number {
 	return a.data.dueAt.getTime() - b.data.dueAt.getTime()
-}
-
-function compareOccurrences(a: ReminderOccurrence, b: ReminderOccurrence): number {
-	return a.dueAt.getTime() - b.dueAt.getTime()
 }
