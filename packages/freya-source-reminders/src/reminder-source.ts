@@ -36,6 +36,7 @@ import {
 	recurrenceAfterSplit,
 	stopRecurrenceAfterOccurrenceCount,
 } from "./recurrence.ts"
+import { ReminderOccurrencesKey } from "./reminder-context.ts"
 import {
 	CompleteReminderInput as CompleteReminderInputSchema,
 	DeleteReminderInput as DeleteReminderInputSchema,
@@ -95,6 +96,7 @@ export class ReminderSource implements FeedSource<ReminderFeedItem> {
 	private readonly defaultTimeZone: string
 	private readonly createReminderInput: ReturnType<typeof createReminderInputSchema>
 	private readonly itemListeners = new Set<(items: ReminderFeedItem[]) => void>()
+	private cachedOccurrences: { time: Date; occurrences: ReminderOccurrence[] } | null = null
 
 	constructor(options: ReminderSourceOptions) {
 		this.storage = options.storage
@@ -148,8 +150,9 @@ export class ReminderSource implements FeedSource<ReminderFeedItem> {
 		}
 	}
 
-	async fetchContext(_context: Context): Promise<readonly ContextEntry[] | null> {
-		return null
+	async fetchContext(context: Context): Promise<readonly ContextEntry[]> {
+		const occurrences = await this.fetchOccurrences(context.time)
+		return [[ReminderOccurrencesKey, occurrences]]
 	}
 
 	onItemsUpdate(callback: (items: ReminderFeedItem[]) => void): () => void {
@@ -165,8 +168,30 @@ export class ReminderSource implements FeedSource<ReminderFeedItem> {
 	}
 
 	async fetchItems(context: Context): Promise<ReminderFeedItem[]> {
-		const from = new Date(context.time.getTime() - this.lookBackMs)
-		const to = new Date(context.time.getTime() + this.lookAheadMs)
+		const now = context.time
+		const occurrences = await this.fetchOccurrences(now)
+		const sourceId = this.id
+
+		return occurrences
+			.map(function feedItem(occurrence) {
+				return createFeedItem(occurrence, now, sourceId)
+			})
+			.sort(compareFeedItems)
+	}
+
+	private async fetchOccurrences(time: Date): Promise<ReminderOccurrence[]> {
+		if (this.cachedOccurrences?.time === time) {
+			return this.cachedOccurrences.occurrences
+		}
+
+		const occurrences = await this.loadOccurrences(time)
+		this.cachedOccurrences = { time, occurrences }
+		return occurrences
+	}
+
+	private async loadOccurrences(time: Date): Promise<ReminderOccurrence[]> {
+		const from = new Date(time.getTime() - this.lookBackMs)
+		const to = new Date(time.getTime() + this.lookAheadMs)
 		const reminders = await this.storage.listReminders({
 			from,
 			to,
@@ -181,21 +206,20 @@ export class ReminderSource implements FeedSource<ReminderFeedItem> {
 		const overrides = await this.storage.listOccurrenceOverrides({ reminderIds, from, to })
 		const overridesByReminderId = groupOverridesByReminderId(overrides)
 
-		const items: ReminderFeedItem[] = []
+		const occurrences: ReminderOccurrence[] = []
 		for (const reminder of reminders) {
-			const occurrences = expandReminderOccurrences(reminder, {
+			const reminderOccurrences = expandReminderOccurrences(reminder, {
 				from,
 				to,
 				includeCompleted: this.includeCompleted,
 				overrides: overridesByReminderId.get(reminder.id),
 			})
-
-			for (const occurrence of occurrences) {
-				items.push(createFeedItem(occurrence, context.time, this.id))
-			}
+			occurrences.push(...reminderOccurrences)
 		}
 
-		return items.sort(compareFeedItems)
+		return occurrences.sort(function compareByDueAt(a, b) {
+			return a.dueAt.getTime() - b.dueAt.getTime()
+		})
 	}
 
 	async createReminder(input: CreateReminderInput): Promise<Reminder> {
@@ -418,6 +442,7 @@ export class ReminderSource implements FeedSource<ReminderFeedItem> {
 	}
 
 	private notifyItemsChanged(): void {
+		this.cachedOccurrences = null
 		for (const listener of this.itemListeners) {
 			listener([])
 		}

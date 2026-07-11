@@ -1,3 +1,4 @@
+export { ReminderOccurrencesKey } from "./reminder-context.ts"
 export { ReminderSource, type ReminderSourceOptions } from "./reminder-source.ts"
 export {
 	createReminderOccurrenceId,
