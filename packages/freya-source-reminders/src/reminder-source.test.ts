@@ -12,6 +12,7 @@ import type {
 	ReminderStorage,
 } from "./types.ts"
 
+import { ReminderOccurrencesKey } from "./reminder-context.ts"
 import { ReminderSource } from "./reminder-source.ts"
 import {
 	ReminderAction,
@@ -25,6 +26,8 @@ import {
 class InMemoryReminderStorage implements ReminderStorage {
 	readonly reminders = new Map<string, Reminder>()
 	readonly overrides = new Map<string, ReminderOccurrenceOverride>()
+	listRemindersCallCount = 0
+	listOccurrenceOverridesCallCount = 0
 	private nextId = 1
 	private readonly listeners = new Set<() => void>()
 
@@ -35,6 +38,7 @@ class InMemoryReminderStorage implements ReminderStorage {
 	}
 
 	async listReminders(_params: ReminderListParams): Promise<Reminder[]> {
+		this.listRemindersCallCount += 1
 		return Array.from(this.reminders.values())
 	}
 
@@ -91,6 +95,7 @@ class InMemoryReminderStorage implements ReminderStorage {
 	async listOccurrenceOverrides(
 		params: ReminderOccurrenceOverrideListParams,
 	): Promise<ReminderOccurrenceOverride[]> {
+		this.listOccurrenceOverridesCallCount += 1
 		const reminderIds = new Set(params.reminderIds)
 		return Array.from(this.overrides.values()).filter(function matches(override) {
 			if (!reminderIds.has(override.reminderId)) return false
@@ -195,15 +200,127 @@ describe("ReminderSource", () => {
 			expect(actions[ReminderAction.UncompleteReminder]?.id).toBe(ReminderAction.UncompleteReminder)
 		})
 
-		test("fetchContext returns null", async () => {
-			const source = new ReminderSource({ storage: new InMemoryReminderStorage() })
+		test("publishes due and upcoming occurrences with overrides and completion filtering", async () => {
+			const storage = new InMemoryReminderStorage([
+				reminder({
+					dueAt: new Date("2026-06-12T09:00:00Z"),
+					recurrence: {
+						frequency: ReminderRecurrenceFrequency.Daily,
+						interval: 1,
+					},
+				}),
+			])
+			const source = new ReminderSource({
+				storage,
+				lookAheadMs: 48 * 60 * 60 * 1000,
+			})
 
-			await expect(source.fetchContext(context("2026-06-12T09:00:00Z"))).resolves.toBeNull()
+			await source.updateReminder({
+				reminderId: "r1",
+				scope: ReminderEditScope.ThisOccurrence,
+				occurrenceDueAt: new Date("2026-06-12T09:00:00Z"),
+				patch: {
+					title: "Take vitamins after breakfast",
+					dueAt: new Date("2026-06-12T10:00:00Z"),
+				},
+			})
+			await source.completeReminder({
+				reminderId: "r1",
+				occurrenceDueAt: new Date("2026-06-14T09:00:00Z"),
+				completedAt: new Date("2026-06-14T09:05:00Z"),
+			})
+
+			const sourceContext = context("2026-06-12T12:00:00Z")
+			sourceContext.set(await source.fetchContext(sourceContext))
+			const occurrences = sourceContext.get(ReminderOccurrencesKey)
+
+			expect(
+				occurrences?.map(function occurrenceSummary(occurrence) {
+					return `${occurrence.title}:${occurrence.dueAt.toISOString()}`
+				}),
+			).toEqual([
+				"Take vitamins after breakfast:2026-06-12T10:00:00.000Z",
+				"Take vitamins:2026-06-13T09:00:00.000Z",
+			])
+
+			const includingCompleted = new ReminderSource({
+				storage,
+				lookAheadMs: 48 * 60 * 60 * 1000,
+				includeCompleted: true,
+			})
+			const completedContext = context("2026-06-12T12:00:00Z")
+			completedContext.set(await includingCompleted.fetchContext(completedContext))
+
+			expect(completedContext.get(ReminderOccurrencesKey)?.at(-1)?.completedAt?.toISOString()).toBe(
+				"2026-06-14T09:05:00.000Z",
+			)
 		})
 
-		test("notifies item listeners after source actions", async () => {
+		test("publishes an empty occurrence list", async () => {
+			const source = new ReminderSource({ storage: new InMemoryReminderStorage() })
+			const sourceContext = context("2026-06-12T09:00:00Z")
+
+			sourceContext.set(await source.fetchContext(sourceContext))
+
+			expect(sourceContext.get(ReminderOccurrencesKey)).toEqual([])
+		})
+
+		test("reuses published occurrences when building feed items", async () => {
+			const storage = new InMemoryReminderStorage([reminder()])
+			const source = new ReminderSource({ storage })
+			const sourceContext = context("2026-06-12T09:00:00Z")
+
+			sourceContext.set(await source.fetchContext(sourceContext))
+			const occurrences = sourceContext.get(ReminderOccurrencesKey)
+			const items = await source.fetchItems(sourceContext)
+
+			expect(occurrences).toHaveLength(1)
+			expect(items).toHaveLength(1)
+			expect(items[0]!.data.reminderId).toBe(occurrences![0]!.reminderId)
+			expect(items[0]!.data.dueAt).toEqual(occurrences![0]!.dueAt)
+			expect(storage.listRemindersCallCount).toBe(1)
+			expect(storage.listOccurrenceOverridesCallCount).toBe(1)
+		})
+
+		test("reloads occurrences when the context time reference changes", async () => {
+			const storage = new InMemoryReminderStorage([
+				reminder({
+					id: "old-window",
+					title: "Old window",
+					dueAt: new Date("2026-06-12T09:00:00Z"),
+				}),
+				reminder({
+					id: "new-window",
+					title: "New window",
+					dueAt: new Date("2026-06-13T09:00:00Z"),
+				}),
+			])
+			const source = new ReminderSource({
+				storage,
+				lookBackMs: 0,
+				lookAheadMs: 12 * 60 * 60 * 1000,
+			})
+			const sourceContext = context("2026-06-12T00:00:00Z")
+
+			sourceContext.set(await source.fetchContext(sourceContext))
+			expect(sourceContext.get(ReminderOccurrencesKey)?.[0]?.reminderId).toBe("old-window")
+
+			sourceContext.time = new Date("2026-06-13T00:00:00Z")
+			const items = await source.fetchItems(sourceContext)
+
+			expect(
+				items.map(function reminderId(item) {
+					return item.data.reminderId
+				}),
+			).toEqual(["new-window"])
+			expect(storage.listRemindersCallCount).toBe(2)
+		})
+
+		test("invalidates cached occurrences and notifies listeners after source actions", async () => {
 			const storage = new InMemoryReminderStorage()
 			const source = new ReminderSource({ storage })
+			const sourceContext = context("2026-06-12T12:00:00Z")
+			sourceContext.set(await source.fetchContext(sourceContext))
 			const listener = mock()
 			source.onItemsUpdate(listener)
 
@@ -213,6 +330,8 @@ describe("ReminderSource", () => {
 			})
 
 			expect(listener).toHaveBeenCalled()
+			await expect(source.fetchItems(sourceContext)).resolves.toHaveLength(1)
+			expect(storage.listRemindersCallCount).toBe(2)
 		})
 	})
 
