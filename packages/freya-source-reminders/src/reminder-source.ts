@@ -97,7 +97,6 @@ export class ReminderSource implements FeedSource<ReminderFeedItem> {
 	private readonly createReminderInput: ReturnType<typeof createReminderInputSchema>
 	private readonly itemListeners = new Set<(items: ReminderFeedItem[]) => void>()
 	private cachedOccurrences: { time: Date; occurrences: ReminderOccurrence[] } | null = null
-	private occurrenceCacheRevision = 0
 
 	constructor(options: ReminderSourceOptions) {
 		this.storage = options.storage
@@ -185,11 +184,8 @@ export class ReminderSource implements FeedSource<ReminderFeedItem> {
 			return this.cachedOccurrences.occurrences
 		}
 
-		const cacheRevision = this.occurrenceCacheRevision
 		const occurrences = await this.loadOccurrences(time)
-		if (cacheRevision === this.occurrenceCacheRevision) {
-			this.cachedOccurrences = { time, occurrences }
-		}
+		this.cachedOccurrences = { time, occurrences }
 		return occurrences
 	}
 
@@ -446,7 +442,6 @@ export class ReminderSource implements FeedSource<ReminderFeedItem> {
 	}
 
 	private notifyItemsChanged(): void {
-		this.occurrenceCacheRevision += 1
 		this.cachedOccurrences = null
 		for (const listener of this.itemListeners) {
 			listener([])
