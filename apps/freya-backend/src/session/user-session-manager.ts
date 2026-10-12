@@ -375,7 +375,7 @@ export class UserSessionManager {
 		}
 
 		if (promises.length === 0) {
-			return this.initializedSession(userId, [], agentConfig)
+			return new UserSession(userId, [], this.feedEnhancer, agentConfig)
 		}
 
 		const results = await Promise.allSettled(promises)
@@ -399,28 +399,13 @@ export class UserSessionManager {
 			console.error("[UserSessionManager] Feed source provider failed:", error)
 		}
 
-		return this.initializedSession(userId, feedSources, agentConfig)
+		return new UserSession(userId, feedSources, this.feedEnhancer, agentConfig)
 	}
 
 	private queryAgentConfigForUser(userId: string): UserSessionAgentConfig {
 		return {
 			...(this.queryAgentConfig ?? {}),
 			conversationStorage: conversations(this.db, userId),
-		}
-	}
-
-	private async initializedSession(
-		userId: string,
-		sources: FeedSource[],
-		agentConfig: UserSessionAgentConfig,
-	): Promise<UserSession> {
-		const session = new UserSession(userId, sources, this.feedEnhancer, agentConfig)
-		try {
-			await session.initialize()
-			return session
-		} catch (err) {
-			session.destroy()
-			throw err
 		}
 	}
 

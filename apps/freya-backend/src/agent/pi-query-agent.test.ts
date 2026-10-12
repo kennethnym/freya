@@ -225,6 +225,58 @@ beforeEach(() => {
 })
 
 describe("PiQueryAgent", () => {
+	test("rejects switching a conversation-bound agent before creating a Pi session", async () => {
+		const { PiQueryAgent } = await import("./pi-query-agent.ts")
+		const agent = new PiQueryAgent({
+			toolbox: createStubToolbox(),
+			conversationId: "conversation-1",
+		})
+		expect(
+			await collectEvents(agent.ask({ message: "hello", conversationId: "conversation-2" })),
+		).toEqual([
+			{ type: "error", message: "Conversation switching is not supported for this session" },
+		])
+		expect(createAgentSessionCalls).toBe(0)
+		agent.dispose()
+	})
+
+	test("loads only the selected conversation history before the pending batch", async () => {
+		const { UserSession } = await import("../session/user-session.ts")
+		const session = new UserSession("test-user", [], null, {
+			conversationStorage: {
+				async listEntries(id) {
+					expect(id).toBe("conversation-2")
+					return [1, 2].map((sequence) => ({
+						id: "entry-" + sequence,
+						sequence,
+						kind: ConversationEntryKind.UserMessage,
+						payload: { role: "user", parts: [{ type: "text", text: "message-" + sequence }] },
+						metadata: {},
+						createdAt: new Date(),
+					}))
+				},
+			},
+		})
+		const agent = await session.loadConversation({ id: "conversation-2", beforeSequence: 2 })
+		const events = collectEvents(agent.ask({ message: "message-2" }))
+		await sessionCreationStarted
+		if (
+			!isRecord(createAgentSessionOptions) ||
+			!(createAgentSessionOptions.sessionManager instanceof FakeSessionManager)
+		) {
+			throw new Error("Session manager was not captured")
+		}
+		const context = createAgentSessionOptions.sessionManager.buildSessionContext()
+		if (!isRecord(context) || !Array.isArray(context.messages)) throw new Error("Missing context")
+		expect(context.messages).toHaveLength(1)
+		expect(context.messages[0]).toMatchObject({ role: "user", content: "message-1" })
+		releaseSessionCreation()
+		await promptStarted
+		releasePrompt()
+		await events
+		session.destroy()
+	})
+
 	test("rejects a concurrent first query while the Pi session is being created", async () => {
 		const { PiQueryAgent } = await import("./pi-query-agent.ts")
 		const agent = new PiQueryAgent({

@@ -6,22 +6,25 @@ import {
 	type FeedSource,
 } from "@freya/core"
 
+import type { ConversationStorage } from "../agent/conversation-recording-query-agent.ts"
 import type { QueryAgentToolbox } from "../agent/query-agent-toolbox.ts"
 import type { QueryAgent } from "../agent/query-agent.ts"
 import type { FeedEnhancer } from "../enhancement/enhance-feed.ts"
 
-import {
-	ConversationRecordingQueryAgent,
-	type ConversationStorage,
-} from "../agent/conversation-recording-query-agent.ts"
-import { PiQueryAgent, PI_MODEL_ID, PI_MODEL_PROVIDER } from "../agent/pi-query-agent.ts"
+import { PiQueryAgent } from "../agent/pi-query-agent.ts"
 import { UserSessionQueryAgentToolbox } from "../agent/user-session-query-agent-toolbox.ts"
 
 export interface UserSessionAgentConfig {
 	apiKey?: string
 	cwd?: string
 	systemPrompt?: string
-	conversationStorage?: ConversationStorage
+	conversationStorage?: Pick<ConversationStorage, "listEntries">
+}
+
+export interface LoadConversationInput {
+	id: string
+	/** Exclude the pending batch that the caller will supply to ask(). */
+	beforeSequence?: number
 }
 
 export class UserSession {
@@ -31,9 +34,9 @@ export class UserSession {
 	private sources = new Map<string, FeedSource>()
 	private readonly enhancer: FeedEnhancer | null
 	private readonly agentConfig: UserSessionAgentConfig | undefined
-	private queryAgent: QueryAgent | null = null
-	private initializePromise: Promise<void> | null = null
-	private initialized = false
+	private readonly queryAgents = new Map<string, QueryAgent>()
+	private readonly pendingConversations = new Map<string, Promise<QueryAgent>>()
+	private destroyed = false
 	private enhancedItems: FeedItem[] | null = null
 	/** The FeedResult that enhancedItems was derived from. */
 	private enhancedSource: FeedResult | null = null
@@ -63,40 +66,24 @@ export class UserSession {
 		}
 
 		this.toolbox = new UserSessionQueryAgentToolbox(this)
-		if (!agentConfig?.conversationStorage) {
-			this.queryAgent = new PiQueryAgent({
-				toolbox: this.toolbox,
-				apiKey: this.agentConfig?.apiKey,
-				cwd: this.agentConfig?.cwd,
-				systemPrompt: this.agentConfig?.systemPrompt,
-			})
-			this.initialized = true
-		}
-
 		this.engine.start()
 	}
 
-	get agent(): QueryAgent {
-		if (!this.queryAgent) {
-			throw new Error("UserSession has not been initialized")
-		}
-		return this.queryAgent
-	}
+	async loadConversation(input: LoadConversationInput): Promise<QueryAgent> {
+		if (this.destroyed) throw new Error("User session is destroyed")
 
-	async initialize(): Promise<void> {
-		if (this.initialized) return
-		if (this.initializePromise) return this.initializePromise
+		const existing = this.queryAgents.get(input.id)
+		if (existing) return existing
 
-		const promise = this.initializeAgent()
-		this.initializePromise = promise
+		const pending = this.pendingConversations.get(input.id)
+		if (pending) return pending
 
+		const promise = this.createConversationAgent(input)
+		this.pendingConversations.set(input.id, promise)
 		try {
-			await promise
-			this.initialized = true
+			return await promise
 		} finally {
-			if (this.initializePromise === promise) {
-				this.initializePromise = null
-			}
+			this.pendingConversations.delete(input.id)
 		}
 	}
 
@@ -236,8 +223,10 @@ export class UserSession {
 	}
 
 	destroy(): void {
-		this.queryAgent?.dispose()
-		this.queryAgent = null
+		this.destroyed = true
+		for (const agent of this.queryAgents.values()) agent.dispose()
+		this.queryAgents.clear()
+		this.pendingConversations.clear()
 		this.unsubscribe?.()
 		this.unsubscribe = null
 		this.engine.stop()
@@ -246,30 +235,27 @@ export class UserSession {
 		this.enhancingPromise = null
 	}
 
-	private async initializeAgent(): Promise<void> {
-		if (this.queryAgent) return
+	private async createConversationAgent(input: LoadConversationInput): Promise<QueryAgent> {
+		const storage = this.agentConfig?.conversationStorage
+		if (!storage) throw new Error("Conversation storage is not configured")
 
-		const conversationStorage = this.agentConfig?.conversationStorage
-		if (!conversationStorage) {
-			this.queryAgent = new PiQueryAgent({
-				toolbox: this.toolbox,
-				apiKey: this.agentConfig?.apiKey,
-				cwd: this.agentConfig?.cwd,
-				systemPrompt: this.agentConfig?.systemPrompt,
-			})
-			return
+		// The user-scoped storage validates ownership before returning entries.
+		const entries = await storage.listEntries(input.id)
+		if (this.destroyed) {
+			throw new Error("User session was destroyed while loading conversation")
 		}
-
-		const conversation = await conversationStorage.getOrCreateConversation()
-		const entries = await conversationStorage.listEntries(conversation.id)
-
-		this.queryAgent = new PiQueryAgent({
+		const agent = new PiQueryAgent({
+			conversationId: input.id,
 			toolbox: this.toolbox,
 			apiKey: this.agentConfig?.apiKey,
 			cwd: this.agentConfig?.cwd,
 			systemPrompt: this.agentConfig?.systemPrompt,
-			initialEntries: entries,
+			initialEntries: entries.filter(
+				(entry) => input.beforeSequence === undefined || entry.sequence < input.beforeSequence,
+			),
 		})
+		this.queryAgents.set(input.id, agent)
+		return agent
 	}
 
 	private invalidateEnhancement(): void {
