@@ -1,45 +1,12 @@
 import { describe, expect, test } from "bun:test"
 import { Hono } from "hono"
 
-import type { UserSessionManager } from "../session/index.ts"
 import type { QueryDebugTools, QueryDebugToolDefinition } from "./debug-tools.ts"
-import type {
-	QueryAgent,
-	QueryAgentAsk,
-	QueryAgentEventListener,
-	QueryAgentStreamEvent,
-	QueryAgentEvent,
-} from "./query-agent.ts"
 
 import { mockAuthSessionMiddleware } from "../auth/session-middleware.ts"
-import { registerAgentHttpHandlers, registerDebugAgentHttpHandlers } from "./http.ts"
+import { registerDebugAgentHttpHandlers } from "./http.ts"
 
 const MockUserId = "k7Gx2mPqRvNwYs9TdLfA4bHcJeUo1iZn"
-
-class FakeQueryAgent implements QueryAgent {
-	readonly inputs: QueryAgentAsk[] = []
-	private readonly events: QueryAgentStreamEvent[]
-
-	constructor(events: QueryAgentStreamEvent[]) {
-		this.events = events
-	}
-
-	async *ask(input: QueryAgentAsk): AsyncIterable<QueryAgentStreamEvent> {
-		this.inputs.push(input)
-		for (const event of this.events) {
-			yield event
-		}
-	}
-
-	addEventListener<T extends QueryAgentEvent>(
-		_type: T,
-		_listener: QueryAgentEventListener<T>,
-	): () => void {
-		return () => {}
-	}
-
-	dispose(): void {}
-}
 
 class FakeDebugTools implements QueryDebugTools {
 	readonly executions: Array<{ userId: string; toolName: string; params: unknown }> = []
@@ -62,21 +29,6 @@ class FakeDebugTools implements QueryDebugTools {
 	}
 }
 
-function buildTestApp(queryAgent: QueryAgent, userId?: string) {
-	const app = new Hono()
-	const sessionManager = {
-		async getOrCreate() {
-			return { agent: queryAgent }
-		},
-	} as unknown as UserSessionManager
-
-	registerAgentHttpHandlers(app, {
-		sessionManager,
-		authSessionMiddleware: mockAuthSessionMiddleware(userId),
-	})
-	return app
-}
-
 function buildDebugTestApp(userId: string | undefined, debugTools: QueryDebugTools) {
 	const app = new Hono()
 	registerDebugAgentHttpHandlers(app, {
@@ -85,106 +37,6 @@ function buildDebugTestApp(userId: string | undefined, debugTools: QueryDebugToo
 	})
 	return app
 }
-
-describe("POST /api/agent", () => {
-	test("returns 401 without auth", async () => {
-		const app = buildTestApp(new FakeQueryAgent([]))
-
-		const res = await app.request("/api/agent", {
-			method: "POST",
-			body: JSON.stringify({ message: "hello" }),
-		})
-
-		expect(res.status).toBe(401)
-	})
-
-	test("collects text deltas", async () => {
-		const agent = new FakeQueryAgent([
-			{ type: "text_delta", text: "You should " },
-			{ type: "text_delta", text: "leave at 8:30." },
-			{ type: "done" },
-		])
-		const app = buildTestApp(agent, "user-1")
-
-		const res = await app.request("/api/agent", {
-			method: "POST",
-			body: JSON.stringify({
-				message: "What should I do?",
-			}),
-		})
-
-		expect(res.status).toBe(200)
-		expect(agent.inputs).toHaveLength(1)
-		expect(agent.inputs[0]!.message).toBe("What should I do?")
-
-		const body = (await res.json()) as {
-			message: string
-		}
-		expect(body.message).toBe("You should leave at 8:30.")
-	})
-
-	test("passes conversation id to the query agent", async () => {
-		const agent = new FakeQueryAgent([
-			{ type: "conversation", conversationId: "conversation-1" },
-			{ type: "done" },
-		])
-		const app = buildTestApp(agent, "user-1")
-
-		const res = await app.request("/api/agent", {
-			method: "POST",
-			body: JSON.stringify({
-				message: "Continue this chat.",
-				conversationId: "conversation-1",
-			}),
-		})
-
-		expect(res.status).toBe(200)
-		expect(agent.inputs[0]?.conversationId).toBe("conversation-1")
-		const body = (await res.json()) as { conversationId?: string }
-		expect(body.conversationId).toBe("conversation-1")
-	})
-
-	test("returns 400 for invalid body", async () => {
-		const app = buildTestApp(new FakeQueryAgent([]), "user-1")
-
-		const res = await app.request("/api/agent", {
-			method: "POST",
-			body: JSON.stringify({ feedItemId: "feed-1" }),
-		})
-
-		expect(res.status).toBe(400)
-	})
-
-	test("returns 400 when body includes feedItemId", async () => {
-		const app = buildTestApp(new FakeQueryAgent([]), "user-1")
-
-		const res = await app.request("/api/agent", {
-			method: "POST",
-			body: JSON.stringify({
-				message: "What should I do?",
-				feedItemId: "feed-1",
-			}),
-		})
-
-		expect(res.status).toBe(400)
-	})
-
-	test("returns 500 when agent reports an error", async () => {
-		const app = buildTestApp(
-			new FakeQueryAgent([{ type: "error", message: "model unavailable" }]),
-			"user-1",
-		)
-
-		const res = await app.request("/api/agent", {
-			method: "POST",
-			body: JSON.stringify({ message: "hello" }),
-		})
-
-		expect(res.status).toBe(500)
-		const body = (await res.json()) as { error: string }
-		expect(body.error).toBe("model unavailable")
-	})
-})
 
 describe("query debug tools", () => {
 	test("returns 401 without auth", async () => {
