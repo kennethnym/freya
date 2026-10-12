@@ -216,7 +216,7 @@ describe("UserSessionManager", () => {
 		expect(session.engine).toBeDefined()
 	})
 
-	test("getOrCreate eagerly loads conversation entries for the user session", async () => {
+	test("getOrCreate defers history loading until loadConversation", async () => {
 		setEnabledSources([])
 		setConversationEntriesForUser("user-1", [
 			{
@@ -233,12 +233,11 @@ describe("UserSessionManager", () => {
 		])
 		const manager = new UserSessionManager({ db: fakeDb, providers: [] })
 
-		await manager.getOrCreate("user-1")
-
-		expect(mockConversationCalls).toEqual([
-			{ type: "getOrCreate", userId: "user-1" },
-			{ type: "listEntries", userId: "user-1" },
-		])
+		const session = await manager.getOrCreate("user-1")
+		expect(mockConversationCalls).toEqual([])
+		await session.loadConversation({ id: "conversation-user-1" })
+		expect(mockConversationCalls).toEqual([{ type: "listEntries", userId: "user-1" }])
+		manager.dispose()
 	})
 
 	test("getOrCreate returns same session for same user", async () => {

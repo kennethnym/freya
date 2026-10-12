@@ -115,9 +115,13 @@ export class AgentResponseJobExecutor implements JobExecutor<AgentResponseJobPay
 			}
 
 			const session = await this.userSessionManager.getOrCreate(conversation.userId)
+			const agent = await session.loadConversation({
+				id: conversation.id,
+				beforeSequence: Math.min(...pendingEntries.map((entry) => entry.sequence)),
+			})
 
 			for await (const event of streamAgentResponse({
-				agent: session.agent,
+				agent,
 				input: {
 					message,
 					conversationId: conversation.id,

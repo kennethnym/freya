@@ -1,6 +1,5 @@
 import type { ActionDefinition, ContextEntry, FeedItem, FeedSource } from "@freya/core"
 
-import { ConversationEntryKind } from "@freya/core"
 import { LocationSource } from "@freya/source-location"
 import { describe, expect, spyOn, test } from "bun:test"
 
@@ -58,8 +57,8 @@ class FakeConversationStorage implements ConversationStorage {
 		}
 	}
 
-	async listEntries(_conversationId: string): Promise<ConversationStorageEntry[]> {
-		this.calls.push("listEntries")
+	async listEntries(conversationId: string): Promise<ConversationStorageEntry[]> {
+		this.calls.push("listEntries:" + conversationId)
 		return this.entries
 	}
 }
@@ -99,39 +98,77 @@ describe("UserSession", () => {
 		expect(session.getSource("test")).toBeUndefined()
 	})
 
-	test("destroy disposes query agent", () => {
-		const session = new UserSession("test-user", [createStubSource("test")])
-		const disposeSpy = spyOn(session.agent, "dispose")
+	test("loads agents lazily and caches each conversation independently", async () => {
+		const storage = new FakeConversationStorage()
+		const session = new UserSession("test-user", [], null, { conversationStorage: storage })
+		expect(storage.calls).toEqual([])
 
+		const [first, repeated, second] = await Promise.all([
+			session.loadConversation({ id: "conversation-1" }),
+			session.loadConversation({ id: "conversation-1" }),
+			session.loadConversation({ id: "conversation-2" }),
+		])
+
+		expect(first).toBe(repeated)
+		expect(first).not.toBe(second)
+		expect(await session.loadConversation({ id: "conversation-1" })).toBe(first)
+		expect(storage.calls).toEqual(["listEntries:conversation-1", "listEntries:conversation-2"])
+		const firstDispose = spyOn(first, "dispose")
+		const secondDispose = spyOn(second, "dispose")
 		session.destroy()
-
-		expect(disposeSpy).toHaveBeenCalled()
+		expect(firstDispose).toHaveBeenCalledTimes(1)
+		expect(secondDispose).toHaveBeenCalledTimes(1)
+		await expect(session.loadConversation({ id: "conversation-1" })).rejects.toThrow("destroyed")
 	})
 
-	test("initialize loads conversation entries before exposing stored agent", async () => {
-		const storage = new FakeConversationStorage([
-			{
-				id: "entry-1",
-				sequence: 1,
-				kind: ConversationEntryKind.UserMessage,
-				payload: {
-					role: "user",
-					parts: [{ type: "text", text: "stored hello" }],
-				},
-				metadata: {},
-				createdAt: new Date("2026-06-15T00:00:00.000Z"),
-			},
-		])
-		const session = new UserSession("test-user", [createStubSource("test")], null, {
-			conversationStorage: storage,
-		})
+	test("rejects failed history loads and allows retry", async () => {
+		const storage = new FakeConversationStorage()
+		const list = spyOn(storage, "listEntries").mockRejectedValueOnce(
+			new Error("Conversation not found"),
+		)
+		const session = new UserSession("test-user", [], null, { conversationStorage: storage })
 
-		expect(() => session.agent).toThrow("UserSession has not been initialized")
+		await expect(session.loadConversation({ id: "other-user-conversation" })).rejects.toThrow(
+			"Conversation not found",
+		)
+		expect(await session.loadConversation({ id: "conversation-1" })).toBeDefined()
+		expect(await session.loadConversation({ id: "other-user-conversation" })).toBeDefined()
+		expect(list).toHaveBeenCalledTimes(3)
+		session.destroy()
+	})
 
-		await session.initialize()
+	test("does not retain an agent when destroyed during loading", async () => {
+		const storage = new FakeConversationStorage()
+		let release!: (entries: ConversationStorageEntry[]) => void
+		spyOn(storage, "listEntries").mockImplementationOnce(
+			() =>
+				new Promise((resolve) => {
+					release = resolve
+				}),
+		)
+		const session = new UserSession("test-user", [], null, { conversationStorage: storage })
+		const loading = session.loadConversation({ id: "conversation-1" })
+		const repeated = session.loadConversation({ id: "conversation-1" })
+		const results = Promise.allSettled([loading, repeated])
+		session.destroy()
+		release([])
+		for (const result of await results) {
+			expect(result.status).toBe("rejected")
+			if (result.status === "rejected") {
+				expect(result.reason).toEqual(
+					new Error("User session was destroyed while loading conversation"),
+				)
+			}
+		}
+		await expect(session.loadConversation({ id: "conversation-1" })).rejects.toThrow("destroyed")
+	})
 
-		expect(storage.calls).toEqual(["getOrCreateConversation", "listEntries"])
-		expect(session.agent).toBeDefined()
+	test("requires storage to load a conversation", async () => {
+		const session = new UserSession("test-user", [])
+		await expect(session.loadConversation({ id: "conversation-1" })).rejects.toThrow(
+			"storage is not configured",
+		)
+		session.destroy()
 	})
 
 	test("engine.executeAction routes to correct source", async () => {

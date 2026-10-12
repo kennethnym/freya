@@ -53,6 +53,7 @@ type PiSessionMessage = Parameters<PiSessionManager["appendMessage"]>[0]
 
 /** Configuration for the Pi-backed query agent. */
 export interface PiQueryAgentConfig {
+	conversationId?: string
 	toolbox: QueryAgentToolbox
 	apiKey?: string
 	cwd?: string
@@ -64,6 +65,7 @@ export const PI_MODEL_PROVIDER = "openrouter"
 export const PI_MODEL_ID = "z-ai/glm-4.7-flash"
 
 export class PiQueryAgent implements QueryAgent {
+	private readonly conversationId: string | undefined
 	private readonly toolbox: QueryAgentToolbox
 	private readonly cwd: string
 	private readonly systemPrompt: string
@@ -101,6 +103,7 @@ export class PiQueryAgent implements QueryAgent {
 	private disposed = false
 
 	constructor(config: PiQueryAgentConfig) {
+		this.conversationId = config.conversationId
 		this.toolbox = config.toolbox
 		this.apiKey = config.apiKey
 		this.cwd = config.cwd ?? tmpdir()
@@ -109,6 +112,15 @@ export class PiQueryAgent implements QueryAgent {
 	}
 
 	async *ask(input: QueryAgentAsk): AsyncIterable<QueryAgentStreamEvent> {
+		if (
+			this.conversationId &&
+			input.conversationId &&
+			this.conversationId !== input.conversationId
+		) {
+			yield { type: "error", message: "Conversation switching is not supported for this session" }
+			return
+		}
+
 		if (this.activeConversationId !== null) {
 			yield {
 				type: "error",
@@ -117,7 +129,7 @@ export class PiQueryAgent implements QueryAgent {
 			return
 		}
 
-		this.activeConversationId = input.conversationId ?? ""
+		this.activeConversationId = this.conversationId ?? input.conversationId ?? ""
 		this.activeUserMessageEntry = input.userMessageEntry ?? null
 
 		let session: PiSession

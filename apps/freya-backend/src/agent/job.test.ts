@@ -240,7 +240,13 @@ function fakeUserSessionManager(agent: QueryAgent): UserSessionManager {
 	return {
 		async getOrCreate(userId: string) {
 			expect(userId).toBe(UserId)
-			return { agent }
+			return {
+				async loadConversation(input: { id: string; beforeSequence?: number }) {
+					expect(input.id).toBe(ConversationId)
+					expect(input.beforeSequence).toBe(1)
+					return agent
+				},
+			}
 		},
 	} as unknown as UserSessionManager
 }
