@@ -4,7 +4,7 @@ import { createMiddleware } from "hono/factory"
 
 import { registerAdminHttpHandlers } from "./admin/http.ts"
 import { createQueryDebugTools } from "./agent/debug-tools.ts"
-import { registerAgentHttpHandlers, registerDebugAgentHttpHandlers } from "./agent/http.ts"
+import { registerDebugAgentHttpHandlers } from "./agent/http.ts"
 import { AgentService } from "./agent/service.ts"
 import { agentWebSocket, registerAgentWebSocketHandlers } from "./agent/ws.ts"
 import { createRequireAdmin } from "./auth/admin-middleware.ts"
@@ -147,10 +147,6 @@ function main() {
 	})
 	registerLocationHttpHandlers(app, { sessionManager, authSessionMiddleware })
 	registerSourcesHttpHandlers(app, { sessionManager, authSessionMiddleware })
-	registerAgentHttpHandlers(app, {
-		sessionManager,
-		authSessionMiddleware,
-	})
 	registerConversationsHttpHandlers(app, { db, authSessionMiddleware })
 	if (isDebugMode) {
 		registerDebugAgentHttpHandlers(app, {

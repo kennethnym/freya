@@ -550,7 +550,7 @@ async function requestJson(
 	cookies.apply(response)
 
 	if (!response.ok) {
-		throw new Error(await readResponseError(response, path))
+		throw new Error(await readResponseError(response))
 	}
 
 	return response.json()
@@ -811,11 +811,8 @@ function webSocketMessageText(message: unknown): string | null {
 	return null
 }
 
-async function readResponseError(response: Response, path: string): Promise<string> {
+async function readResponseError(response: Response): Promise<string> {
 	const text = await response.text()
-	if (response.status === 404 && path === "/api/agent") {
-		return "Backend does not expose /api/agent. Restart the WIP backend on port 3000 or check FREYA_BACKEND_URL."
-	}
 	if (!text) return `Request failed: ${response.status} ${response.statusText}`
 
 	try {
